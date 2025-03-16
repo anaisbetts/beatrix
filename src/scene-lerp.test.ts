@@ -7,6 +7,7 @@ import {
   testOneSceneTo,
   testOneTo,
 } from './mocks'
+import { describe, expect, it } from 'bun:test'
 
 describe('lerp-entity', () => {
   it('Can interpolate between two lights that are on', () => {

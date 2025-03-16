@@ -1,2 +1,3 @@
-new WebSocket('')
+
 console.log('foo')
+console.log('bar')

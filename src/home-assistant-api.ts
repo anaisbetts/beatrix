@@ -111,10 +111,13 @@ export async function getSceneList(api: Axios) {
   d('Getting scene list!!')
   const result = await getHAStates(api)
 
-  const entityTable = result.reduce((acc, x) => {
-    acc[x.entity_id] = x
-    return acc
-  }, {} as Record<string, HAState>)
+  const entityTable = result.reduce(
+    (acc, x) => {
+      acc[x.entity_id] = x
+      return acc
+    },
+    {} as Record<string, HAState>
+  )
 
   const scenes = result.filter((x) => x.entity_id.startsWith('scene.'))
 
@@ -122,10 +125,13 @@ export async function getSceneList(api: Axios) {
     getHASceneDetails(HAStateToFriendlyEntity(x), api)
   )
 
-  const sceneTable = Array.from(sceneMap.keys()).reduce((acc, k) => {
-    acc[k.entity_id] = sceneMap.get(k)!
-    return acc
-  }, {} as Record<string, HASceneDetails>)
+  const sceneTable = Array.from(sceneMap.keys()).reduce(
+    (acc, k) => {
+      acc[k.entity_id] = sceneMap.get(k)!
+      return acc
+    },
+    {} as Record<string, HASceneDetails>
+  )
 
   return scenes.map((x) => {
     const affectsList: string[] = x.attributes.entity_id
@@ -134,14 +140,17 @@ export async function getSceneList(api: Axios) {
       entity: x.entity_id,
       internalId: x.attributes.id,
       name: x.attributes.friendly_name,
-      affects: affectsList.reduce((acc, id) => {
-        acc[id] = AddStateToEntity(
-          HAStateToFriendlyEntity(entityTable[id]),
-          sceneTable[x.entity_id].entities[id]
-        )
+      affects: affectsList.reduce(
+        (acc, id) => {
+          acc[id] = AddStateToEntity(
+            HAStateToFriendlyEntity(entityTable[id]),
+            sceneTable[x.entity_id].entities[id]
+          )
 
-        return acc
-      }, {} as Record<string, FriendlyStateEntity>),
+          return acc
+        },
+        {} as Record<string, FriendlyStateEntity>
+      ),
     }
 
     return ret
@@ -171,22 +180,25 @@ export async function getSensorData(api: Axios) {
     )
   )
 
-  return Array.from(sensorMap.values()).reduce((acc, sensors) => {
-    // NB: The raw data from this API is a bit Weird. It's an array of sensor
-    // readings, but the first sensor reading has the entity information
-    sensors.forEach((s) => {
-      const first = s[0] as HADetailedSensorReading
+  return Array.from(sensorMap.values()).reduce(
+    (acc, sensors) => {
+      // NB: The raw data from this API is a bit Weird. It's an array of sensor
+      // readings, but the first sensor reading has the entity information
+      sensors.forEach((s) => {
+        const first = s[0] as HADetailedSensorReading
 
-      acc[first.entity_id] = {
-        entity: first.entity_id,
-        name: first.attributes['friendly_name'] || first.entity_id,
-        attributes: first.attributes,
-        history: s,
-      }
-    })
+        acc[first.entity_id] = {
+          entity: first.entity_id,
+          name: first.attributes['friendly_name'] || first.entity_id,
+          attributes: first.attributes,
+          history: s,
+        }
+      })
 
-    return acc
-  }, {} as Record<string, FriendlyStateHistoryEntity>)
+      return acc
+    },
+    {} as Record<string, FriendlyStateHistoryEntity>
+  )
 }
 
 export async function fetchLocalApi<T>(url: string): Promise<T> {
@@ -220,6 +232,3 @@ export async function callService(
   const response = await api.post('api/call-service', rqData)
   return response.data
 }
-
-const wnd: any = globalThis
-wnd.fetchLocalApi = fetchLocalApi

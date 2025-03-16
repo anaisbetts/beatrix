@@ -62,11 +62,14 @@ export function lerp(from: any, to: any, t: number) {
 }
 
 export function distribute<T>(arr: T[], bucketSize: number): Array<T[]> {
-  return arr.reduce((acc, x, n) => {
-    const bucket = n % bucketSize
-    acc[bucket] = acc[bucket] || []
-    acc[bucket].push(x)
+  return arr.reduce(
+    (acc, x, n) => {
+      const bucket = n % bucketSize
+      acc[bucket] = acc[bucket] || []
+      acc[bucket].push(x)
 
-    return acc
-  }, [] as Array<T[]>)
+      return acc
+    },
+    [] as Array<T[]>
+  )
 }

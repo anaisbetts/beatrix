@@ -15,10 +15,13 @@ const d = console.log.bind(console)
 // like 100000x more complicated so I'm gonna try to ignore it as long as I
 // can. https://developers.home-assistant.io/docs/core/entity/light?_highlight=color&_highlight=mode#color-modes
 // has the details around this particular mess.
-const attributeIgnoreList = ['color_mode'].reduce((acc, x) => {
-  acc[x] = true
-  return acc
-}, {} as Record<string, boolean>)
+const attributeIgnoreList = ['color_mode'].reduce(
+  (acc, x) => {
+    acc[x] = true
+    return acc
+  },
+  {} as Record<string, boolean>
+)
 
 function dedupeIdenticalKeys(attributeKeys: string[]): string[] {
   // Home Assistant stores the same attribute key in multiple formats - if we
@@ -32,11 +35,14 @@ function dedupeIdenticalKeys(attributeKeys: string[]): string[] {
   }
 
   // Deduplicate keys as well as filter out ones in our blocklist
-  const dedup = ret.reduce((acc, x) => {
-    if (attributeIgnoreList[x]) return acc
-    acc[x] = true
-    return acc
-  }, {} as Record<string, boolean>)
+  const dedup = ret.reduce(
+    (acc, x) => {
+      if (attributeIgnoreList[x]) return acc
+      acc[x] = true
+      return acc
+    },
+    {} as Record<string, boolean>
+  )
 
   return Object.keys(dedup)
 }
@@ -86,22 +92,28 @@ export function lerpEntity(
 }
 
 export function lerpScene(from: Scene, to: Scene, t: number) {
-  return Object.keys(from.affects).reduce((acc, entity) => {
-    d(`Examining ${entity}`)
-    if (!to.affects.hasOwnProperty(entity)) {
-      d(`${entity} is in ${from.entity} but not ${to.entity}!`)
-      return acc
-    }
+  return Object.keys(from.affects).reduce(
+    (acc, entity) => {
+      d(`Examining ${entity}`)
+      if (!to.affects.hasOwnProperty(entity)) {
+        d(`${entity} is in ${from.entity} but not ${to.entity}!`)
+        return acc
+      }
 
-    acc[entity] = lerpEntity(from.affects[entity], to.affects[entity], t)
-    return acc
-  }, {} as Record<string, FriendlyStateEntity>)
+      acc[entity] = lerpEntity(from.affects[entity], to.affects[entity], t)
+      return acc
+    },
+    {} as Record<string, FriendlyStateEntity>
+  )
 }
 
-const ignoredStateKeys = ['state'].reduce((acc, x) => {
-  acc[x] = true
-  return acc
-}, {} as Record<string, boolean>)
+const ignoredStateKeys = ['state'].reduce(
+  (acc, x) => {
+    acc[x] = true
+    return acc
+  },
+  {} as Record<string, boolean>
+)
 
 function filterIgnoredStateKeys(state: HAAttributeList) {
   return Object.keys(state).reduce((acc, k) => {

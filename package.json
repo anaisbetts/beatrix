@@ -5,7 +5,8 @@
   "devDependencies": {
     "@types/bun": "^1.2.5",
     "@types/debug": "^4.1.12",
-    "bun-types": "latest"
+    "bun-types": "latest",
+    "prettier": "^3.5.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

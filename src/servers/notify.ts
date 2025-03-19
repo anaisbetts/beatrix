@@ -7,10 +7,6 @@ import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
 
-const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
-const check = `${prefix}${process.argv[1].replaceAll('\\', '/')}`
-const isMainModule = import.meta.url === check
-
 const d = debug('ha:notify')
 
 export async function extractNotifiers(svcs: HassServices) {
@@ -28,7 +24,11 @@ export async function extractNotifiers(svcs: HassServices) {
   )
 }
 
-export function createNotifyServer(connection: Connection) {
+export function createNotifyServer(
+  connection: Connection,
+  opts?: { testMode: boolean }
+) {
+  const testMode = opts?.testMode ?? false
   const server = new McpServer({
     name: 'notify',
     version: pkg.version,
@@ -36,7 +36,7 @@ export function createNotifyServer(connection: Connection) {
 
   server.tool(
     'list-notify-targets',
-    'List all Home Assistant devices that can receive notifications',
+    'List all Home Assistant devices that can receive notifications. Always call this before calling send-notification.',
     {},
     async () => {
       try {
@@ -63,12 +63,21 @@ export function createNotifyServer(connection: Connection) {
     async ({ target, message, title }) => {
       try {
         d('send-notification: %s %s', target, message)
-        await connection.sendMessagePromise({
-          type: 'call_service',
-          domain: 'notify',
-          service: target,
-          service_data: { message, ...(title ? { title } : {}) },
-        })
+        if (testMode) {
+          const svcs = await fetchServices(connection)
+          const notifiers = await extractNotifiers(svcs)
+
+          if (!notifiers.find((n) => n.name === target)) {
+            throw new Error('Target not found')
+          }
+        } else {
+          await connection.sendMessagePromise({
+            type: 'call_service',
+            domain: 'notify',
+            service: target,
+            service_data: { message, ...(title ? { title } : {}) },
+          })
+        }
 
         return {
           content: [{ type: 'text', text: 'Notification sent' }],
@@ -84,6 +93,10 @@ export function createNotifyServer(connection: Connection) {
 
   return server
 }
+
+const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
+const isMainModule =
+  import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
 
 async function main() {
   const connection = await connectToHAWebsocket()

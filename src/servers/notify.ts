@@ -17,7 +17,7 @@ export async function extractNotifiers(svcs: HassServices) {
       }
 
       const service = svcs.notify[k]
-      acc.push({ name: service.name!, description: service.description! })
+      acc.push({ name: k, description: service.name! })
       return acc
     },
     [] as { name: string; description: string }[]
@@ -36,11 +36,11 @@ export function createNotifyServer(connection: Connection) {
     {},
     async () => {
       const svcs = await fetchServices(connection)
+      const resp = await extractNotifiers(svcs)
 
+      console.log('Notifiers:', resp)
       return {
-        content: [
-          { type: 'text', text: JSON.stringify(extractNotifiers(svcs)) },
-        ],
+        content: [{ type: 'text', text: JSON.stringify(resp) }],
       }
     }
   )

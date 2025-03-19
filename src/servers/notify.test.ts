@@ -10,5 +10,6 @@ describe('the notify server', () => {
     const result = await extractNotifiers(svcs)
 
     expect(result.length).toBeGreaterThan(0)
+    console.log('Notifiers:', result)
   })
 })

@@ -23,7 +23,7 @@ export function asyncMap<T, TRet>(
 
 export async function asyncReduce<T, TAcc>(
   array: T[],
-  selector: (acc: TAcc, x: T) => TAcc,
+  selector: (acc: TAcc, x: T) => Promise<TAcc>,
   seed: TAcc
 ) {
   let acc = seed

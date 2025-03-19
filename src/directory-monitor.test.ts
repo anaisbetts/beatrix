@@ -6,8 +6,9 @@ import { mkdtemp, writeFile, mkdir, rm } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { firstValueFrom } from 'rxjs'
-import { take, toArray, timeout } from 'rxjs/operators'
+import { take, timeout } from 'rxjs/operators'
 import { delay } from './promise-extras'
+import { describe, beforeEach, afterEach, it, expect } from 'bun:test'
 
 describe('DirectoryMonitor', () => {
   let tempDir: string

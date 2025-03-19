@@ -5,7 +5,6 @@ import {
   Observable,
   repeat,
   share,
-  startWith,
   take,
 } from 'rxjs'
 import { watch } from 'fs'

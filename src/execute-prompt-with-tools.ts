@@ -8,7 +8,7 @@ import {
   ContentBlockParam,
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { asyncReduce } from './promise-extras'
+import { asyncReduce, asyncMap } from './promise-extras'
 import debug from 'debug'
 
 const d = debug('ha:anthropic')
@@ -149,7 +149,7 @@ export async function executePromptWithTools(
     }
 
     const toolCalls = response.content.filter((msg) => msg.type === 'tool_use')
-    d('Processing %d tool calls', toolCalls.length)
+    d('Processing %d tool calls in parallel', toolCalls.length)
 
     // Estimate token usage for tool calls - this is approximate
     // We add a fixed overhead per tool call plus the estimated content size
@@ -159,32 +159,56 @@ export async function executePromptWithTools(
       return sum + 20 + inputSize
     }, 0)
     usedTokens += estimatedToolCallTokens
-
-    const toolResults = await asyncReduce(
+    
+    // Execute tool calls in parallel
+    const toolResultsMap = await asyncMap(
       toolCalls,
-      async (acc, toolCall) => {
-        d('Calling tool: %o', toolCall)
-        const toolResp = await client.callTool({
-          name: toolCall.name,
-          arguments: toolCall.input as Record<string, any>,
-        })
-
-        // Estimate token usage for tool results
-        const resultContent = toolResp.content as string
-        if (resultContent) {
-          // Rough estimate: ~4 chars per token
-          usedTokens += (resultContent.length / 4) + 10 // overhead
+      async (toolCall) => {
+        d('Calling tool: %s', toolCall.name)
+        try {
+          const toolResp = await client.callTool({
+            name: toolCall.name,
+            arguments: toolCall.input as Record<string, any>,
+          })
+          
+          const resultContent = toolResp.content as string
+          return {
+            type: 'tool_result' as const,
+            tool_use_id: toolCall.id,
+            content: resultContent ?? [],
+            // Return token estimation for accounting
+            tokenEstimate: resultContent ? (resultContent.length / 4) + 10 : 10,
+          }
+        } catch (err) {
+          d('Error executing tool %s: %o', toolCall.name, err)
+          const errorMsg = `Error executing tool ${toolCall.name}: ${err instanceof Error ? err.message : String(err)}`
+          return {
+            type: 'tool_result' as const,
+            tool_use_id: toolCall.id,
+            content: errorMsg,
+            tokenEstimate: errorMsg.length / 4 + 10,
+          }
         }
-
-        acc.push({
-          type: 'tool_result',
-          tool_use_id: toolCall.id,
-          content: resultContent ?? [],
-        })
-        return acc
       },
-      [] as ContentBlockParam[]
+      10 // Allow up to 10 concurrent tool executions
     )
+    
+    // Convert Map to array and update token usage
+    const toolResults: ContentBlockParam[] = []
+    let totalToolTokens = 0
+    
+    toolResultsMap.forEach((result, _) => {
+      toolResults.push({
+        type: result.type,
+        tool_use_id: result.tool_use_id,
+        content: result.content,
+      })
+      
+      totalToolTokens += result.tokenEstimate
+    })
+    
+    usedTokens += totalToolTokens
+    d('Completed %d parallel tool calls, estimated %d tokens', toolCalls.length, totalToolTokens)
 
     msgs.push({ role: 'user', content: toolResults })
     

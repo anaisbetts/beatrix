@@ -1,36 +1,10 @@
-import {
-  Connection,
-  createConnection,
-  createLongLivedTokenAuth,
-  HassEventBase,
-} from 'home-assistant-js-websocket'
-import { Observable, Subscription } from 'rxjs'
+import { configDotenv } from 'dotenv'
+import { connectToHAWebsocket, eventsObservable } from './ha-ws-api'
 
-function eventsObservable(connection: Connection): Observable<HassEventBase> {
-  return new Observable((subj) => {
-    const disp = new Subscription()
-
-    connection
-      .subscribeEvents<HassEventBase>((ev) => subj.next(ev))
-      .then(
-        (unsub) => disp.add(() => unsub()),
-        (err) => subj.error(err)
-      )
-
-    return disp
-  })
-}
+configDotenv()
 
 async function main() {
-  const auth = createLongLivedTokenAuth(
-    process.env.HA_BASE_URL!,
-    process.env.HA_TOKEN!
-  )
-
-  console.log('create')
-  const connection = await createConnection({ auth })
-  connection.addEventListener('ready', () => console.log('readyyyyy'))
-  console.log('Connected')
+  const connection = await connectToHAWebsocket()
 
   const events = eventsObservable(connection)
   events.subscribe((ev) => {

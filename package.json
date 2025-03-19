@@ -12,6 +12,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
     "@types/ws": "^8.18.0",
     "axios": "^1.8.3",
     "debug": "^4.4.0",

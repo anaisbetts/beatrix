@@ -3,7 +3,7 @@ import {
   HADetailedSensorReading,
   HAThinSensorReading,
   Scene,
-} from './home-assistant-api'
+} from './ha-rest-api'
 
 export const testOneFrom: FriendlyStateEntity = {
   entity: 'light.office_lamp_left',

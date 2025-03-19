@@ -3,7 +3,7 @@ import {
   FriendlyStateEntity,
   HAAttributeList,
   Scene,
-} from './home-assistant-api'
+} from './ha-rest-api'
 
 import { defaultValueFromExample, lerp } from './math'
 import { asyncMap } from './promise-extras'

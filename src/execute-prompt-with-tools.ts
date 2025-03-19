@@ -8,7 +8,12 @@ import {
   ContentBlockParam,
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { asyncReduce, asyncMap, withTimeout, TimeoutError } from './promise-extras'
+import {
+  asyncReduce,
+  asyncMap,
+  withTimeout,
+  TimeoutError,
+} from './promise-extras'
 import debug from 'debug'
 
 const d = debug('ha:anthropic')
@@ -20,7 +25,7 @@ const MODEL_TOKEN_LIMITS: Record<string, number> = {
   'claude-3-opus-20240229': 200000,
   'claude-3-haiku-20240307': 200000,
   'claude-3-sonnet-20240229': 200000,
-  'default': 150000
+  default: 150000,
 }
 
 // Reserve tokens for model responses
@@ -106,28 +111,39 @@ export async function executePromptWithTools(
   const modelLimit = MODEL_TOKEN_LIMITS[modelName] || MODEL_TOKEN_LIMITS.default
   let tokenBudget = maxTokens || modelLimit
   let usedTokens = 0
-  
+
   // Track conversation and tool use to avoid infinite loops
   let iterationCount = 0
-  
+
   // We're gonna keep looping until there are no more tool calls to satisfy
   while (iterationCount < MAX_ITERATIONS) {
     iterationCount++
-    
+
     // Calculate response token limit for this iteration
-    const responseTokens = Math.min(RESPONSE_TOKEN_RESERVE, (tokenBudget - usedTokens) / 2)
-    
+    const responseTokens = Math.min(
+      RESPONSE_TOKEN_RESERVE,
+      (tokenBudget - usedTokens) / 2
+    )
+
     // Check if we have enough tokens left for a meaningful response
     if (responseTokens < 1000) {
-      d('Token budget too low for meaningful response. Used: %d/%d', usedTokens, tokenBudget)
+      d(
+        'Token budget too low for meaningful response. Used: %d/%d',
+        usedTokens,
+        tokenBudget
+      )
       break
     }
-    
-    d('Prompting iteration %d: %d tokens used, %d tokens remaining', 
-      iterationCount, usedTokens, tokenBudget - usedTokens)
+
+    d(
+      'Prompting iteration %d: %d tokens used, %d tokens remaining',
+      iterationCount,
+      usedTokens,
+      tokenBudget - usedTokens
+    )
 
     // Apply timeout to the Anthropic API call
-    let response;
+    let response
     try {
       response = await withTimeout(
         anthropic.messages.create({
@@ -146,10 +162,12 @@ export async function executePromptWithTools(
         // Add a system message about the timeout and continue to next iteration
         msgs.push({
           role: 'assistant',
-          content: [{
-            type: 'text',
-            text: `I apologize, but the AI service took too long to respond. Let's continue with what we have so far.`
-          }]
+          content: [
+            {
+              type: 'text',
+              text: `I apologize, but the AI service took too long to respond. Let's continue with what we have so far.`,
+            },
+          ],
         })
         continue
       } else {
@@ -162,10 +180,12 @@ export async function executePromptWithTools(
     // Track token usage from response
     if (response.usage) {
       usedTokens += response.usage.input_tokens + response.usage.output_tokens
-      d('Token usage for this request: %d input, %d output, %d total', 
-        response.usage.input_tokens, 
+      d(
+        'Token usage for this request: %d input, %d output, %d total',
+        response.usage.input_tokens,
         response.usage.output_tokens,
-        response.usage.input_tokens + response.usage.output_tokens)
+        response.usage.input_tokens + response.usage.output_tokens
+      )
     }
 
     msgs.push({
@@ -188,7 +208,7 @@ export async function executePromptWithTools(
       return sum + 20 + inputSize
     }, 0)
     usedTokens += estimatedToolCallTokens
-    
+
     // Execute tool calls in parallel with timeouts
     const toolResultsMap = await asyncMap(
       toolCalls,
@@ -204,18 +224,18 @@ export async function executePromptWithTools(
             TOOL_EXECUTION_TIMEOUT,
             `Tool execution '${toolCall.name}' timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
           )
-          
+
           const resultContent = toolResp.content as string
           return {
             type: 'tool_result' as const,
             tool_use_id: toolCall.id,
             content: resultContent ?? [],
             // Return token estimation for accounting
-            tokenEstimate: resultContent ? (resultContent.length / 4) + 10 : 10,
+            tokenEstimate: resultContent ? resultContent.length / 4 + 10 : 10,
           }
         } catch (err) {
           // Handle both timeout errors and other execution errors
-          let errorMsg = '';
+          let errorMsg = ''
           if (err instanceof TimeoutError) {
             d('Tool execution timed out: %s', toolCall.name)
             errorMsg = `Tool '${toolCall.name}' execution timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
@@ -223,7 +243,7 @@ export async function executePromptWithTools(
             d('Error executing tool %s: %o', toolCall.name, err)
             errorMsg = `Error executing tool ${toolCall.name}: ${err instanceof Error ? err.message : String(err)}`
           }
-          
+
           return {
             type: 'tool_result' as const,
             tool_use_id: toolCall.id,
@@ -234,34 +254,46 @@ export async function executePromptWithTools(
       },
       10 // Allow up to 10 concurrent tool executions
     )
-    
+
     // Convert Map to array and update token usage
     const toolResults: ContentBlockParam[] = []
     let totalToolTokens = 0
-    
+
     toolResultsMap.forEach((result, _) => {
       toolResults.push({
         type: result.type,
         tool_use_id: result.tool_use_id,
         content: result.content,
       })
-      
+
       totalToolTokens += result.tokenEstimate
     })
-    
+
     usedTokens += totalToolTokens
-    d('Completed %d parallel tool calls, estimated %d tokens', toolCalls.length, totalToolTokens)
+    d(
+      'Completed %d parallel tool calls, estimated %d tokens',
+      toolCalls.length,
+      totalToolTokens
+    )
 
     msgs.push({ role: 'user', content: toolResults })
-    
+
     // Check if we're approaching token limit
     if (usedTokens > tokenBudget * 0.9) {
-      d('Approaching token budget limit: %d/%d used (90%)', usedTokens, tokenBudget)
+      d(
+        'Approaching token budget limit: %d/%d used (90%)',
+        usedTokens,
+        tokenBudget
+      )
       break
     }
   }
 
-  d('Conversation complete. Used %d/%d tokens (%.1f%%)', 
-    usedTokens, tokenBudget, (usedTokens / tokenBudget) * 100)
+  d(
+    'Conversation complete. Used %d/%d tokens (%.1f%%)',
+    usedTokens,
+    tokenBudget,
+    (usedTokens / tokenBudget) * 100
+  )
   return msgs
 }

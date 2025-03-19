@@ -43,7 +43,7 @@ export function delay(ms: number) {
 /**
  * Wraps a promise with a timeout. If the promise doesn't resolve within the specified timeout,
  * the returned promise will reject with a TimeoutError.
- * 
+ *
  * @param promise The promise to wrap with a timeout
  * @param timeoutMs The timeout duration in milliseconds
  * @param errorMessage Optional custom error message
@@ -66,11 +66,11 @@ export function withTimeout<T>(
       const msg = errorMessage || `Operation timed out after ${timeoutMs}ms`
       reject(new TimeoutError(msg))
     }, timeoutMs)
-    
+
     // Ensure the timeout is cleared if the promise resolves before timeout
     promise.finally(() => clearTimeout(timeoutId))
   })
-  
+
   return Promise.race([promise, timeoutPromise])
 }
 

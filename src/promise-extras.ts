@@ -40,6 +40,40 @@ export function delay(ms: number) {
   })
 }
 
+/**
+ * Wraps a promise with a timeout. If the promise doesn't resolve within the specified timeout,
+ * the returned promise will reject with a TimeoutError.
+ * 
+ * @param promise The promise to wrap with a timeout
+ * @param timeoutMs The timeout duration in milliseconds
+ * @param errorMessage Optional custom error message
+ * @returns A new promise that will resolve with the original promise's result or reject with a TimeoutError
+ */
+export class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'TimeoutError'
+  }
+}
+
+export function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage?: string
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    const timeoutId = setTimeout(() => {
+      const msg = errorMessage || `Operation timed out after ${timeoutMs}ms`
+      reject(new TimeoutError(msg))
+    }, timeoutMs)
+    
+    // Ensure the timeout is cleared if the promise resolves before timeout
+    promise.finally(() => clearTimeout(timeoutId))
+  })
+  
+  return Promise.race([promise, timeoutPromise])
+}
+
 export function retryPromise<T>(
   func: () => Promise<T>,
   retries = 3

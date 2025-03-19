@@ -8,7 +8,7 @@ import {
   ContentBlockParam,
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { asyncReduce, asyncMap } from './promise-extras'
+import { asyncReduce, asyncMap, withTimeout, TimeoutError } from './promise-extras'
 import debug from 'debug'
 
 const d = debug('ha:anthropic')
@@ -26,6 +26,10 @@ const MODEL_TOKEN_LIMITS: Record<string, number> = {
 // Reserve tokens for model responses
 const RESPONSE_TOKEN_RESERVE = 4000
 const MAX_ITERATIONS = 10 // Safety limit for iterations
+
+// Timeout configuration (in milliseconds)
+const ANTHROPIC_API_TIMEOUT = 30000 // 30 seconds for Anthropic API calls
+const TOOL_EXECUTION_TIMEOUT = 10000 // 10 seconds for tool execution
 
 export function connectBuiltinServers(
   client: Client,
@@ -122,13 +126,38 @@ export async function executePromptWithTools(
     d('Prompting iteration %d: %d tokens used, %d tokens remaining', 
       iterationCount, usedTokens, tokenBudget - usedTokens)
 
-    const response = await anthropic.messages.create({
-      model: modelName,
-      max_tokens: responseTokens,
-      messages: msgs,
-      tools: anthropicTools,
-      tool_choice: { type: 'auto' },
-    })
+    // Apply timeout to the Anthropic API call
+    let response;
+    try {
+      response = await withTimeout(
+        anthropic.messages.create({
+          model: modelName,
+          max_tokens: responseTokens,
+          messages: msgs,
+          tools: anthropicTools,
+          tool_choice: { type: 'auto' },
+        }),
+        ANTHROPIC_API_TIMEOUT,
+        `Anthropic API call timed out after ${ANTHROPIC_API_TIMEOUT}ms`
+      )
+    } catch (err) {
+      if (err instanceof TimeoutError) {
+        d('Anthropic API call timed out: %s', err.message)
+        // Add a system message about the timeout and continue to next iteration
+        msgs.push({
+          role: 'assistant',
+          content: [{
+            type: 'text',
+            text: `I apologize, but the AI service took too long to respond. Let's continue with what we have so far.`
+          }]
+        })
+        continue
+      } else {
+        // For other errors, log and rethrow
+        d('Error in Anthropic API call: %o', err)
+        throw err
+      }
+    }
 
     // Track token usage from response
     if (response.usage) {
@@ -160,16 +189,21 @@ export async function executePromptWithTools(
     }, 0)
     usedTokens += estimatedToolCallTokens
     
-    // Execute tool calls in parallel
+    // Execute tool calls in parallel with timeouts
     const toolResultsMap = await asyncMap(
       toolCalls,
       async (toolCall) => {
         d('Calling tool: %s', toolCall.name)
         try {
-          const toolResp = await client.callTool({
-            name: toolCall.name,
-            arguments: toolCall.input as Record<string, any>,
-          })
+          // Apply timeout to each tool call
+          const toolResp = await withTimeout(
+            client.callTool({
+              name: toolCall.name,
+              arguments: toolCall.input as Record<string, any>,
+            }),
+            TOOL_EXECUTION_TIMEOUT,
+            `Tool execution '${toolCall.name}' timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
+          )
           
           const resultContent = toolResp.content as string
           return {
@@ -180,8 +214,16 @@ export async function executePromptWithTools(
             tokenEstimate: resultContent ? (resultContent.length / 4) + 10 : 10,
           }
         } catch (err) {
-          d('Error executing tool %s: %o', toolCall.name, err)
-          const errorMsg = `Error executing tool ${toolCall.name}: ${err instanceof Error ? err.message : String(err)}`
+          // Handle both timeout errors and other execution errors
+          let errorMsg = '';
+          if (err instanceof TimeoutError) {
+            d('Tool execution timed out: %s', toolCall.name)
+            errorMsg = `Tool '${toolCall.name}' execution timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
+          } else {
+            d('Error executing tool %s: %o', toolCall.name, err)
+            errorMsg = `Error executing tool ${toolCall.name}: ${err instanceof Error ? err.message : String(err)}`
+          }
+          
           return {
             type: 'tool_result' as const,
             tool_use_id: toolCall.id,

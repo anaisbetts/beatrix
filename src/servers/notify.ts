@@ -5,7 +5,9 @@ import { Connection } from 'home-assistant-js-websocket'
 import { connectToHAWebsocket, fetchServices } from '../ha-ws-api'
 import { configDotenv } from 'dotenv'
 
-const isMainModule = import.meta.url === `file://${process.argv[1]}`
+const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
+const check = `${prefix}${process.argv[1].replaceAll('\\', '/')}`
+const isMainModule = import.meta.url === check
 
 export function createNotifyServer(connection: Connection) {
   const server = new McpServer({
@@ -45,7 +47,6 @@ async function main() {
   const connection = await connectToHAWebsocket()
   const server = createNotifyServer(connection)
 
-  console.log('Starting server')
   server.connect(new StdioServerTransport())
 }
 

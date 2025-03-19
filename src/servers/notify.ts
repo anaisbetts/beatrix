@@ -1,13 +1,28 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Connection } from 'home-assistant-js-websocket'
+import { Connection, HassServices } from 'home-assistant-js-websocket'
 import { connectToHAWebsocket, fetchServices } from '../ha-ws-api'
 import { configDotenv } from 'dotenv'
 
 const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
 const check = `${prefix}${process.argv[1].replaceAll('\\', '/')}`
 const isMainModule = import.meta.url === check
+
+export async function extractNotifiers(svcs: HassServices) {
+  return Object.keys(svcs.notify).reduce(
+    (acc, k) => {
+      if (k === 'persistent_notification' || k === 'send_message') {
+        return acc
+      }
+
+      const service = svcs.notify[k]
+      acc.push({ name: service.name!, description: service.description! })
+      return acc
+    },
+    [] as { name: string; description: string }[]
+  )
+}
 
 export function createNotifyServer(connection: Connection) {
   const server = new McpServer({
@@ -17,26 +32,16 @@ export function createNotifyServer(connection: Connection) {
 
   server.tool(
     'list-notify-targets',
-    'List all devices that can receive notifications',
+    'List all Home Assistant devices that can receive notifications',
     {},
     async () => {
       const svcs = await fetchServices(connection)
 
-      const result = Object.keys(svcs.notify.Services).reduce(
-        (acc, k) => {
-          if (k === 'persistent_notification' || k === 'send_message') {
-            return acc
-          }
-
-          const service = svcs.notify.Services[k]
-
-          acc[k] = { name: service.name, description: service.description }
-          return acc
-        },
-        {} as Record<string, { name: string; description: string }>
-      )
-
-      return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+      return {
+        content: [
+          { type: 'text', text: JSON.stringify(extractNotifiers(svcs)) },
+        ],
+      }
     }
   )
 

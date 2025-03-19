@@ -35,7 +35,7 @@ export async function fetchServices(connection: Connection) {
   })
 
   cache.set('services', ret)
-  return ret
+  return ret as HassServices
 }
 
 export function eventsObservable(

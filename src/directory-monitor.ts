@@ -1,4 +1,13 @@
-import { Observable } from 'rxjs'
+import {
+  bufferTime,
+  concatMap,
+  map,
+  Observable,
+  repeat,
+  share,
+  startWith,
+  take,
+} from 'rxjs'
 import { watch } from 'fs'
 import { join } from 'path'
 import debug from 'debug'
@@ -139,38 +148,16 @@ export function createBufferedDirectoryMonitor(
   options: DirectoryMonitorOptions,
   debounceTimeMs = 500
 ): Observable<string[]> {
-  const monitor = createDirectoryMonitor(options)
+  const monitor = createDirectoryMonitor(options).pipe(share())
 
-  return new Observable<string[]>((subscriber) => {
-    // Track files changed during debounce period
-    const changedFiles = new Set<string>()
-    let debounceTimer: Timer | null = null
-
-    // Subscribe to raw file changes
-    const subscription = monitor.subscribe((filePath) => {
-      changedFiles.add(filePath)
-
-      // Reset the debounce timer
-      if (debounceTimer) {
-        clearTimeout(debounceTimer)
-      }
-
-      // Set new debounce timer
-      debounceTimer = setTimeout(() => {
-        if (changedFiles.size > 0) {
-          d('Emitting batch of %d changed files', changedFiles.size)
-          subscriber.next(Array.from(changedFiles))
-          changedFiles.clear()
-        }
-      }, debounceTimeMs)
-    })
-
-    // Return cleanup function
-    return () => {
-      subscription.unsubscribe()
-      if (debounceTimer) {
-        clearTimeout(debounceTimer)
-      }
-    }
-  })
+  return monitor.pipe(
+    concatMap((first) =>
+      monitor.pipe(
+        bufferTime(debounceTimeMs),
+        take(1),
+        map((files) => [first, ...files])
+      )
+    ),
+    repeat()
+  )
 }

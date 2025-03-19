@@ -8,12 +8,7 @@ import {
   ContentBlockParam,
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import {
-  asyncReduce,
-  asyncMap,
-  withTimeout,
-  TimeoutError,
-} from './promise-extras'
+import { asyncMap, withTimeout, TimeoutError } from './promise-extras'
 import debug from 'debug'
 
 const d = debug('ha:anthropic')
@@ -259,7 +254,7 @@ export async function executePromptWithTools(
     const toolResults: ContentBlockParam[] = []
     let totalToolTokens = 0
 
-    toolResultsMap.forEach((result, _) => {
+    toolResultsMap.forEach((result) => {
       toolResults.push({
         type: result.type,
         tool_use_id: result.tool_use_id,

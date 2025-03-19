@@ -4,10 +4,14 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Connection, HassServices } from 'home-assistant-js-websocket'
 import { connectToHAWebsocket, fetchServices } from '../ha-ws-api'
 import { configDotenv } from 'dotenv'
+import { z } from 'zod'
+import debug from 'debug'
 
 const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
 const check = `${prefix}${process.argv[1].replaceAll('\\', '/')}`
 const isMainModule = import.meta.url === check
+
+const d = debug('ha:notify')
 
 export async function extractNotifiers(svcs: HassServices) {
   return Object.keys(svcs.notify).reduce(
@@ -35,12 +39,45 @@ export function createNotifyServer(connection: Connection) {
     'List all Home Assistant devices that can receive notifications',
     {},
     async () => {
-      const svcs = await fetchServices(connection)
-      const resp = await extractNotifiers(svcs)
+      try {
+        const svcs = await fetchServices(connection)
+        const resp = await extractNotifiers(svcs)
 
-      console.log('Notifiers:', resp)
-      return {
-        content: [{ type: 'text', text: JSON.stringify(resp) }],
+        d('list-notify-targets: %o', resp)
+        return {
+          content: [{ type: 'text', text: JSON.stringify(resp) }],
+        }
+      } catch (err: any) {
+        return {
+          content: [{ type: 'text', text: err.toString() }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'send-notification',
+    'Send a notification to a Home Assistant device',
+    { target: z.string(), message: z.string(), title: z.string().optional() },
+    async ({ target, message, title }) => {
+      try {
+        d('send-notification: %s %s', target, message)
+        await connection.sendMessagePromise({
+          type: 'call_service',
+          domain: 'notify',
+          service: target,
+          service_data: { message, ...(title ? { title } : {}) },
+        })
+
+        return {
+          content: [{ type: 'text', text: 'Notification sent' }],
+        }
+      } catch (e: any) {
+        return {
+          content: [{ type: 'text', text: e.toString() }],
+          isError: true,
+        }
       }
     }
   )

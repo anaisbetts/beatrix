@@ -19,7 +19,7 @@ async function main() {
 
   const msgs = await executePromptWithTools(
     connection,
-    'What notification sources are there'
+    'Send a notification to the nVidia Shield, with the title "Foo" and the message "bar"'
   )
 
   console.log(messagesToString(msgs))

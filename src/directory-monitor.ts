@@ -64,30 +64,45 @@ export function createDirectoryMonitor(options: DirectoryMonitorOptions): Observ
 function shouldIncludeFile(filePath: string, options: DirectoryMonitorOptions): boolean {
   const { include, exclude } = options;
   
+  // Normalize the path for pattern matching (use just the filename for simpler patterns)
+  const pathForMatching = options.fullPath ? filePath.split('/').pop() || '' : filePath;
+  d('Checking file %s against patterns (using %s for matching)', filePath, pathForMatching);
+  
   // If include patterns are specified, file must match at least one
   if (include && include.length > 0) {
-    const matchesInclude = include.some(pattern => 
-      matchGlobPattern(filePath, pattern)
-    );
+    const matchesInclude = include.some(pattern => {
+      const match = matchGlobPattern(pathForMatching, pattern);
+      d('  Include pattern %s: %s', pattern, match ? 'MATCH' : 'no match');
+      return match;
+    });
     
-    if (!matchesInclude) return false;
+    if (!matchesInclude) {
+      d('  File excluded: no include patterns matched');
+      return false;
+    }
   }
   
   // If exclude patterns are specified, file must not match any
   if (exclude && exclude.length > 0) {
-    const matchesExclude = exclude.some(pattern => 
-      matchGlobPattern(filePath, pattern)
-    );
+    const matchesExclude = exclude.some(pattern => {
+      const match = matchGlobPattern(pathForMatching, pattern);
+      d('  Exclude pattern %s: %s', pattern, match ? 'MATCH' : 'no match');
+      return match;
+    });
     
-    if (matchesExclude) return false;
+    if (matchesExclude) {
+      d('  File excluded: matched an exclude pattern');
+      return false;
+    }
   }
   
+  d('  File included: passed all pattern checks');
   return true;
 }
 
 /**
  * Simple glob pattern matching
- * Supports basic wildcard patterns like *.js, **/*.ts, etc.
+ * Supports basic wildcard patterns like "*.js" and recursive patterns
  */
 function matchGlobPattern(filePath: string, pattern: string): boolean {
   // Convert glob pattern to regex

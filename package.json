@@ -3,10 +3,18 @@
   "version": "0.1.0",
   "module": "./src/index.ts",
   "type": "module",
+  "scripts": {
+    "lint": "eslint src/**/*.ts",
+    "fix": "eslint --fix src/**/*.ts && prettier --write \"src/**/*.{ts,tsx}\""
+  },
   "devDependencies": {
+    "@eslint/js": "^9.22.0",
     "@types/bun": "^1.2.5",
     "@types/debug": "^4.1.12",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
     "bun-types": "latest",
+    "eslint": "^9.22.0",
     "prettier": "^3.5.3"
   },
   "peerDependencies": {

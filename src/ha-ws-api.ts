@@ -25,9 +25,11 @@ const cache = new LRUCache<string, any>({
   ttlAutopurge: false,
 })
 
-export async function fetchServices(connection: Connection) {
+export async function fetchServices(
+  connection: Connection
+): Promise<HassServices> {
   if (cache.has('services')) {
-    return cache.get('services')
+    return cache.get('services') as HassServices
   }
 
   const ret = await connection.sendMessagePromise<HassServices>({
@@ -35,7 +37,7 @@ export async function fetchServices(connection: Connection) {
   })
 
   cache.set('services', ret)
-  return ret as HassServices
+  return ret
 }
 
 export function eventsObservable(
@@ -47,7 +49,7 @@ export function eventsObservable(
     connection
       .subscribeEvents<HassEventBase>((ev) => subj.next(ev))
       .then(
-        (unsub) => disp.add(() => unsub()),
+        (unsub) => disp.add(() => void unsub()),
         (err) => subj.error(err)
       )
 

@@ -1,4 +1,4 @@
-import { Observable, Subject } from 'rxjs'
+import { Observable } from 'rxjs'
 import { watch } from 'fs'
 import { join } from 'path'
 import debug from 'debug'
@@ -139,7 +139,6 @@ export function createBufferedDirectoryMonitor(
   options: DirectoryMonitorOptions,
   debounceTimeMs = 500
 ): Observable<string[]> {
-  const fileChanges = new Subject<string>()
   const monitor = createDirectoryMonitor(options)
 
   return new Observable<string[]>((subscriber) => {

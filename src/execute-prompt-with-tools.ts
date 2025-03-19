@@ -44,8 +44,8 @@ export function connectBuiltinServers(
 
   servers.forEach((server) => {
     const [cli, srv] = InMemoryTransport.createLinkedPair()
-    client.connect(cli)
-    server.connect(srv)
+    void client.connect(cli)
+    void server.connect(srv)
   })
 }
 

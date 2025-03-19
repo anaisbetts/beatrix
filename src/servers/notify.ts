@@ -102,7 +102,7 @@ async function main() {
   const connection = await connectToHAWebsocket()
   const server = createNotifyServer(connection)
 
-  server.connect(new StdioServerTransport())
+  await server.connect(new StdioServerTransport())
 }
 
 if (isMainModule) {

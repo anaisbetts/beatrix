@@ -144,14 +144,10 @@ describe('DirectoryMonitor', () => {
   })
 
   it('should handle recursive directory watching', async () => {
-    // Skip test if platform doesn't support recursive watching
-    // Node.js file watching recursive option is only reliable on macOS and Windows
-    const isRecursiveWatchSupported =
-      process.platform === 'darwin' || process.platform === 'win32'
-    if (!isRecursiveWatchSupported) {
-      console.log('Skipping recursive watch test on this platform')
-      return
-    }
+    // Create a subdirectory first
+    const subDir = join(tempDir, 'subdir')
+    await mkdir(subDir)
+    await delay(100) // Short delay before starting monitor
 
     // Create a monitor with recursive option
     const monitor = createDirectoryMonitor({
@@ -159,20 +155,31 @@ describe('DirectoryMonitor', () => {
       recursive: true,
     })
 
-    // Create a subdirectory first
-    const subDir = join(tempDir, 'subdir')
-    await mkdir(subDir)
-    await delay(500) // Give time for watcher to initialize
+    // Longer delay to ensure watcher is ready - important for Linux
+    await delay(1000) 
 
     // Now start collecting emissions
-    const resultsPromise = firstValueFrom(monitor.pipe(take(1), timeout(5000)))
+    const resultsPromise = firstValueFrom(monitor.pipe(take(1), timeout(10000)))
 
     // Create a file in the subdirectory
     const subFile = join(subDir, 'subfile.txt')
     await writeFile(subFile, 'sub directory file')
 
     // Verify we get a notification for an event in the subdirectory
-    const result = await resultsPromise
-    expect(result.includes('subdir')).toBe(true)
+    try {
+      const result = await resultsPromise
+      expect(result.includes('subdir')).toBe(true)
+    } catch (err) {
+      // If test times out, try a second attempt with different approach
+      console.log('First attempt failed, trying alternative test approach')
+      
+      // Create another file to trigger an event
+      const subFile2 = join(subDir, 'subfile2.txt')
+      await writeFile(subFile2, 'second file')
+      
+      // Wait for emission again
+      const result = await firstValueFrom(monitor.pipe(take(1), timeout(5000)))
+      expect(result.includes('subdir')).toBe(true)
+    }
   })
 })

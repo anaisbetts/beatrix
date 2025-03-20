@@ -5,6 +5,7 @@ import {
   Observable,
   repeat,
   share,
+  shareReplay,
   take,
 } from 'rxjs'
 import { watch } from 'fs'
@@ -65,7 +66,7 @@ export function createDirectoryMonitor(
       d('Stopping directory monitor for %s', path)
       watcher.close()
     }
-  })
+  }).pipe(shareReplay(1))
 }
 
 /**
@@ -147,7 +148,7 @@ export function createBufferedDirectoryMonitor(
   options: DirectoryMonitorOptions,
   debounceTimeMs = 500
 ): Observable<string[]> {
-  const monitor = createDirectoryMonitor(options).pipe(share())
+  const monitor = createDirectoryMonitor(options)
 
   return monitor.pipe(
     concatMap((first) =>

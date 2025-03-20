@@ -4,8 +4,8 @@
   "module": "./src/index.ts",
   "type": "module",
   "scripts": {
-    "lint": "eslint src/**/*.ts && prettier --check \"src/**/*.{ts,tsx}\"",
-    "fix": "eslint --fix src/**/*.ts && prettier --write \"src/**/*.{ts,tsx}\""
+    "lint": "eslint && prettier --check",
+    "fix": "eslint --fix && prettier --write ."
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
@@ -17,7 +17,8 @@
     "@typescript-eslint/parser": "^8.26.1",
     "bun-types": "latest",
     "eslint": "^9.22.0",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

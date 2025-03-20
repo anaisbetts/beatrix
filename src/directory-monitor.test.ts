@@ -156,7 +156,7 @@ describe('DirectoryMonitor', () => {
     })
 
     // Longer delay to ensure watcher is ready - important for Linux
-    await delay(1000) 
+    await delay(1000)
 
     // Now start collecting emissions
     const resultsPromise = firstValueFrom(monitor.pipe(take(1), timeout(10000)))
@@ -169,14 +169,14 @@ describe('DirectoryMonitor', () => {
     try {
       const result = await resultsPromise
       expect(result.includes('subdir')).toBe(true)
-    } catch (err) {
+    } catch {
       // If test times out, try a second attempt with different approach
       console.log('First attempt failed, trying alternative test approach')
-      
+
       // Create another file to trigger an event
       const subFile2 = join(subDir, 'subfile2.txt')
       await writeFile(subFile2, 'second file')
-      
+
       // Wait for emission again
       const result = await firstValueFrom(monitor.pipe(take(1), timeout(5000)))
       expect(result.includes('subdir')).toBe(true)

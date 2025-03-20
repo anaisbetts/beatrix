@@ -68,7 +68,7 @@ export function withTimeout<T>(
     }, timeoutMs)
 
     // Ensure the timeout is cleared if the promise resolves before timeout
-    promise.finally(() => clearTimeout(timeoutId))
+    void promise.finally(() => clearTimeout(timeoutId))
   })
 
   return Promise.race([promise, timeoutPromise])

@@ -4,18 +4,21 @@
   "module": "./src/index.ts",
   "type": "module",
   "scripts": {
-    "lint": "eslint src/**/*.ts && prettier --check \"src/**/*.{ts,tsx}\"",
-    "fix": "eslint --fix src/**/*.ts && prettier --write \"src/**/*.{ts,tsx}\""
+    "lint": "eslint && prettier --check",
+    "fix": "eslint --fix && prettier --write ."
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
     "@types/bun": "^1.2.5",
     "@types/debug": "^4.1.12",
+    "@types/react": "^19.0.12",
+    "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
     "bun-types": "latest",
     "eslint": "^9.22.0",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -25,11 +28,16 @@
     "@modelcontextprotocol/sdk": "^1.7.0",
     "@types/ws": "^8.18.0",
     "axios": "^1.8.3",
+    "bun-plugin-tailwind": "^0.0.15",
+    "clsx": "^2.1.1",
     "debug": "^4.4.0",
     "dotenv": "^16.4.7",
     "home-assistant-js-websocket": "^9.4.0",
     "lru-cache": "^11.0.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "rxjs": "^7.8.2",
+    "tailwindcss": "^4.0.14",
     "ws": "^8.18.1",
     "zod": "^3.24.2"
   }

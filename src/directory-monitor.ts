@@ -4,7 +4,6 @@ import {
   map,
   Observable,
   repeat,
-  share,
   shareReplay,
   take,
 } from 'rxjs'

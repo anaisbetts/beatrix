@@ -4,7 +4,7 @@
   "module": "./src/index.ts",
   "type": "module",
   "scripts": {
-    "lint": "eslint && prettier --check",
+    "lint": "eslint && prettier --check .",
     "fix": "eslint --fix && prettier --write ."
   },
   "devDependencies": {

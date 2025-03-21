@@ -1,28 +1,19 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Connection, HassServices } from 'home-assistant-js-websocket'
-import { connectToHAWebsocket, fetchServices } from '../ha-ws-api'
+import { Connection } from 'home-assistant-js-websocket'
+import {
+  connectToHAWebsocket,
+  extractNotifiers,
+  fetchHAUserInformation,
+  fetchServices,
+  sendNotification,
+} from '../ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
 
 const d = debug('ha:notify')
-
-export async function extractNotifiers(svcs: HassServices) {
-  return Object.keys(svcs.notify).reduce(
-    (acc, k) => {
-      if (k === 'persistent_notification' || k === 'send_message') {
-        return acc
-      }
-
-      const service = svcs.notify[k]
-      acc.push({ name: k, description: service.name! })
-      return acc
-    },
-    [] as { name: string; description: string }[]
-  )
-}
 
 export function createNotifyServer(
   connection: Connection,
@@ -57,27 +48,97 @@ export function createNotifyServer(
   )
 
   server.tool(
+    'list-people',
+    'List all people registered in Home Assistant with their friendly names, as well as their list of notifiers that can be used to notify them',
+    {},
+    async () => {
+      try {
+        const info = await fetchHAUserInformation(connection)
+        d('list-people: %o', info)
+
+        return {
+          content: [{ type: 'text', text: JSON.stringify(info) }],
+        }
+      } catch (err: any) {
+        d('list-people Error: %s', err)
+        return {
+          content: [{ type: 'text', text: err.toString() }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'send-notification-to-person',
+    'Send a notification to all the devices a person owns. Get the list of people via the list-people tool first',
+    {
+      target: z
+        .string()
+        .describe(
+          'The name (NOT friendly_name) returned by the list-people tool'
+        ),
+      message: z.string(),
+      title: z.string().optional(),
+    },
+    async ({ target, message, title }) => {
+      try {
+        d('send-notification: %s %s', target, message)
+        const info = await fetchHAUserInformation(connection)
+        if (!info[target]) {
+          throw new Error(
+            `Person ${target} not found. Use the list-people tool to get the list of people`
+          )
+        }
+        const notifiers = info[target].notifiers
+        if (notifiers.length === 0) {
+          throw new Error("Person doesn't have any notifiers, sorry")
+        }
+
+        for (const notifier of notifiers) {
+          let lastErr: any
+          let errCount = 0
+
+          try {
+            await sendNotification(
+              testMode,
+              connection,
+              notifier,
+              message,
+              title
+            )
+          } catch (e) {
+            lastErr = e
+            errCount++
+          }
+
+          // NB: Sometimes people have stale device trackers / notifiers on their
+          // account, we should fail if we didn't send a notification to any of them
+          if (errCount == notifiers.length) {
+            throw lastErr
+          }
+        }
+
+        return {
+          content: [{ type: 'text', text: 'Notifications sent' }],
+        }
+      } catch (e: any) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify(e) }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
     'send-notification',
-    'Send a notification to a Home Assistant device',
+    'Send a notification to a specific Home Assistant device rather than a person. Get the list of devices via the list-notify-targets tool first',
     { target: z.string(), message: z.string(), title: z.string().optional() },
     async ({ target, message, title }) => {
       try {
         d('send-notification: %s %s', target, message)
-        if (testMode) {
-          const svcs = await fetchServices(connection)
-          const notifiers = await extractNotifiers(svcs)
-
-          if (!notifiers.find((n) => n.name === target)) {
-            throw new Error('Target not found')
-          }
-        } else {
-          await connection.sendMessagePromise({
-            type: 'call_service',
-            domain: 'notify',
-            service: target,
-            service_data: { message, ...(title ? { title } : {}) },
-          })
-        }
+        await sendNotification(testMode, connection, target, message, title)
 
         return {
           content: [{ type: 'text', text: 'Notification sent' }],

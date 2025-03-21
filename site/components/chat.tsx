@@ -20,6 +20,7 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const [sendPrompt, result, reset] = useCommand(async () => {
+    const before = performance.now()
     const response = await fetch(`${API_BASE_URL}/prompt`, {
       method: 'POST',
       headers: {
@@ -38,7 +39,11 @@ export default function Chat() {
       throw new Error(data.error)
     }
 
-    return data.messages as MessageParam[]
+    return {
+      messages: data.messages as MessageParam[],
+      duration: performance.now() - before,
+    }
+    return
   }, [input])
 
   const resetChat = useCallback(() => {
@@ -50,11 +55,12 @@ export default function Chat() {
     ok: (val) => {
       if (!val) return null
       return (
-        <>
-          {val.map((msg, index) => (
+        <div>
+          {val.messages.map((msg, index) => (
             <ChatMessage key={`message-${index}`} msg={msg} />
           ))}
-        </>
+          <div className="pt-2 italic">Request took {val.duration}ms</div>
+        </div>
       )
     },
     err: (e) => <div className="text-gray-400 italic">It didn't. {e}</div>,

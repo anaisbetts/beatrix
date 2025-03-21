@@ -53,10 +53,10 @@ export function messagesToString(msgs: MessageParam[]) {
             acc += subMsg.text
             break
           case 'tool_use':
-            acc += `Running tool: ${subMsg.name}\n`
+            acc += `Running tool: ${subMsg.name}, ${JSON.stringify(subMsg.input)}\n`
             break
           case 'tool_result':
-            acc += JSON.stringify(subMsg.content)
+            acc += `${JSON.stringify(subMsg.content)}\n`
             break
         }
       })
@@ -64,6 +64,7 @@ export function messagesToString(msgs: MessageParam[]) {
       acc += msg.content
     }
 
+    acc += '\n\n---\n\n'
     return acc
   }, '')
 }

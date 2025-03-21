@@ -15,6 +15,9 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
+    "paths": {
+      "@/*": ["./site/*"]
+    },
     "types": [
       "bun-types" // add Bun global
     ]

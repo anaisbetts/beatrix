@@ -14,7 +14,7 @@ async function main() {
 
   const conn = await connectToHAWebsocket()
 
-  const llm = new AnthropicLargeLanguageProvider()
+  const llm = new AnthropicLargeLanguageProvider(process.env.ANTHROPIC_API_KEY!)
   const tools = createBuiltinServers(conn)
 
   console.log('Starting server on port', port)

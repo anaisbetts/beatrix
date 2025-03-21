@@ -1,39 +1,34 @@
 import { configDotenv } from 'dotenv'
-import {
-  executePromptWithTools,
-  messagesToString,
-} from './execute-prompt-with-tools'
+
+import index from '../site/index.html'
+import { executePromptWithTools } from './execute-prompt-with-tools'
 import { connectToHAWebsocket } from './ha-ws-api'
 
 configDotenv()
 
 async function main() {
-  const connection = await connectToHAWebsocket()
-
-  /*
-  const events = eventsObservable(connection)
-  events.subscribe((ev) => {
-    console.log('Event:', ev)
-  })
-    */
-  const msgs = await executePromptWithTools(
-    connection,
-    'Send a notification to adeline and tell her that she is really super cool!'
-  )
-
-  console.log(messagesToString(msgs))
-
-  /*
   const port = process.env.PORT || '5432'
+
+  const conn = await connectToHAWebsocket()
 
   console.log('Starting server on port', port)
   Bun.serve({
     port: port,
     routes: {
       '/': index,
+      '/api/prompt': {
+        POST: async (req) => {
+          const { prompt } = await req.json()
+          try {
+            const resp = await executePromptWithTools(conn, prompt)
+            return Response.json({ prompt, messages: resp })
+          } catch (e) {
+            return Response.json({ prompt, error: JSON.stringify(e) })
+          }
+        },
+      },
     },
   })
-  */
 }
 
 main()

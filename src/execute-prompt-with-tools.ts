@@ -15,16 +15,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 
 const d = debug('ha:anthropic')
 
-// Model token limits and defaults
-const MODEL_TOKEN_LIMITS: Record<string, number> = {
-  'claude-3-5-sonnet-20240620': 200000,
-  'claude-3-7-sonnet-20250219': 200000,
-  'claude-3-opus-20240229': 200000,
-  'claude-3-haiku-20240307': 200000,
-  'claude-3-sonnet-20240229': 200000,
-  default: 150000,
-}
-
 // Reserve tokens for model responses
 const RESPONSE_TOKEN_RESERVE = 4000
 const MAX_ITERATIONS = 10 // Safety limit for iterations
@@ -43,6 +33,16 @@ interface LargeLanguageProvider {
 }
 
 export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
+  // Model token limits and defaults
+  static MODEL_TOKEN_LIMITS: Record<string, number> = {
+    'claude-3-5-sonnet-20240620': 200000,
+    'claude-3-7-sonnet-20250219': 200000,
+    'claude-3-opus-20240229': 200000,
+    'claude-3-haiku-20240307': 200000,
+    'claude-3-sonnet-20240229': 200000,
+    default: 150000,
+  }
+
   async executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
@@ -82,7 +82,8 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
     // Calculate available token budget for the model
     const modelLimit =
-      MODEL_TOKEN_LIMITS[modelName] || MODEL_TOKEN_LIMITS.default
+      AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS[modelName] ||
+      AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS.default
     let tokenBudget = maxTokens || modelLimit
     let usedTokens = 0
 
@@ -272,6 +273,17 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       (usedTokens / tokenBudget) * 100
     )
     return msgs
+  }
+}
+
+export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
+  executePromptWithTools(
+    prompt: string,
+    toolServers: McpServer[],
+    model?: string,
+    maxTokens?: number
+  ): Promise<MessageParam[]> {
+    throw new Error('Method not implemented.')
   }
 }
 

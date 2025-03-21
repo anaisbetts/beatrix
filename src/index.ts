@@ -2,7 +2,6 @@ import { configDotenv } from 'dotenv'
 
 import index from '../site/index.html'
 import { executePromptWithTools } from './execute-prompt-with-tools'
-import { messagesToString } from '../lib/prompt'
 import { connectToHAWebsocket } from './ha-ws-api'
 
 configDotenv()

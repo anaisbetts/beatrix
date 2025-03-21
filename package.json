@@ -57,6 +57,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@types/ws": "^8.18.0",
     "autoprefixer": "^10.4.21",
+    "axios": "^1.8.4",
     "bun-plugin-tailwind": "^0.0.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

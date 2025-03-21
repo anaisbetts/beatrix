@@ -127,7 +127,7 @@ export function ContentBlock({ msg }: { msg: ContentBlockParam }) {
       content = <>Calling tool {msg.name}</>
       break
     case 'tool_result':
-      content = <>Tool returned {typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content}</>
+      content = <>Tool returned {JSON.stringify(msg.content)}</>
       break
     default:
       content = <>'Dunno!'</>

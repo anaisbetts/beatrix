@@ -124,7 +124,11 @@ export function ContentBlock({ msg }: { msg: ContentBlockParam }) {
       content = <>{msg.text}</>
       break
     case 'tool_use':
-      content = <>Calling tool {msg.name}</>
+      content = (
+        <>
+          Calling tool {msg.name}, {JSON.stringify(msg.input)}
+        </>
+      )
       break
     case 'tool_result':
       content = <>Tool returned {JSON.stringify(msg.content)}</>
@@ -133,5 +137,5 @@ export function ContentBlock({ msg }: { msg: ContentBlockParam }) {
       content = <>'Dunno!'</>
   }
 
-  return <div>{content}</div>
+  return <div className="overflow-auto">{content}</div>
 }

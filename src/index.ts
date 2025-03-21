@@ -26,7 +26,7 @@ async function main() {
     llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST)
   }
 
-  const tools = createBuiltinServers(conn)
+  const tools = createBuiltinServers(conn, { testMode: true })
 
   console.log('Starting server on port', port)
   Bun.serve({

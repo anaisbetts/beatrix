@@ -13,6 +13,7 @@ import debug from 'debug'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Ollama, Message, Tool } from 'ollama'
+import { createHomeAssistantServer } from './servers/home-assistant'
 
 const d = debug('ha:llm')
 
@@ -284,7 +285,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
 export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   // Timeout configuration (in milliseconds)
-  static OLLAMA_API_TIMEOUT = 60 * 1000
+  static OLLAMA_API_TIMEOUT = 2 * 60 * 1000
 
   private ollama: Ollama
   private model: string
@@ -405,7 +406,10 @@ export function createBuiltinServers(
   opts?: { testMode?: boolean }
 ) {
   const { testMode } = opts ?? {}
-  return [createNotifyServer(connection, { testMode: testMode ?? false })]
+  return [
+    createNotifyServer(connection, { testMode: testMode ?? false }),
+    createHomeAssistantServer(connection, { testMode: testMode ?? false }),
+  ]
 }
 
 export function connectServersToClient(client: Client, servers: Server[]) {

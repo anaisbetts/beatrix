@@ -400,8 +400,12 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   }
 }
 
-export function createBuiltinServers(connection: HAConnection) {
-  return [createNotifyServer(connection)]
+export function createBuiltinServers(
+  connection: HAConnection,
+  opts?: { testMode?: boolean }
+) {
+  const { testMode } = opts ?? {}
+  return [createNotifyServer(connection, { testMode: testMode ?? false })]
 }
 
 export function connectServersToClient(client: Client, servers: Server[]) {

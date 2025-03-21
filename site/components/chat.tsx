@@ -1,10 +1,16 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, JSX } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send } from 'lucide-react'
 import { useCommand } from '@anaisbetts/commands'
+import {
+  ContentBlockParam,
+  MessageParam,
+} from '@anthropic-ai/sdk/resources/index.mjs'
+import { cx } from '@/lib/utils'
+import { Collapsible, CollapsibleContent } from '@radix-ui/react-collapsible'
 
 // Base URL for API requests
 const API_BASE_URL = '/api'
@@ -32,7 +38,7 @@ export default function Chat() {
       throw new Error(data.error)
     }
 
-    return data.text
+    return data.messages as MessageParam[]
   }, [input])
 
   const resetChat = useCallback(() => {
@@ -41,7 +47,16 @@ export default function Chat() {
   }, [reset, setInput])
 
   const messages = result.mapOrElse({
-    ok: (val) => <div>{val}</div>,
+    ok: (val) => {
+      if (!val) return null
+      return (
+        <>
+          {val.map((msg, index) => (
+            <ChatMessage key={`message-${index}`} msg={msg} />
+          ))}
+        </>
+      )
+    },
     err: (e) => <div className="text-gray-400 italic">It didn't. {e}</div>,
     pending: () => null,
   })
@@ -78,4 +93,45 @@ export default function Chat() {
       </div>
     </div>
   )
+}
+
+export function ChatMessage({ msg }: { msg: MessageParam }) {
+  const color = msg.role === 'assistant' ? 'bg-primary-400' : 'bg-secondary-400'
+
+  const content =
+    msg.content instanceof Array
+      ? msg.content
+      : [{ type: 'text', text: msg.content } as ContentBlockParam]
+  return (
+    <div
+      className={cx(
+        color,
+        'flex flex-col gap-1 rounded-2xl border-2 border-gray-500 p-2'
+      )}
+    >
+      {content.map((cb, index) => (
+        <ContentBlock key={`content-${index}`} msg={cb} />
+      ))}
+    </div>
+  )
+}
+
+export function ContentBlock({ msg }: { msg: ContentBlockParam }) {
+  let content: JSX.Element
+
+  switch (msg.type) {
+    case 'text':
+      content = <>{msg.text}</>
+      break
+    case 'tool_use':
+      content = <>Calling tool {msg.name}</>
+      break
+    case 'tool_result':
+      content = <>Tool returned {typeof msg.content === 'object' ? JSON.stringify(msg.content) : msg.content}</>
+      break
+    default:
+      content = <>'Dunno!'</>
+  }
+
+  return <div>{content}</div>
 }

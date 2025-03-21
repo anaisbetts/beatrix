@@ -1,10 +1,8 @@
 import { configDotenv } from 'dotenv'
 
 import index from '../site/index.html'
-import {
-  executePromptWithTools,
-  messagesToString,
-} from './execute-prompt-with-tools'
+import { executePromptWithTools } from './execute-prompt-with-tools'
+import { messagesToString } from '../lib/prompt'
 import { connectToHAWebsocket } from './ha-ws-api'
 
 configDotenv()
@@ -24,9 +22,7 @@ async function main() {
           const { prompt } = await req.json()
           try {
             const resp = await executePromptWithTools(conn, prompt)
-            const text = messagesToString(resp)
-
-            return Response.json({ prompt, text })
+            return Response.json({ prompt, messages: resp })
           } catch (e) {
             return Response.json({ prompt, error: JSON.stringify(e) })
           }

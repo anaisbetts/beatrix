@@ -70,6 +70,7 @@
     "input-otp": "^1.4.2",
     "lru-cache": "^11.0.2",
     "lucide-react": "^0.483.0",
+    "ollama": "^0.5.14",
     "react": "^19.0.0",
     "react-day-picker": "^9.6.3",
     "react-dom": "^19.0.0",

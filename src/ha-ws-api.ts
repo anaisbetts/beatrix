@@ -61,9 +61,12 @@ export async function fetchServices(
 export async function fetchStates(
   connection: Connection
 ): Promise<HassState[]> {
-  return await connection.sendMessagePromise<HassState[]>({
+  const ret = await connection.sendMessagePromise<HassState[]>({
     type: 'get_states',
   })
+
+  ret.forEach((x: any) => delete x.context)
+  return ret
 }
 
 export function eventsObservable(

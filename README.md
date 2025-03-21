@@ -1,15 +1,22 @@
 # ha-agentic-automation
 
-To install dependencies:
+## To Install (Docker Compose)
 
-```bash
-bun install
+```
+services:
+  ha-agentic-automation:
+    image: ghcr.io/anaisbetts/ha-agentic-automation:latest
+    restart: unless-stopped
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - HA_BASE_URL=${HA_BASE_URL}
+      - HA_TOKEN=${HA_TOKEN}
 ```
 
-To run:
+## Running (development mode)
 
 ```bash
+cp .env.example .env && vim .env  ## Fill this in
+bun install
 bun run ./src/index.ts
 ```
-
-This project was created using `bun init` in bun v1.0.6. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

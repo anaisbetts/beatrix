@@ -23,12 +23,10 @@ const MAX_ITERATIONS = 10 // Safety limit for iterations
 // Timeout configuration (in milliseconds)
 const TOOL_EXECUTION_TIMEOUT = 10000 // 10 seconds for tool execution
 
-interface LargeLanguageProvider {
+export interface LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[],
-    model?: string,
-    maxTokens?: number
+    toolServers: McpServer[]
   ): Promise<MessageParam[]>
 }
 
@@ -45,15 +43,24 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
     default: 150000,
   }
 
-  public constructor(private apiKey: string) {}
+  private maxTokens: number
+  private model: string
+  public constructor(
+    private apiKey: string,
+    model?: string,
+    maxTokens?: number
+  ) {
+    this.model = model ?? 'claude-3-7-sonnet-20250219'
+    this.maxTokens =
+      maxTokens ??
+      AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS[this.model] ??
+      AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS.default
+  }
 
   async executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[],
-    model?: string,
-    maxTokens?: number
+    toolServers: McpServer[]
   ): Promise<MessageParam[]> {
-    const modelName = model ?? 'claude-3-7-sonnet-20250219'
     const anthropic = new Anthropic({ apiKey: this.apiKey })
 
     const client = new Client({
@@ -83,10 +90,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
     ]
 
     // Calculate available token budget for the model
-    const modelLimit =
-      AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS[modelName] ||
-      AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS.default
-    let tokenBudget = maxTokens || modelLimit
+    let tokenBudget = this.maxTokens
     let usedTokens = 0
 
     // Track conversation and tool use to avoid infinite loops
@@ -124,7 +128,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       try {
         response = await withTimeout(
           anthropic.messages.create({
-            model: modelName,
+            model: this.model,
             max_tokens: responseTokens,
             messages: msgs,
             tools: anthropicTools,
@@ -282,19 +286,18 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   // Timeout configuration (in milliseconds)
   static OLLAMA_API_TIMEOUT = 60 * 1000
 
-  ollama: Ollama
-  constructor(endpoint: string) {
+  private ollama: Ollama
+  private model: string
+  constructor(endpoint: string, model?: string) {
+    this.model = model ?? 'qwen2.5:14b'
     this.ollama = new Ollama({ host: endpoint })
   }
 
   async executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[],
-    model?: string,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _maxTokens?: number
+    toolServers: McpServer[]
   ): Promise<MessageParam[]> {
-    const modelName = model ?? 'llama3:70b'
+    const modelName = this.model
 
     const client = new Client({
       name: pkg.name,
@@ -388,7 +391,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
 
         msgs.push({
           role: 'tool',
-          content: toolResp.content as string,
+          content: JSON.stringify(toolResp.content),
         })
       }
     }

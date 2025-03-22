@@ -27,6 +27,18 @@ interface HAPersonInformation {
   state: string
 }
 
+export interface CallServiceOptions {
+  domain: string
+  service: string
+  service_data?: Record<string, any>
+  target?: {
+    entity_id?: string | string[]
+    device_id?: string | string[]
+    area_id?: string | string[]
+  }
+  return_response?: boolean
+}
+
 export async function connectToHAWebsocket() {
   const auth = createLongLivedTokenAuth(
     process.env.HA_BASE_URL!,
@@ -159,6 +171,39 @@ export async function sendNotification(
       service_data: { message, ...(title ? { title } : {}) },
     })
   }
+}
+
+export async function callService<T = any>(
+  connection: Connection,
+  options: CallServiceOptions,
+  testMode = false
+): Promise<T | null> {
+  if (testMode) {
+    // In test mode, validate that entity_id starts with domain
+    const entityId = options.target?.entity_id
+
+    if (entityId) {
+      // Handle both string and array cases
+      const entities = Array.isArray(entityId) ? entityId : [entityId]
+
+      for (const entity of entities) {
+        if (!entity.startsWith(`${options.domain}.`)) {
+          throw new Error(
+            `Entity ID ${entity} doesn't match domain ${options.domain}`
+          )
+        }
+      }
+    }
+
+    return null
+  }
+
+  const message = {
+    type: 'call_service',
+    ...options,
+  }
+
+  return connection.sendMessagePromise<T>(message)
 }
 
 function deviceTrackerNameToNotifyName(tracker: string) {

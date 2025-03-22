@@ -55,7 +55,7 @@ export default function Chat() {
     ok: (val) => {
       if (!val) return null
       return (
-        <div>
+        <div className="flex flex-col gap-2">
           {val.messages.map((msg, index) => (
             <ChatMessage key={`message-${index}`} msg={msg} />
           ))}

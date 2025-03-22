@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "lint": "eslint && prettier --check .",
-    "fix": "eslint --fix && prettier --write ."
+    "fix": "eslint --fix && prettier --write .",
+    "start": "bun run ./src/index.ts",
+    "start:debug": "DEBUG='*' bun run ./src/index.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

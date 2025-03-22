@@ -11,6 +11,12 @@ const d = debug('ha:call-service')
 
 export function createCallServiceServer(
   connection: Connection,
+  onCallService: (
+    domain: string,
+    service: string,
+    target: string,
+    data: any
+  ) => unknown,
   opts?: { testMode: boolean }
 ) {
   const testMode = opts?.testMode ?? false
@@ -69,10 +75,7 @@ export function createCallServiceServer(
         .describe(
           'The service to call (e.g. "turn_on", "turn_off", "set_temperature")'
         ),
-      entity_id: z
-        .string()
-        .optional()
-        .describe('The entity ID to call the service on'),
+      entity_id: z.string().describe('The entity ID to call the service on'),
       service_data: z
         .record(z.any())
         .optional()
@@ -100,6 +103,8 @@ export function createCallServiceServer(
           },
           testMode
         )
+
+        onCallService?.(domain, service, entity_id, service_data)
 
         return {
           content: [{ type: 'text', text: 'Service call successful' }],

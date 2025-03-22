@@ -139,18 +139,19 @@ export function createHomeAssistantServer(
       let msgs: MessageParam[] | undefined = undefined
 
       try {
-        const tools = [createCallServiceServer(connection, { testMode })]
+        let serviceCalledCount = 0
+        const tools = [
+          createCallServiceServer(connection, () => serviceCalledCount++, {
+            testMode,
+          }),
+        ]
         msgs = await llm.executePromptWithTools(
           callServicePrompt(prompt, entity_id),
           tools
         )
 
-        const lastMsg = messagesToString([msgs[msgs.length - 1]])
-        d('LLM returned string "%s"', lastMsg)
-        const msgsStr = JSON.parse(lastMsg)
-
-        if (msgsStr.error) {
-          throw new Error(msgsStr.error)
+        if (serviceCalledCount !== 1) {
+          throw new Error('callService not called!')
         }
 
         return {
@@ -226,37 +227,7 @@ For the task and entity provided within the XML tags, follow these steps:
    - entity_id: The full entity ID provided
    - service_data: Any additional parameters required for the service
 
-## Required Response Format
-
-You must respond with a JSON object in the following format:
-
-{
-  "error": null
-}
-
-If the operation is successful, the "error" field should be null.
-
-If any errors or issues occur during processing, set the "error" field to a descriptive error message:
-
-{
-  "error": "Unable to find appropriate service for the requested action"
-}
-
-The *only* response should be valid JSON. Do not respond with any other text.
-
-## Error Handling Guidelines
-
-Include an error message in your JSON response if:
-- The entity domain cannot be properly extracted
-- No services can be found for the entity domain
-- The requested action cannot be mapped to an available service
-- Required parameters for the service call cannot be determined
-- Any tool execution fails or returns an error
-
-Always be specific about what went wrong in your error messages to assist with troubleshooting.
-
-Do not include any explanatory text outside the JSON response.
-
+## Input
 
 <entity_id>${entity_id}</entity_id>
 

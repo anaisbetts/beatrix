@@ -42,8 +42,8 @@ async function mcpCommand(options: { testMode: boolean }) {
   const llm = createDefaultLLMProvider()
   const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
 
-  const transport = new StdioServerTransport()
   for (const t of tools) {
+    const transport = new StdioServerTransport()
     await t.server.connect(transport)
   }
 }

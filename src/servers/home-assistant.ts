@@ -122,7 +122,7 @@ export function createHomeAssistantServer(
 
   server.tool(
     'call-service',
-    'Asks an entity to do a specific task in plain English',
+    'Asks an entity or multiple entities to do a specific task in plain English',
     {
       prompt: z
         .string()
@@ -130,9 +130,9 @@ export function createHomeAssistantServer(
           'An english description of what operation the entity should perform'
         ),
       entity_id: z
-        .string()
+        .union([z.string(), z.array(z.string())])
         .describe(
-          'The entity ID to get state for (e.g. "light.living_room", "person.john")'
+          'The entity ID or array of entity IDs to perform the action on (e.g. "light.living_room", ["light.living_room", "light.kitchen"])'
         ),
     },
     async ({ prompt, entity_id }) => {
@@ -150,7 +150,7 @@ export function createHomeAssistantServer(
           tools
         )
 
-        if (serviceCalledCount !== 1) {
+        if (serviceCalledCount < 1) {
           throw new Error('callService not called!')
         }
 
@@ -183,7 +183,10 @@ export function createHomeAssistantServer(
   return server
 }
 
-export const callServicePrompt = (prompt: string, entity_id: string) => `
+export const callServicePrompt = (
+  prompt: string,
+  entity_id: string | string[]
+) => `
 # Home Assistant Entity Control Assistant
 
 You are an assistant specialized in controlling Home Assistant entities through natural language requests. Your goal is to translate user requests into the appropriate Home Assistant service calls using the MCP server tools available to you.
@@ -192,7 +195,7 @@ You are an assistant specialized in controlling Home Assistant entities through 
 
 You will receive:
 - A natural language request in <task>...</task> tags
-- A Home Assistant entity ID in <entity_id>...</entity_id> tags
+- One or more Home Assistant entity IDs in <entity_id>...</entity_id> tags
 
 <task>Turn the living room lights to 50% brightness and make them warm white</task>
 <entity_id>light.living_room</entity_id>
@@ -202,14 +205,15 @@ You will receive:
 You have access to the following tools:
 
 1. 'list-services-for-entity' - Lists all available services for a specific entity domain
-2. 'call-service' - Executes a specific service on a Home Assistant entity
+2. 'call-service' - Executes a specific service on one or multiple Home Assistant entities
 
 ## Your Process Flow
 
-For the task and entity provided within the XML tags, follow these steps:
+For the task and entity/entities provided within the XML tags, follow these steps:
 
-1. **Extract the entity domain** from the entity_id (the part before the period)
+1. **Extract the entity domain** from the entity_id(s) (the part before the period)
    - Example: "light" from "light.living_room"
+   - If multiple entities are provided, identify if they share the same domain
 
 2. **List available services** for the entity domain using 'list-services-for-entity'
    - Use the entity domain as the prefix (e.g., "light.", "switch.", "climate.")
@@ -224,12 +228,16 @@ For the task and entity provided within the XML tags, follow these steps:
 5. **Execute the service call** using 'call-service' with the correct parameters:
    - domain: The entity domain extracted from the entity_id
    - service: The specific service to call
-   - entity_id: The full entity ID provided
+   - entity_id: The entity ID or array of entity IDs provided
    - service_data: Any additional parameters required for the service
+
+6. **For multiple entities:**
+   - If the entities are of the same domain, you can pass them as an array to a single call-service operation
+   - If the entities are of different domains, make separate service calls for each domain
 
 ## Input
 
-<entity_id>${entity_id}</entity_id>
+<entity_id>${JSON.stringify(entity_id)}</entity_id>
 
 <task>
 ${prompt}

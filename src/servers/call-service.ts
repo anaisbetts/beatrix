@@ -63,7 +63,7 @@ export function createCallServiceServer(
 
   server.tool(
     'call-service',
-    'Call any Home Assistant service for a specific entity',
+    'Call any Home Assistant service for a specific entity or a list of entities',
     {
       domain: z
         .string()
@@ -75,7 +75,11 @@ export function createCallServiceServer(
         .describe(
           'The service to call (e.g. "turn_on", "turn_off", "set_temperature")'
         ),
-      entity_id: z.string().describe('The entity ID to call the service on'),
+      entity_id: z
+        .union([z.string(), z.array(z.string())])
+        .describe(
+          'The entity ID or array of entity IDs to call the service on'
+        ),
       service_data: z
         .record(z.any())
         .optional()
@@ -83,28 +87,32 @@ export function createCallServiceServer(
     },
     async ({ domain, service, entity_id, service_data }) => {
       try {
-        let targetObj = { entity_id }
+        const entityIds = Array.isArray(entity_id) ? entity_id : [entity_id]
 
-        d(
-          'call-service: domain=%s, service=%s, target=%o, data=%o',
-          domain,
-          service,
-          targetObj,
-          service_data
-        )
+        for (const id of entityIds) {
+          let targetObj = { entity_id: id }
 
-        await callService(
-          connection,
-          {
+          d(
+            'call-service: domain=%s, service=%s, target=%o, data=%o',
             domain,
             service,
-            target: targetObj,
-            service_data,
-          },
-          testMode
-        )
+            targetObj,
+            service_data
+          )
 
-        onCallService?.(domain, service, entity_id, service_data)
+          await callService(
+            connection,
+            {
+              domain,
+              service,
+              target: targetObj,
+              service_data,
+            },
+            testMode
+          )
+
+          onCallService?.(domain, service, id, service_data)
+        }
 
         return {
           content: [{ type: 'text', text: 'Service call successful' }],
@@ -128,7 +136,7 @@ const isMainModule =
 
 async function main() {
   const connection = await connectToHAWebsocket()
-  const server = createCallServiceServer(connection)
+  const server = createCallServiceServer(connection, () => {})
 
   await server.connect(new StdioServerTransport())
 }

@@ -61,11 +61,16 @@ export async function fetchServices(
 export async function fetchStates(
   connection: Connection
 ): Promise<HassState[]> {
+  if (cache.has('states')) {
+    return cache.get('states') as HassState[]
+  }
+
   const ret = await connection.sendMessagePromise<HassState[]>({
     type: 'get_states',
   })
 
   ret.forEach((x: any) => delete x.context)
+  cache.set('states', ret, { ttl: 1000 })
   return ret
 }
 

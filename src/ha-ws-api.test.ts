@@ -1,4 +1,4 @@
-import { describe, expect, it, jest, mock } from 'bun:test'
+import { describe, expect, it, jest } from 'bun:test'
 import { Connection } from 'home-assistant-js-websocket'
 import { callService, connectToHAWebsocket, fetchServices } from './ha-ws-api'
 
@@ -15,9 +15,11 @@ describe('the fetch methods', () => {
 describe('callService function', () => {
   it('should correctly format and send service call message', async () => {
     // Create mock connection
-    const mockSendMessagePromise = jest.fn().mockResolvedValue({ result: 'success' })
+    const mockSendMessagePromise = jest
+      .fn()
+      .mockResolvedValue({ result: 'success' })
     const mockConnection = {
-      sendMessagePromise: mockSendMessagePromise
+      sendMessagePromise: mockSendMessagePromise,
     } as unknown as Connection
 
     // Call the function
@@ -26,12 +28,12 @@ describe('callService function', () => {
       service: 'turn_on',
       service_data: {
         color_name: 'beige',
-        brightness: '101'
+        brightness: '101',
       },
       target: {
-        entity_id: 'light.kitchen'
+        entity_id: 'light.kitchen',
       },
-      return_response: true
+      return_response: true,
     })
 
     // Verify correct message was sent
@@ -41,28 +43,32 @@ describe('callService function', () => {
       service: 'turn_on',
       service_data: {
         color_name: 'beige',
-        brightness: '101'
+        brightness: '101',
       },
       target: {
-        entity_id: 'light.kitchen'
+        entity_id: 'light.kitchen',
       },
-      return_response: true
+      return_response: true,
     })
   })
-  
+
   it('should validate entity ID domain in test mode', async () => {
     const mockConnection = {
-      sendMessagePromise: jest.fn()
+      sendMessagePromise: jest.fn(),
     } as unknown as Connection
 
     // Valid entity ID that starts with the domain
-    const result = await callService(mockConnection, {
-      domain: 'light',
-      service: 'turn_on',
-      target: {
-        entity_id: 'light.kitchen'
-      }
-    }, true)
+    const result = await callService(
+      mockConnection,
+      {
+        domain: 'light',
+        service: 'turn_on',
+        target: {
+          entity_id: 'light.kitchen',
+        },
+      },
+      true
+    )
 
     // Should pass validation and return null
     expect(result).toBeNull()
@@ -72,35 +78,45 @@ describe('callService function', () => {
 
   it('should throw error for invalid entity ID in test mode', async () => {
     const mockConnection = {
-      sendMessagePromise: jest.fn()
+      sendMessagePromise: jest.fn(),
     } as unknown as Connection
 
     // Entity ID that doesn't match the domain
-    await expect(callService(mockConnection, {
-      domain: 'light',
-      service: 'turn_on',
-      target: {
-        entity_id: 'switch.kitchen'
-      }
-    }, true)).rejects.toThrow("Entity ID switch.kitchen doesn't match domain light")
-    
+    expect(
+      callService(
+        mockConnection,
+        {
+          domain: 'light',
+          service: 'turn_on',
+          target: {
+            entity_id: 'switch.kitchen',
+          },
+        },
+        true
+      )
+    ).rejects.toThrow("Entity ID switch.kitchen doesn't match domain light")
+
     // Should not call sendMessagePromise when validation fails
     expect(mockConnection.sendMessagePromise).not.toHaveBeenCalled()
   })
 
   it('should handle array of entity IDs in test mode', async () => {
     const mockConnection = {
-      sendMessagePromise: jest.fn()
+      sendMessagePromise: jest.fn(),
     } as unknown as Connection
 
     // Valid array of entity IDs that all start with the domain
-    const result = await callService(mockConnection, {
-      domain: 'light',
-      service: 'turn_on',
-      target: {
-        entity_id: ['light.kitchen', 'light.living_room']
-      }
-    }, true)
+    const result = await callService(
+      mockConnection,
+      {
+        domain: 'light',
+        service: 'turn_on',
+        target: {
+          entity_id: ['light.kitchen', 'light.living_room'],
+        },
+      },
+      true
+    )
 
     // Should pass validation and return null
     expect(result).toBeNull()
@@ -110,18 +126,24 @@ describe('callService function', () => {
 
   it('should throw error for mixed valid/invalid entity IDs in test mode', async () => {
     const mockConnection = {
-      sendMessagePromise: jest.fn()
+      sendMessagePromise: jest.fn(),
     } as unknown as Connection
 
     // Array with one valid and one invalid entity ID
-    await expect(callService(mockConnection, {
-      domain: 'light',
-      service: 'turn_on',
-      target: {
-        entity_id: ['light.kitchen', 'switch.porch']
-      }
-    }, true)).rejects.toThrow("Entity ID switch.porch doesn't match domain light")
-    
+    expect(
+      callService(
+        mockConnection,
+        {
+          domain: 'light',
+          service: 'turn_on',
+          target: {
+            entity_id: ['light.kitchen', 'switch.porch'],
+          },
+        },
+        true
+      )
+    ).rejects.toThrow("Entity ID switch.porch doesn't match domain light")
+
     // Should not call sendMessagePromise when validation fails
     expect(mockConnection.sendMessagePromise).not.toHaveBeenCalled()
   })

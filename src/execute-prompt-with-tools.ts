@@ -14,6 +14,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Ollama, Message, Tool } from 'ollama'
 import { createHomeAssistantServer } from './servers/home-assistant'
+import { LargeLanguageProvider } from './llm'
 
 const d = debug('ha:llm')
 
@@ -22,17 +23,10 @@ const RESPONSE_TOKEN_RESERVE = 4000
 const MAX_ITERATIONS = 10 // Safety limit for iterations
 
 // Timeout configuration (in milliseconds)
-const TOOL_EXECUTION_TIMEOUT = 10000 // 10 seconds for tool execution
-
-export interface LargeLanguageProvider {
-  executePromptWithTools(
-    prompt: string,
-    toolServers: McpServer[]
-  ): Promise<MessageParam[]>
-}
+const TOOL_EXECUTION_TIMEOUT = 60 * 1000
 
 export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
-  static ANTHROPIC_API_TIMEOUT = 30000 // 30 seconds for Anthropic API calls
+  static ANTHROPIC_API_TIMEOUT = 100 * 1000
 
   // Model token limits and defaults
   static MODEL_TOKEN_LIMITS: Record<string, number> = {
@@ -285,7 +279,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
 export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   // Timeout configuration (in milliseconds)
-  static OLLAMA_API_TIMEOUT = 2 * 60 * 1000
+  static OLLAMA_API_TIMEOUT = 5 * 60 * 1000
 
   private ollama: Ollama
   private model: string
@@ -403,12 +397,14 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
 
 export function createBuiltinServers(
   connection: HAConnection,
+  llm: LargeLanguageProvider,
   opts?: { testMode?: boolean }
 ) {
   const { testMode } = opts ?? {}
+
   return [
     createNotifyServer(connection, { testMode: testMode ?? false }),
-    createHomeAssistantServer(connection, { testMode: testMode ?? false }),
+    createHomeAssistantServer(connection, llm, { testMode: testMode ?? false }),
   ]
 }
 
@@ -419,6 +415,7 @@ export function connectServersToClient(client: Client, servers: Server[]) {
     void server.connect(srv)
   })
 }
+
 function convertOllamaMessageToAnthropic(
   msgs: Message[]
 ): Anthropic.Messages.MessageParam[] {

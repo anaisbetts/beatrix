@@ -2,12 +2,8 @@ import { configDotenv } from 'dotenv'
 
 import index from '../site/index.html'
 import { connectToHAWebsocket } from './ha-ws-api'
-import {
-  AnthropicLargeLanguageProvider,
-  createBuiltinServers,
-  LargeLanguageProvider,
-  OllamaLargeLanguageProvider,
-} from './execute-prompt-with-tools'
+import { createBuiltinServers } from './execute-prompt-with-tools'
+import { createDefaultLLMProvider } from './llm'
 
 configDotenv()
 
@@ -16,17 +12,9 @@ async function main() {
 
   const conn = await connectToHAWebsocket()
 
-  let llm: LargeLanguageProvider
+  let llm = createDefaultLLMProvider()
 
-  if (process.env.ANTHROPIC_API_KEY) {
-    console.log('Found Anthropic API key, using Anthropic as provider')
-    llm = new AnthropicLargeLanguageProvider(process.env.ANTHROPIC_API_KEY)
-  } else if (process.env.OLLAMA_HOST) {
-    console.log('Found Ollama host, using Ollama as provider')
-    llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST)
-  }
-
-  const tools = createBuiltinServers(conn, { testMode: true })
+  const tools = createBuiltinServers(conn, llm, { testMode: false })
 
   console.log('Starting server on port', port)
   Bun.serve({

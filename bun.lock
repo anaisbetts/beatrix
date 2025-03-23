@@ -49,6 +49,8 @@
         "embla-carousel-react": "^8.5.2",
         "home-assistant-js-websocket": "^9.4.0",
         "input-otp": "^1.4.2",
+        "kysely": "^0.27.6",
+        "kysely-bun-worker": "^1.1.0",
         "lru-cache": "^11.0.2",
         "lucide-react": "^0.483.0",
         "ollama": "^0.5.14",
@@ -587,6 +589,12 @@
     "json-stable-stringify-without-jsonify": ["json-stable-stringify-without-jsonify@1.0.1", "", {}, "sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw=="],
 
     "keyv": ["keyv@4.5.4", "", { "dependencies": { "json-buffer": "3.0.1" } }, "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw=="],
+
+    "kysely": ["kysely@0.27.6", "", {}, "sha512-FIyV/64EkKhJmjgC0g2hygpBv5RNWVPyNCqSAD7eTCv6eFWNIi4PN1UvdSJGicN/o35bnevgis4Y0UDC0qi8jQ=="],
+
+    "kysely-bun-worker": ["kysely-bun-worker@1.1.0", "", { "dependencies": { "kysely-generic-sqlite": "1.1.0" }, "peerDependencies": { "bun-types": ">=1.1.14", "kysely": ">=0.26" } }, "sha512-ZPtbM117pWtClf+TTRLt4XHM2YMLvmVANUf+3ba9L6MPmcWifSoBF3UYJRRjZNfY8nyJUTrEalbsMQW9Hox6lg=="],
+
+    "kysely-generic-sqlite": ["kysely-generic-sqlite@1.1.0", "", { "peerDependencies": { "kysely": ">=0.26" } }, "sha512-IUTzyDYRu/M8UhwLhArZD9fh98inOCM8zAgQF9ZUMmAhJg4WXLvqO5i9RXcubG6Qpk8Y3FMRfIk4ABkzto0MGw=="],
 
     "levn": ["levn@0.4.1", "", { "dependencies": { "prelude-ls": "^1.2.1", "type-check": "~0.4.0" } }, "sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ=="],
 

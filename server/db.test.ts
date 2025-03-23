@@ -1,35 +1,38 @@
 import { promises as fs } from 'fs'
 import { createDatabase } from './db'
-import { afterEach, describe, expect, it } from 'bun:test'
+import { describe, expect, it, test } from 'bun:test'
+import { asyncMap } from '@anaisbetts/commands'
+
+async function tryUnlink(file: string) {
+  try {
+    await fs.unlink(file)
+  } catch {
+    // dontcare
+  }
+}
 
 describe('database', () => {
-  const testDbPath = './app.db'
-
-  afterEach(async () => {
-    try {
-      await fs.unlink(testDbPath)
-      await fs.unlink(testDbPath.replace('.db', '.db-shm'))
-      await fs.unlink(testDbPath.replace('.db', '.db-wal'))
-    } catch {
-      // Ignore errors if file doesn't exist
-    }
-  })
-
   it('should create a database with migrations', async () => {
-    // Override the database path for testing
-    process.env.DATA_DIR = '.'
+    const testDbPath = 'test.db'
 
-    const db = await createDatabase()
+    try {
+      const db = await createDatabase(testDbPath)
 
-    // Verify database was created
-    const fileExists = await fs
-      .stat(testDbPath)
-      .then(() => true)
-      .catch(() => false)
+      // Verify database was created
+      const fileExists = await fs.stat(testDbPath)
+      expect(fileExists).toBeDefined()
 
-    expect(fileExists).toBe(true)
-
-    // Clean up
-    await db.destroy()
+      // Clean up
+      await db.destroy()
+    } finally {
+      await asyncMap(
+        [
+          testDbPath,
+          testDbPath.replace('.db', '.db-wal'),
+          testDbPath.replace('.db', '.db-shm'),
+        ],
+        tryUnlink
+      )
+    }
   })
 })

@@ -8,15 +8,17 @@ import { Schema } from './db-schema'
 
 const d = debug('ha:db')
 
-export async function createDatabase() {
-  const dbPath = process.env.DATA_DIR
-    ? path.join(process.env.DATA_DIR, 'app.db')
-    : './app.db'
+export async function createDatabase(dbPath?: string) {
+  const dbFile =
+    dbPath ??
+    (process.env.DATA_DIR
+      ? path.join(process.env.DATA_DIR, 'app.db')
+      : './app.db')
 
   const db = new Kysely<Schema>({
-    dialect: new BunSqliteDialect({ url: dbPath }),
+    dialect: new BunSqliteDialect({ url: dbFile }),
     log(ev) {
-      d('database: %o', ev)
+      d('db: %o', ev)
     },
   })
 

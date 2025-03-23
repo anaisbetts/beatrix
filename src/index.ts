@@ -6,6 +6,7 @@ import { connectToHAWebsocket } from './ha-ws-api'
 import { createBuiltinServers } from './execute-prompt-with-tools'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { createHomeAssistantServer } from './servers/home-assistant'
 
 configDotenv()
 
@@ -40,12 +41,21 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
 async function mcpCommand(options: { testMode: boolean }) {
   const conn = await connectToHAWebsocket()
   const llm = createDefaultLLMProvider()
-  const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
 
+  // XXX: Ugh, there's no way to expose multiple servers in one go. For now, just expose
+  // Home Assistant
+  //const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
+  const ha = createHomeAssistantServer(conn, llm, {
+    testMode: options.testMode,
+  })
+  await ha.server.connect(new StdioServerTransport())
+
+  /*
   for (const t of tools) {
     const transport = new StdioServerTransport()
     await t.server.connect(transport)
   }
+  */
 }
 
 async function main() {

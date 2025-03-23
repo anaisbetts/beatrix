@@ -4,7 +4,7 @@
     "": {
       "name": "ha-agentic-automation",
       "dependencies": {
-        "@anaisbetts/commands": "^0.3.0",
+        "@anaisbetts/commands": "0.3.1",
         "@anthropic-ai/sdk": "^0.39.0",
         "@modelcontextprotocol/sdk": "^1.7.0",
         "@radix-ui/react-dialog": "^1.1.6",
@@ -53,7 +53,7 @@
     },
   },
   "packages": {
-    "@anaisbetts/commands": ["@anaisbetts/commands@0.3.0", "", { "dependencies": { "rxjs": "^7.8.1" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-ub0rD1b+YwUYH4zz2Pz5jqEqemx9cG+dnjxiH15k+XlV8dqndMQUgcXoxqAz7y7iAnPsEPjCe+zMBN0NVIayPQ=="],
+    "@anaisbetts/commands": ["@anaisbetts/commands@0.3.1", "", { "dependencies": { "rxjs": "^7.8.1" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-hNRSyfzm7RYQ4w3q6wllopbKg9JETF7uAsjAwR+5IZSR9Mq7yNf9k27mojtq+V5wBlSZ+R57dONK2+SZa+rSvg=="],
 
     "@anthropic-ai/sdk": ["@anthropic-ai/sdk@0.39.0", "", { "dependencies": { "@types/node": "^18.11.18", "@types/node-fetch": "^2.6.4", "abort-controller": "^3.0.0", "agentkeepalive": "^4.2.1", "form-data-encoder": "1.7.2", "formdata-node": "^4.3.2", "node-fetch": "^2.6.7" } }, "sha512-eMyDIPRZbt1CCLErRCi3exlAvNkBtRe+kW5vvJyef93PmNr/clstYgHhtvmkxN82nlKgzyGPCyGxrm0JQ1ZIdg=="],
 

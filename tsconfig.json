@@ -21,5 +21,7 @@
     "types": [
       "bun-types" // add Bun global
     ]
-  }
+  },
+  "include": ["site", "server", "shared"],
+  "exclude": ["node_modules"]
 }

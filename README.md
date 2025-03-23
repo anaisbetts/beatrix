@@ -54,7 +54,7 @@ You must configure either Anthropic Claude or Ollama by setting one of these pai
 | Variable   | Description                                                                                                                |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `LLM_NAME` | The specific model to use. For Anthropic, defaults to `claude-3-7-sonnet-20250219`. For Ollama, defaults to `qwen2.5:14b`. |
-| `DATA_DIR` | Database storage location. Defaults to `/data` in Docker and `./app.db` in development                                     |
+| `DATA_DIR` | Directory for database storage. Defaults to `/data` in Docker and the current directory in development.                    |
 | `PORT`     | Server port. Defaults to 5432                                                                                              |
 
 ## Running (development mode)

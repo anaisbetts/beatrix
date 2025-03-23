@@ -21,4 +21,4 @@ ENV NODE_ENV=production
 EXPOSE ${PORT}
 
 # Run the application
-CMD ["bun", "run", "src/index.ts"]
+CMD ["bun", "start"]

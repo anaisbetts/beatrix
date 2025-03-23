@@ -1,9 +1,13 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import {
-  AnthropicLargeLanguageProvider,
-  OllamaLargeLanguageProvider,
-} from './execute-prompt-with-tools'
+import { AnthropicLargeLanguageProvider } from './anthropic'
+import { Connection as HAConnection } from 'home-assistant-js-websocket'
+import { createHomeAssistantServer } from './mcp/home-assistant'
+import { createNotifyServer } from './mcp/notify'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { OllamaLargeLanguageProvider } from './ollama'
 
 export interface LargeLanguageProvider {
   executePromptWithTools(
@@ -28,4 +32,25 @@ export function createDefaultLLMProvider() {
   }
 
   return llm
+}
+
+export function createBuiltinServers(
+  connection: HAConnection,
+  llm: LargeLanguageProvider,
+  opts?: { testMode?: boolean }
+) {
+  const { testMode } = opts ?? {}
+
+  return [
+    createNotifyServer(connection, { testMode: testMode ?? false }),
+    createHomeAssistantServer(connection, llm, { testMode: testMode ?? false }),
+  ]
+}
+
+export function connectServersToClient(client: Client, servers: Server[]) {
+  servers.forEach((server) => {
+    const [cli, srv] = InMemoryTransport.createLinkedPair()
+    void client.connect(cli)
+    void server.connect(srv)
+  })
 }

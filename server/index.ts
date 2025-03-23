@@ -7,6 +7,7 @@ import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
+import { handlePromptRequest } from './api'
 
 configDotenv()
 
@@ -23,16 +24,7 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
     routes: {
       '/': index,
       '/api/prompt': {
-        POST: async (req) => {
-          const { prompt } = await req.json()
-          try {
-            const resp = await llm.executePromptWithTools(prompt, tools)
-            return Response.json({ prompt, messages: resp })
-          } catch (e) {
-            console.error(e)
-            return Response.json({ prompt, error: JSON.stringify(e) })
-          }
-        },
+        POST: (req) => handlePromptRequest(llm, tools, req),
       },
     },
   })

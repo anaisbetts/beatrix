@@ -17,6 +17,9 @@ export async function up(db: Kysely<Schema>): Promise<void> {
     .addColumn('createdAt', 'datetime', (c) =>
       c.defaultTo(sql`CURRENT_TIMESTAMP`)
     )
+    .addColumn('type', 'varchar(64)')
+    .addColumn('automationHash', 'varchar(64)')
+    .addColumn('signalId', 'integer', (c) => c.references('signals.id'))
     .addColumn('messageLog', 'text')
     .execute()
 }

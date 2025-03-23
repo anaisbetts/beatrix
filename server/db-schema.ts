@@ -13,10 +13,16 @@ export interface SignalTable {
   automationHash: string
 }
 
+export type AutomationType = 'manual' | 'determine-signal' | 'execute-signal'
+
 export interface AutomationLogTable {
   id: Generated<number>
+  type: AutomationType
   createdAt: Generated<Timestamp>
   messageLog: string
+
+  automationHash?: string // if type = 'determine-signal', the automation that we read through
+  signalId?: number // if type = 'execute-signal', the signal ID that triggered
 }
 
 export type Signal = Selectable<SignalTable>

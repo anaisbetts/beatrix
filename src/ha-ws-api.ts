@@ -211,6 +211,41 @@ function deviceTrackerNameToNotifyName(tracker: string) {
   return `mobile_app_${tracker.replace('device_tracker.', '')}`
 }
 
+const LOW_VALUE_REGEXES = [
+  // Domain-based filters (anchored at start)
+  /^update\./,
+  /^device_tracker\./,
+  /^button\./,
+  /^binary_sensor\.remote_ui/,
+  /^conversation\./,
+  /^stt\./,
+  /^tts\./,
+  /^number\./,
+  /^select\./,
+
+  // Name-based pattern filters (can appear anywhere)
+  /_uptime/,
+  /_cpu_utilization/,
+  /_memory_/,
+  /_battery_/,
+  /_uplink_mac/,
+  /_firmware/,
+  /debug_/,
+  /_identify/,
+  /_reboot/,
+  /_restart/,
+  /_power_cycle/,
+  /_fan_speed/,
+  /_signal/,
+  /_mac/,
+  /_version/,
+  /_bssid/,
+  /_ssid/,
+  /_ip/,
+  /hacs_/,
+  /_connectivity/,
+]
+
 export function filterUncommonEntities(
   entities: HassState[],
   options: {
@@ -219,67 +254,7 @@ export function filterUncommonEntities(
 ): HassState[] {
   // Default options
   const { includeUnavailable = false } = options
-
-  // Domain-based filtering
-  const LOW_VALUE_DOMAINS = [
-    'update.',
-    'device_tracker.',
-    'button.',
-    'binary_sensor.remote_ui',
-    'conversation.',
-    'stt.',
-    'tts.',
-    'number.', // Often configuration values
-    'select.', // Often configuration options
-  ]
-
-  // Name-based pattern filtering
-  const LOW_VALUE_PATTERNS = [
-    '_uptime',
-    '_cpu_utilization',
-    '_memory_',
-    '_battery_',
-    '_uplink_mac',
-    '_firmware',
-    'debug_',
-    '_identify',
-    '_reboot',
-    '_restart',
-    '_power_cycle',
-    '_fan_speed',
-    '_signal',
-    '_mac',
-    '_version',
-    '_bssid',
-    '_ssid',
-    '_ip',
-    'hacs_',
-    '_connectivity',
-  ]
-
-  // High-value domains to always include
-  const HIGH_PRIORITY_DOMAINS = [
-    'light.',
-    'switch.',
-    'climate.',
-    'media_player.',
-    'vacuum.',
-    'cover.',
-    'scene.',
-    'script.',
-  ]
-
-  // Exception patterns that should be kept despite matching low-value patterns
-  const EXCEPTION_PATTERNS = [
-    'temperature_sensor', // Room temperature sensors are important
-    'battery_level', // Overall battery level of critical devices
-    'room_temperature', // Room temperature readings
-  ]
-
-  // Create maps to track devices and their entities
-  const deviceGroups: Record<string, HassState[]> = {}
-  const primaryEntities: HassState[] = []
-  const utilityEntities: HassState[] = []
+  // Combine domain and pattern filters into a single array of RegExp objects
 
   // Step 1: Filter out unavailable/unknown entities if configured
   let filtered = includeUnavailable
@@ -288,157 +263,12 @@ export function filterUncommonEntities(
         (e) =>
           e.state !== 'unavailable' &&
           e.state !== 'unknown' &&
-          changedRecently(new Date(e.last_changed), 24)
+          changedRecently(new Date(e.last_changed), 10 * 24)
       )
 
-  // Step 2: First pass - categorize entities
-  filtered.forEach((entity) => {
-    const { entity_id } = entity
-
-    // Extract device/group name
-    const parts = entity_id.split('.')
-    const name = parts[1]
-
-    // Try to extract base device name (without specific sensor type)
-    // This helps group related entities like light.kitchen_light and binary_sensor.kitchen_light_overheating
-    const deviceNameParts = name.split('_')
-    // Find a meaningful device name - either the full name or remove the last part if it's a modifier
-    let deviceKey = name
-
-    // If the last part seems to be a modifier/attribute rather than part of the device name
-    if (
-      deviceNameParts.length > 1 &&
-      [
-        'light',
-        'switch',
-        'sensor',
-        'temperature',
-        'humidity',
-        'motion',
-        'battery',
-      ].includes(deviceNameParts[deviceNameParts.length - 1])
-    ) {
-      deviceKey = deviceNameParts.slice(0, -1).join('_')
-    }
-
-    // Initialize group if it doesn't exist
-    if (!deviceGroups[deviceKey]) {
-      deviceGroups[deviceKey] = []
-    }
-
-    // Add to the appropriate device group
-    deviceGroups[deviceKey].push(entity)
-
-    // Check if it's a primary or utility entity
-    const isPrimaryDomain = HIGH_PRIORITY_DOMAINS.some((d) =>
-      entity_id.startsWith(d)
-    )
-    const isLowValueDomain = LOW_VALUE_DOMAINS.some((d) =>
-      entity_id.startsWith(d)
-    )
-    const hasLowValuePattern = LOW_VALUE_PATTERNS.some((p) =>
-      entity_id.includes(p)
-    )
-    const hasExceptionPattern = EXCEPTION_PATTERNS.some((p) =>
-      entity_id.includes(p)
-    )
-
-    if (isPrimaryDomain || hasExceptionPattern) {
-      primaryEntities.push(entity)
-    } else if (isLowValueDomain || hasLowValuePattern) {
-      utilityEntities.push(entity)
-    } else {
-      // For entities that don't clearly fit either category,
-      // add to primary by default
-      primaryEntities.push(entity)
-    }
-  })
-
-  // Step 3: Process device groups to keep only essential entities
-  const essentialEntities: HassState[] = []
-
-  Object.entries(deviceGroups).forEach(([, deviceEntities]) => {
-    // Skip empty groups
-    if (deviceEntities.length === 0) return
-
-    // Keep main controls (lights, switches) and core sensors
-    const controlEntities = deviceEntities.filter((e) => {
-      return (
-        HIGH_PRIORITY_DOMAINS.some((d) => e.entity_id.startsWith(d)) ||
-        e.entity_id.includes('temperature') ||
-        e.entity_id.includes('humidity') ||
-        e.entity_id.includes('occupancy') ||
-        e.entity_id.includes('motion')
-      )
-    })
-
-    // If we found control entities, add them
-    if (controlEntities.length > 0) {
-      essentialEntities.push(...controlEntities)
-    } else {
-      // If no control entities, keep the first entity as representative
-      essentialEntities.push(deviceEntities[0])
-    }
-  })
-
-  // Step 4: Add important primary entities that weren't in device groups
-  primaryEntities.forEach((entity) => {
-    if (!essentialEntities.some((e) => e.entity_id === entity.entity_id)) {
-      essentialEntities.push(entity)
-    }
-  })
-
-  // Step 5: Special handling for important entity types not caught above
-
-  // Add important sensors like temperatures if not already included
-  const temperatureSensors = filtered.filter(
-    (e) =>
-      e.entity_id.startsWith('sensor.') &&
-      e.entity_id.includes('temperature') &&
-      !e.entity_id.includes('device_temperature')
+  return filtered.filter(
+    (x) => !LOW_VALUE_REGEXES.find((re) => re.test(x.entity_id))
   )
-
-  temperatureSensors.forEach((sensor) => {
-    if (!essentialEntities.some((e) => e.entity_id === sensor.entity_id)) {
-      essentialEntities.push(sensor)
-    }
-  })
-
-  // Add person entities - these are usually important
-  const personEntities = filtered.filter((e) =>
-    e.entity_id.startsWith('person.')
-  )
-  personEntities.forEach((entity) => {
-    if (!essentialEntities.some((e) => e.entity_id === entity.entity_id)) {
-      essentialEntities.push(entity)
-    }
-  })
-
-  // Step 6: Limit to maxEntities if needed
-  const sortedEntities = essentialEntities.sort((a, b) => {
-    // Sort primary domains first
-    const aIsPrimary = HIGH_PRIORITY_DOMAINS.some((d) =>
-      a.entity_id.startsWith(d)
-    )
-    const bIsPrimary = HIGH_PRIORITY_DOMAINS.some((d) =>
-      b.entity_id.startsWith(d)
-    )
-
-    if (aIsPrimary && !bIsPrimary) return -1
-    if (!aIsPrimary && bIsPrimary) return 1
-
-    // Then sort by person entities
-    const aIsPerson = a.entity_id.startsWith('person.')
-    const bIsPerson = b.entity_id.startsWith('person.')
-
-    if (aIsPerson && !bIsPerson) return -1
-    if (!aIsPerson && bIsPerson) return 1
-
-    // Default sort by entity_id
-    return a.entity_id.localeCompare(b.entity_id)
-  })
-
-  return sortedEntities
 }
 
 function changedRecently(date: Date, hours: number): boolean {

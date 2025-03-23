@@ -31,20 +31,27 @@ export function createHomeAssistantServer(
 
   server.tool(
     'get-entities-by-prefix',
-    'List all Home Assistant entities that match a given prefix',
+    'List all Home Assistant entities that match a given prefix or array of prefixes',
     {
-      prefix: z
-        .string()
+      prefixes: z
+        .union([z.string(), z.array(z.string())])
         .describe(
-          'The entity prefix to match (e.g. "light.", "switch.", "person.")'
+          'The entity prefix or array of prefixes to match (e.g. "light.", "switch.", "person.")'
         ),
     },
-    async ({ prefix }) => {
+    async ({ prefixes }) => {
       try {
+        const prefixMap = Object.fromEntries(
+          (Array.isArray(prefixes) ? prefixes : [prefixes]).map((k) => [
+            k.replace('.', ''),
+            true,
+          ])
+        )
+
         const states = filterUncommonEntities(await fetchStates(connection))
 
         const matchingStates = states
-          .filter((state) => state.entity_id.startsWith(prefix))
+          .filter((state) => prefixMap[state.entity_id.replace(/\..*$/, '')])
           .map((x) => x.entity_id)
 
         d('get-entities-by-prefix: %o', matchingStates)
@@ -53,6 +60,7 @@ export function createHomeAssistantServer(
         }
       } catch (err: any) {
         d('get-entities-by-prefix Error: %s', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,
@@ -63,24 +71,28 @@ export function createHomeAssistantServer(
 
   server.tool(
     'get-state-for-entity',
-    'Get the full state including all attributes for a specific Home Assistant entity',
+    'Get the full state including all attributes for a specific Home Assistant entity or array of entities',
     {
-      entity_id: z
-        .string()
+      entity_ids: z
+        .union([z.string(), z.array(z.string())])
         .describe(
-          'The entity ID to get state for (e.g. "light.living_room", "person.john")'
+          'The entity ID or array of IDs to get state for (e.g. "light.living_room", "person.john")'
         ),
     },
-    async ({ entity_id }) => {
+    async ({ entity_ids }) => {
       try {
-        const states = await fetchStates(connection)
-        const entityState = states.find(
-          (state) => state.entity_id === entity_id
+        const ids = Object.fromEntries(
+          (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((k) => [
+            k,
+            true,
+          ])
         )
+        const states = await fetchStates(connection)
+        const entityState = states.filter((state) => ids[state.entity_id])
 
-        if (!entityState) {
+        if (entityState.length !== Object.keys(ids).length) {
           throw new Error(
-            `Entity ${entity_id} not found. Please check the entity ID and try again.`
+            `Entity not found. Please check the entity ID and try again.`
           )
         }
 

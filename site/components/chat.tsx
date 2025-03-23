@@ -10,7 +10,6 @@ import {
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import { cx } from '@/lib/utils'
-import { Collapsible, CollapsibleContent } from '@radix-ui/react-collapsible'
 
 // Base URL for API requests
 const API_BASE_URL = '/api'

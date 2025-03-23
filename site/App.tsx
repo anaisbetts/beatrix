@@ -41,10 +41,12 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
     [isMobile]
   )
 
+  const bg = isMobile ? 'bg-white' : ''
+
   return (
     <>
-      <SidebarHeader>{headerContent}</SidebarHeader>
-      <SidebarContent>
+      <SidebarHeader className={bg}></SidebarHeader>
+      <SidebarContent className={bg}>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>

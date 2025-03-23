@@ -31,26 +31,32 @@ export function createCallServiceServer(
   })
 
   server.tool(
-    'list-services-for-entity',
-    'List all Home Assistant services that match a given entity prefix',
+    'list-services-for-entities',
+    'List all Home Assistant services that match a given entity or list of entities',
     {
-      entity_prefix: z
-        .string()
-        .describe(
-          'The entity prefix to match (e.g. "light.", "switch.", "climate.")'
-        ),
+      entity_ids: z
+        .union([z.string(), z.array(z.string())])
+        .describe('The entity to find services for (e.g. "light.living_room")'),
     },
-    async ({ entity_prefix }) => {
+    async ({ entity_ids }) => {
       try {
+        const needles = Object.fromEntries(
+          (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((x) => [
+            x.replace(/\..*$/, ''),
+            true,
+          ])
+        )
         const services = await fetchServices(connection)
-        const matchingServices = Object.entries(services)
-          .filter(([domain]) => domain === entity_prefix.replace('.', ''))
-          .reduce((acc, [domain, services]) => {
-            return {
-              ...acc,
-              [domain]: services,
-            }
-          }, {})
+
+        const matchingServices = Object.keys(services).reduce(
+          (acc, k) => {
+            if (!needles[k]) return acc
+
+            acc[k] = services[k]
+            return acc
+          },
+          {} as Record<string, any>
+        )
 
         d('list-services-for-entity: %o', matchingServices)
         return {

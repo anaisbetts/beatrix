@@ -181,3 +181,4 @@ app.db
 *.db-wal
 
 .env
+tsconfig.tsbuildinfo

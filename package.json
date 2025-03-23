@@ -28,7 +28,7 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@anaisbetts/commands": "^0.3.0",
+    "@anaisbetts/commands": "0.3.1",
     "@anthropic-ai/sdk": "^0.39.0",
     "@modelcontextprotocol/sdk": "^1.7.0",
     "@radix-ui/react-dialog": "^1.1.6",

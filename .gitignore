@@ -174,4 +174,10 @@ dist
 # Finder (MacOS) folder config
 .DS_Store
 
+# SQLite database files
+app.db
+*.db
+*.db-shm
+*.db-wal
+
 .env

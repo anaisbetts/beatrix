@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs'
 import { createDatabase } from './db'
-import { describe, expect, it, test } from 'bun:test'
+import { describe, expect, it } from 'bun:test'
 import { asyncMap } from '@anaisbetts/commands'
 
 async function tryUnlink(file: string) {

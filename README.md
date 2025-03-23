@@ -18,5 +18,5 @@ services:
 ```bash
 cp .env.example .env && vim .env  ## Fill this in
 bun install
-bun run ./src/index.ts
+bun start
 ```

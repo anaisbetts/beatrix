@@ -1,5 +1,5 @@
 import { Connection as HAConnection } from 'home-assistant-js-websocket'
-import { createNotifyServer } from './servers/notify'
+import { createNotifyServer } from './mcp/notify'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import pkg from '../package.json'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
@@ -13,7 +13,7 @@ import debug from 'debug'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Ollama, Message, Tool } from 'ollama'
-import { createHomeAssistantServer } from './servers/home-assistant'
+import { createHomeAssistantServer } from './mcp/home-assistant'
 import { LargeLanguageProvider } from './llm'
 
 const d = debug('ha:llm')

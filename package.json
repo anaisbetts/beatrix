@@ -73,6 +73,8 @@
     "embla-carousel-react": "^8.5.2",
     "home-assistant-js-websocket": "^9.4.0",
     "input-otp": "^1.4.2",
+    "kysely": "^0.27.6",
+    "kysely-bun-worker": "^1.1.0",
     "lru-cache": "^11.0.2",
     "lucide-react": "^0.483.0",
     "ollama": "^0.5.14",

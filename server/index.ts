@@ -7,6 +7,8 @@ import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
+import { handlePromptRequest } from './api'
+import { createDatabase } from './db'
 
 configDotenv()
 
@@ -16,6 +18,7 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
   const conn = await connectToHAWebsocket()
   const llm = createDefaultLLMProvider()
   const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
+  const db = await createDatabase()
 
   console.log(`Starting server on port ${port} (testMode: ${options.testMode})`)
   Bun.serve({
@@ -23,16 +26,7 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
     routes: {
       '/': index,
       '/api/prompt': {
-        POST: async (req) => {
-          const { prompt } = await req.json()
-          try {
-            const resp = await llm.executePromptWithTools(prompt, tools)
-            return Response.json({ prompt, messages: resp })
-          } catch (e) {
-            console.error(e)
-            return Response.json({ prompt, error: JSON.stringify(e) })
-          }
-        },
+        POST: (req) => handlePromptRequest(db, llm, tools, req),
       },
     },
   })

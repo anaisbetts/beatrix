@@ -85,6 +85,7 @@ export default function Home() {
         <Sidebar variant="floating" collapsible="icon">
           <AppSidebar onPageClicked={setPage} />
         </Sidebar>
+
         <main className="w-full flex-1">
           <SidebarTrigger className="absolute top-2 right-2" />
           <div className="h-full pr-8">{mainContent}</div>

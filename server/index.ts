@@ -2,11 +2,11 @@ import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
 import index from '../site/index.html'
-import { connectToHAWebsocket } from './ha-ws-api'
-import { createBuiltinServers } from './execute-prompt-with-tools'
+import { connectToHAWebsocket } from './lib/ha-ws-api'
+import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { createHomeAssistantServer } from './servers/home-assistant'
+import { createHomeAssistantServer } from './mcp/home-assistant'
 
 configDotenv()
 

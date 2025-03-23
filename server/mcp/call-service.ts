@@ -2,7 +2,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { Connection } from 'home-assistant-js-websocket'
-import { connectToHAWebsocket, callService, fetchServices } from '../ha-ws-api'
+import {
+  connectToHAWebsocket,
+  callService,
+  fetchServices,
+} from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'

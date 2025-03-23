@@ -8,7 +8,7 @@ import {
   fetchHAUserInformation,
   fetchServices,
   sendNotification,
-} from '../ha-ws-api'
+} from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'

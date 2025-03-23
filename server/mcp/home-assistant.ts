@@ -6,13 +6,13 @@ import {
   connectToHAWebsocket,
   fetchStates,
   filterUncommonEntities,
-} from '../ha-ws-api'
+} from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
 import { createDefaultLLMProvider, LargeLanguageProvider } from '../llm'
 import { createCallServiceServer } from './call-service'
-import { messagesToString } from '../../lib/prompt'
+import { messagesToString } from '../../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 const d = debug('ha:home-assistant')

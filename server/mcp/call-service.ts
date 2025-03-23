@@ -6,6 +6,7 @@ import {
   connectToHAWebsocket,
   callService,
   fetchServices,
+  fetchStates,
 } from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
@@ -67,7 +68,7 @@ export function createCallServiceServer(
 
   server.tool(
     'call-service',
-    'Call any Home Assistant service for a specific entity or a list of entities',
+    'Call any Home Assistant service for a specific entity or a list of entities. Response contains the new state of the entities.',
     {
       domain: z
         .string()
@@ -118,8 +119,29 @@ export function createCallServiceServer(
           onCallService?.(domain, service, id, service_data)
         }
 
+        const states = await fetchStates(connection)
+        const needles = Object.fromEntries(entityIds.map((k) => [k, true]))
+        const stateInfo = states.reduce(
+          (acc, x) => {
+            if (!needles[x.entity_id]) return acc
+
+            acc[x.entity_id] = {
+              state: x.state,
+              attributes: x.attributes,
+            }
+
+            return acc
+          },
+          {} as Record<string, any>
+        )
+
         return {
-          content: [{ type: 'text', text: 'Service call successful' }],
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, states: stateInfo }),
+            },
+          ],
         }
       } catch (err: any) {
         d('call-service Error: %s', err)

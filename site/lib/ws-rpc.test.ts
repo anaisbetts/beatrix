@@ -1,57 +1,46 @@
-import { RecursiveProxyHandler } from './ws-rpc'
+import { firstValueFrom, map, share, Subject } from 'rxjs'
+import { IpcResponse, ServerMessage } from '../../shared/ws-rpc'
+import { createRemoteClient, RecursiveProxyHandler } from './ws-rpc'
 import { describe, expect, it } from 'bun:test'
+import { handleWebsocketRpc } from '../../server/ws-rpc'
 
-/**
- * Simple mock function implementation since we're not using Jest
- */
-function createMockFn() {
-  const calls: any[][] = []
-  const fn = function (...args: any[]) {
-    calls.push(args)
-    return fn.returnValue
-  }
-
-  fn.calls = calls
-  fn.returnValue = undefined
-  fn.mockReturnValue = function (value: any) {
-    fn.returnValue = value
-    return fn
-  }
-  fn.mockImplementation = function (implementation: Function) {
-    const originalFn = fn
-    const newFn = function (...args: any[]) {
-      originalFn.calls.push(args)
-      return implementation(...args)
-    }
-    newFn.calls = originalFn.calls
-    newFn.returnValue = originalFn.returnValue
-    newFn.mockReturnValue = originalFn.mockReturnValue
-    newFn.mockImplementation = originalFn.mockImplementation
-    newFn.callCount = originalFn.callCount
-    newFn.calledWith = originalFn.calledWith
-    newFn.nthCall = originalFn.nthCall
-    return newFn
-  }
-  fn.callCount = function () {
-    return calls.length
-  }
-  fn.calledWith = function (...expectedArgs: any[]) {
-    return calls.some((callArgs) => {
-      if (callArgs.length !== expectedArgs.length) return false
-      return callArgs.every((arg, i) => {
-        if (typeof arg === 'object' && arg !== null) {
-          return JSON.stringify(arg) === JSON.stringify(expectedArgs[i])
-        }
-        return arg === expectedArgs[i]
-      })
-    })
-  }
-  fn.nthCall = function (n: number) {
-    return calls[n - 1] || []
-  }
-
-  return fn
+interface TestInterface {
+  itShouldReturnAString(): string
 }
+
+class TestInterfaceImpl implements TestInterface {
+  itShouldReturnAString(): string {
+    return 'hello'
+  }
+}
+
+describe('createRemoteClient', () => {
+  it('should roundtrip the entire thing', async () => {
+    const subj: Subject<ServerMessage> = new Subject()
+    const resps: Subject<string> = new Subject()
+
+    const respMsgs = resps.pipe(
+      map((x) => JSON.parse(x) as IpcResponse),
+      share()
+    )
+
+    handleWebsocketRpc(new TestInterfaceImpl(), subj)
+
+    const client = createRemoteClient<TestInterface>((msg) => {
+      subj.next({
+        message: msg,
+        reply: (m) => {
+          resps.next(m as string)
+          return Promise.resolve()
+        },
+      })
+      return Promise.resolve()
+    }, respMsgs)
+
+    const ret = await firstValueFrom(client.itShouldReturnAString())
+    expect(ret).toBe('hello')
+  })
+})
 
 describe('RecursiveProxyHandler', () => {
   describe('create', () => {
@@ -176,3 +165,55 @@ describe('RecursiveProxyHandler', () => {
     })
   })
 })
+
+/**
+ * Simple mock function implementation since we're not using Jest
+ */
+function createMockFn() {
+  const calls: any[][] = []
+  const fn = function (...args: any[]) {
+    calls.push(args)
+    return fn.returnValue
+  }
+
+  fn.calls = calls
+  fn.returnValue = undefined
+  fn.mockReturnValue = function (value: any) {
+    fn.returnValue = value
+    return fn
+  }
+  fn.mockImplementation = function (implementation: Function) {
+    const originalFn = fn
+    const newFn = function (...args: any[]) {
+      originalFn.calls.push(args)
+      return implementation(...args)
+    }
+    newFn.calls = originalFn.calls
+    newFn.returnValue = originalFn.returnValue
+    newFn.mockReturnValue = originalFn.mockReturnValue
+    newFn.mockImplementation = originalFn.mockImplementation
+    newFn.callCount = originalFn.callCount
+    newFn.calledWith = originalFn.calledWith
+    newFn.nthCall = originalFn.nthCall
+    return newFn
+  }
+  fn.callCount = function () {
+    return calls.length
+  }
+  fn.calledWith = function (...expectedArgs: any[]) {
+    return calls.some((callArgs) => {
+      if (callArgs.length !== expectedArgs.length) return false
+      return callArgs.every((arg, i) => {
+        if (typeof arg === 'object' && arg !== null) {
+          return JSON.stringify(arg) === JSON.stringify(expectedArgs[i])
+        }
+        return arg === expectedArgs[i]
+      })
+    })
+  }
+  fn.nthCall = function (n: number) {
+    return calls[n - 1] || []
+  }
+
+  return fn
+}

@@ -1,9 +1,77 @@
-/*
+import {
+  AsyncSubject,
+  EMPTY,
+  filter,
+  from,
+  mergeMap,
+  NEVER,
+  Observable,
+  of,
+  shareReplay,
+  Subject,
+  takeUntil,
+  takeWhile,
+  throwError,
+} from 'rxjs'
+import { Asyncify, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
+import debug from 'debug'
+
+const d = debug('ha:ws-rpc')
+
 export function createRemoteClient<T>(
   sender: (msg: string) => Promise<void>,
-  messageStream: Observable<string>
-): Asyncify<T> {}
-*/
+  messageStream: Observable<IpcResponse>
+): Asyncify<T> {
+  let rqId = 1
+
+  const ret = RecursiveProxyHandler.create('root', ([, ...chain], args) => {
+    rqId++
+    const rq: IpcRequest = {
+      requestId: rqId.toString(),
+      method: chain.join('.'),
+      args: args,
+    }
+
+    const retVal = handleSingleRequest(rq, messageStream).pipe(shareReplay())
+
+    retVal.subscribe({ error: () => {} })
+
+    return from(sender(JSON.stringify(rq))).pipe(mergeMap(() => retVal))
+  })
+
+  return ret as Asyncify<T>
+}
+
+function handleSingleRequest(rq: IpcRequest, stream: Observable<IpcResponse>) {
+  const bail: Subject<void> = new AsyncSubject()
+
+  return stream.pipe(
+    filter((x) => x.requestId === rq.requestId),
+    takeUntil(bail),
+    mergeMap((x) => {
+      d('Got a response! %o', x)
+
+      switch (x.type) {
+        case 'item':
+          return of(x.object)
+        case 'error':
+          return throwError(() =>
+            'message' in x.object
+              ? new Error(x.object.message)
+              : new Error(x.object.toString())
+          )
+        case 'end':
+          bail.next()
+          return EMPTY
+        case 'reply':
+          bail.next()
+          return of(x.object)
+        default:
+          return throwError(() => new Error('invalid'))
+      }
+    })
+  )
+}
 
 /**
  * RecursiveProxyHandler is a ES6 Proxy Handler object that intercepts method

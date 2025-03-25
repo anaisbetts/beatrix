@@ -1,8 +1,8 @@
-import { from, mergeMap, Observable, shareReplay, tap } from 'rxjs'
+import { from, mergeMap, Observable, ReplaySubject } from 'rxjs'
 import { Asyncify, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
 import debug from 'debug'
 
-const d = debug('ha:ws-rpc')
+const d = debug('ha:ws-rpc-client')
 
 export function createRemoteClient<T>(
   sender: (msg: string) => Promise<void>,
@@ -18,17 +18,10 @@ export function createRemoteClient<T>(
       args: args,
     }
 
-    const retVal = handleSingleRequest(rq, messageStream).pipe(
-      shareReplay(),
-      tap({
-        next: (x) => d('snext: %o', x),
-        error: (e) => d('serr: %o', e),
-        complete: () => d('sdone'),
-      })
-    )
-    retVal.subscribe({ error: () => {} })
+    const subj = new ReplaySubject()
+    handleSingleRequest(rq, messageStream).subscribe(subj)
 
-    return from(sender(JSON.stringify(rq))).pipe(mergeMap(() => retVal))
+    return from(sender(JSON.stringify(rq))).pipe(mergeMap(() => subj))
   })
 
   return ret as Asyncify<T>
@@ -53,7 +46,6 @@ function handleSingleRequest(rq: IpcRequest, stream: Observable<IpcResponse>) {
             break
           case 'error':
             done = true
-            d('hang up')
             subj.error(
               new Error(
                 typeof resp.object === 'object' && 'message' in resp.object

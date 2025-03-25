@@ -167,7 +167,7 @@ function handleSingleResponse(
           requestId: rq.requestId,
           type: 'error',
           object: {
-            message: e?.message || String(e)
+            message: e?.message || String(e),
           },
         }
 
@@ -205,7 +205,7 @@ function handleSingleResponse(
             requestId: rq.requestId,
             type: 'error',
             object: {
-              message: e?.message || String(e)
+              message: e?.message || String(e),
             },
           }
           return serverMessage.reply(JSON.stringify(resp))

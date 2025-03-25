@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, JSX } from 'react'
+import { useState, useRef, useCallback, JSX, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send } from 'lucide-react'
@@ -11,10 +11,11 @@ import {
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import { cx } from '@/lib/utils'
 import { useWebSocket } from './ws-provider'
-import { firstValueFrom } from 'rxjs'
+import { firstValueFrom, share, toArray } from 'rxjs'
 
 export default function Chat() {
   const [input, setInput] = useState('')
+  const [messages, setMessages] = useState<MessageParam[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { api } = useWebSocket()
 
@@ -22,33 +23,51 @@ export default function Chat() {
     const before = performance.now()
     if (!api) throw new Error('Not connected!')
 
-    const messages = await firstValueFrom(api.handlePromptRequest(input))
+    setMessages([])
 
+    const msgCall = api.handlePromptRequest(input).pipe(share())
+    const msgs: MessageParam[] = []
+
+    msgCall.subscribe({
+      next: (x) => {
+        msgs.push(x)
+        setMessages([...msgs])
+      },
+      error: () => {},
+    })
+
+    const result = await firstValueFrom(msgCall.pipe(toArray()))
+
+    console.log('done?')
     return {
-      messages: messages as MessageParam[],
+      messages: result as MessageParam[],
       duration: performance.now() - before,
     }
   }, [input])
 
   const resetChat = useCallback(() => {
     reset()
+    setMessages([])
     setInput('')
   }, [reset, setInput])
 
-  const messages = result.mapOrElse({
-    ok: (val) => {
-      if (!val) return null
-      return (
-        <div className="flex flex-col gap-2">
-          {val.messages.map((msg, index) => (
-            <ChatMessage key={`message-${index}`} msg={msg} />
-          ))}
-          <div className="pt-2 italic">Request took {val.duration}ms</div>
-        </div>
-      )
-    },
+  const msgContent = useMemo(() => {
+    return (
+      <div className="flex flex-col gap-2">
+        {messages.map((msg, index) => (
+          <ChatMessage key={`message-${index}`} msg={msg} />
+        ))}
+      </div>
+    )
+  }, [messages])
+
+  const requestInfo = result.mapOrElse({
+    ok: (val) => (
+      <div className="pt-2 italic">Request took {val?.duration}ms</div>
+    ),
     err: (e) => <div className="text-gray-400 italic">It didn't. {e}</div>,
     pending: () => null,
+    null: () => null,
   })
 
   return (
@@ -61,7 +80,8 @@ export default function Chat() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {messages}
+        {msgContent}
+        {requestInfo}
         <div ref={messagesEndRef} />
       </div>
 

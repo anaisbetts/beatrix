@@ -10,24 +10,70 @@ import {
 } from 'rxjs'
 import { getAllProperties } from '../shared/utility'
 import debug from 'debug'
+import { ServerMessage, IpcRequest, IpcResponse } from '../shared/ws-rpc'
 
 const d = debug('ha:ws-rpc')
 
-export interface ServerMessage {
-  message: string | Buffer
-  reply: (msg: string | Buffer) => Promise<void>
-}
+export function handleWebsocketRpc<T extends object>(
+  routes: T,
+  socket: Observable<ServerMessage>
+) {
+  d('handleWebsocketRpc: initializing with routes %o', Object.keys(routes))
+  const validKeys = Object.fromEntries(
+    getAllProperties(routes).map((k) => [k, true])
+  )
+  d('handleWebsocketRpc: valid methods %o', Object.keys(validKeys))
 
-export interface IpcRequest {
-  requestId: string
-  method: string
-  args: any[] | null
-}
+  return socket
+    .pipe(
+      mergeMap((sm) => {
+        d(
+          'handleWebsocketRpc: received message %s',
+          typeof sm.message === 'string'
+            ? sm.message.substring(0, 100) + '...'
+            : '[Buffer]'
+        )
+        let rq: IpcRequest | null = null
+        try {
+          rq = validateRequest(sm.message, validKeys)
+          d(
+            'handleWebsocketRpc: invoking method %s with args %o',
+            rq.method,
+            rq.args
+          )
 
-export interface IpcResponse {
-  requestId: string
-  type: 'reply' | 'item' | 'end' | 'error'
-  object: any
+          const fn: any = routes[rq.method as keyof T]
+          const retVal = fn.apply(routes, rq.args ?? [])
+
+          return handleSingleResponse(rq, sm, retVal)
+        } catch (err) {
+          d('handleWebsocketRpc: error handling request: %o', err)
+          if (rq && rq.requestId) {
+            d(
+              'handleWebsocketRpc: sending error response for request %s',
+              rq.requestId
+            )
+            const resp: IpcResponse = {
+              requestId: rq?.requestId ?? '',
+              type: 'error',
+              object: JSON.stringify(err),
+            }
+
+            return from(sm.reply(JSON.stringify(resp)))
+          }
+
+          d('handleWebsocketRpc: no valid request ID, propagating error')
+          return throwError(() => err)
+        }
+      })
+    )
+    .subscribe({
+      error: (e) => {
+        d('handleWebsocketRpc: socket subscription failed: %o', e)
+        console.error('Socket has failed!', e)
+      },
+      complete: () => d('handleWebsocketRpc: socket completed'),
+    })
 }
 
 function validateRequest(
@@ -177,66 +223,4 @@ function handleSingleResponse(
   }
 
   return from(serverMessage.reply(JSON.stringify(resp)))
-}
-
-export function handleWebsocketRpc<T extends object>(
-  routes: T,
-  socket: Observable<ServerMessage>
-) {
-  d('handleWebsocketRpc: initializing with routes %o', Object.keys(routes))
-  const validKeys = Object.fromEntries(
-    getAllProperties(routes).map((k) => [k, true])
-  )
-  d('handleWebsocketRpc: valid methods %o', Object.keys(validKeys))
-
-  return socket
-    .pipe(
-      mergeMap((sm) => {
-        d(
-          'handleWebsocketRpc: received message %s',
-          typeof sm.message === 'string'
-            ? sm.message.substring(0, 100) + '...'
-            : '[Buffer]'
-        )
-        let rq: IpcRequest | null = null
-        try {
-          rq = validateRequest(sm.message, validKeys)
-          d(
-            'handleWebsocketRpc: invoking method %s with args %o',
-            rq.method,
-            rq.args
-          )
-
-          const fn: any = routes[rq.method as keyof T]
-          const retVal = fn.apply(routes, rq.args ?? [])
-
-          return handleSingleResponse(rq, sm, retVal)
-        } catch (err) {
-          d('handleWebsocketRpc: error handling request: %o', err)
-          if (rq && rq.requestId) {
-            d(
-              'handleWebsocketRpc: sending error response for request %s',
-              rq.requestId
-            )
-            const resp: IpcResponse = {
-              requestId: rq?.requestId ?? '',
-              type: 'error',
-              object: JSON.stringify(err),
-            }
-
-            return from(sm.reply(JSON.stringify(resp)))
-          }
-
-          d('handleWebsocketRpc: no valid request ID, propagating error')
-          return throwError(() => err)
-        }
-      })
-    )
-    .subscribe({
-      error: (e) => {
-        d('handleWebsocketRpc: socket subscription failed: %o', e)
-        console.error('Socket has failed!', e)
-      },
-      complete: () => d('handleWebsocketRpc: socket completed'),
-    })
 }

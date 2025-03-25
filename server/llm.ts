@@ -8,12 +8,13 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { OllamaLargeLanguageProvider } from './ollama'
+import { Observable } from 'rxjs'
 
 export interface LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[]
-  ): Promise<MessageParam[]>
+  ): Observable<MessageParam>
 }
 
 export function createDefaultLLMProvider() {

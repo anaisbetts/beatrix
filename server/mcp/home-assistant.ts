@@ -14,6 +14,7 @@ import { createDefaultLLMProvider, LargeLanguageProvider } from '../llm'
 import { createCallServiceServer } from './call-service'
 import { messagesToString } from '../../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import { firstValueFrom, toArray } from 'rxjs'
 
 const d = debug('ha:home-assistant')
 
@@ -157,9 +158,10 @@ export function createHomeAssistantServer(
             testMode,
           }),
         ]
-        msgs = await llm.executePromptWithTools(
-          callServicePrompt(prompt, entity_id),
-          tools
+        msgs = await firstValueFrom(
+          llm
+            .executePromptWithTools(callServicePrompt(prompt, entity_id), tools)
+            .pipe(toArray())
         )
 
         if (serviceCalledCount < 1) {

@@ -9,6 +9,7 @@ import { asyncMap, withTimeout, TimeoutError } from './lib/promise-extras'
 import debug from 'debug'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { connectServersToClient, LargeLanguageProvider } from './llm'
+import { from, Observable } from 'rxjs'
 
 const d = debug('ha:llm')
 
@@ -46,10 +47,14 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS.default
   }
 
-  async executePromptWithTools(
+  executePromptWithTools(
     prompt: string,
     toolServers: McpServer[]
-  ): Promise<MessageParam[]> {
+  ): Observable<MessageParam> {
+    return from(this._executePromptWithTools(prompt, toolServers))
+  }
+
+  async *_executePromptWithTools(prompt: string, toolServers: McpServer[]) {
     const anthropic = new Anthropic({ apiKey: this.apiKey })
 
     const client = new Client({
@@ -77,6 +82,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
         content: prompt,
       },
     ]
+    yield msgs[msgs.length - 1]
 
     // Calculate available token budget for the model
     let tokenBudget = this.maxTokens
@@ -139,6 +145,8 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
               },
             ],
           })
+          yield msgs[msgs.length - 1]
+
           continue
         } else {
           // For other errors, log and rethrow
@@ -162,6 +170,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
         role: response.role,
         content: response.content,
       })
+      yield msgs[msgs.length - 1]
 
       if (!response.content.find((msg) => msg.type === 'tool_use')) {
         break
@@ -249,6 +258,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       )
 
       msgs.push({ role: 'user', content: toolResults })
+      yield msgs[msgs.length - 1]
 
       // Check if we're approaching token limit
       if (usedTokens > tokenBudget * 0.9) {
@@ -267,6 +277,5 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       tokenBudget,
       (usedTokens / tokenBudget) * 100
     )
-    return msgs
   }
 }

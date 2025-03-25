@@ -1,6 +1,7 @@
 # Home Assistant Agentic Automation
 
 ## Build & Test Commands
+
 - Run server: `bun run ./server/index.ts` or `bun start`
 - Debug mode: `bun start:debug`
 - Run tests: `bun test` (all tests)

@@ -15,6 +15,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Ollama, Message, Tool } from 'ollama'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { LargeLanguageProvider } from './llm'
+import { from, map, Observable } from 'rxjs'
 
 const d = debug('ha:llm')
 
@@ -35,10 +36,16 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
     this.ollama = new Ollama({ host: endpoint })
   }
 
-  async executePromptWithTools(
+  executePromptWithTools(
     prompt: string,
     toolServers: McpServer[]
-  ): Promise<MessageParam[]> {
+  ): Observable<MessageParam> {
+    return from(this._executePromptWithTools(prompt, toolServers)).pipe(
+      map((m) => convertOllamaMessageToAnthropic(m))
+    )
+  }
+
+  async *_executePromptWithTools(prompt: string, toolServers: McpServer[]) {
     const modelName = this.model
 
     const client = new Client({
@@ -50,6 +57,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
       client,
       toolServers.map((x) => x.server)
     )
+
     const toolList = await client.listTools()
 
     // Format tools for Ollama's format
@@ -73,6 +81,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
         content: prompt,
       },
     ]
+    yield msgs[msgs.length - 1]
 
     // We're gonna keep looping until there are no more tool calls to satisfy
     while (iterationCount < MAX_ITERATIONS) {
@@ -99,6 +108,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
             role: 'assistant',
             content: `I apologize, but the AI service took too long to respond. Let's continue with what we have so far.`,
           })
+          yield msgs[msgs.length - 1]
 
           continue
         } else {
@@ -109,6 +119,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
       }
 
       msgs.push(response.message)
+      yield msgs[msgs.length - 1]
 
       if (
         !response.message.tool_calls ||
@@ -135,10 +146,9 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
           role: 'tool',
           content: JSON.stringify(toolResp.content),
         })
+        yield msgs[msgs.length - 1]
       }
     }
-
-    return convertOllamaMessageToAnthropic(msgs)
   }
 }
 
@@ -164,64 +174,62 @@ export function connectServersToClient(client: Client, servers: Server[]) {
 }
 
 function convertOllamaMessageToAnthropic(
-  msgs: Message[]
-): Anthropic.Messages.MessageParam[] {
-  return msgs.map((msg) => {
-    if (msg.role === 'tool') {
-      // Tool messages in Ollama -> tool_result content blocks in Anthropic
-      return {
-        role: 'user',
-        content: [
-          {
-            type: 'tool_result',
-            tool_use_id: 'unknown', // Ollama doesn't track tool_use_id in responses
-            content: msg.content,
-          },
-        ],
-      }
-    } else if (
-      msg.role === 'assistant' &&
-      msg.tool_calls &&
-      msg.tool_calls.length > 0
-    ) {
-      // Convert assistant messages with tool calls to Anthropic format
-      const contentBlocks: ContentBlockParam[] = []
-
-      // Add any regular text content
-      if (msg.content) {
-        contentBlocks.push({
-          type: 'text',
-          text: msg.content,
-        })
-      }
-
-      // Add tool_use blocks for each tool call
-      msg.tool_calls.forEach((toolCall) => {
-        contentBlocks.push({
-          type: 'tool_use',
-          id: `tool_${Date.now()}`, // Generate an ID if none exists
-          name: toolCall.function.name,
-          input: toolCall.function.arguments,
-        })
-      })
-
-      return {
-        role: 'assistant',
-        content: contentBlocks,
-      }
-    } else {
-      // User messages and regular assistant messages
-      return {
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content
-          ? [
-              {
-                type: 'text',
-                text: msg.content,
-              },
-            ]
-          : [],
-      }
+  msg: Message
+): Anthropic.Messages.MessageParam {
+  if (msg.role === 'tool') {
+    // Tool messages in Ollama -> tool_result content blocks in Anthropic
+    return {
+      role: 'user',
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: 'unknown', // Ollama doesn't track tool_use_id in responses
+          content: msg.content,
+        },
+      ],
     }
-  })
+  } else if (
+    msg.role === 'assistant' &&
+    msg.tool_calls &&
+    msg.tool_calls.length > 0
+  ) {
+    // Convert assistant messages with tool calls to Anthropic format
+    const contentBlocks: ContentBlockParam[] = []
+
+    // Add any regular text content
+    if (msg.content) {
+      contentBlocks.push({
+        type: 'text',
+        text: msg.content,
+      })
+    }
+
+    // Add tool_use blocks for each tool call
+    msg.tool_calls.forEach((toolCall) => {
+      contentBlocks.push({
+        type: 'tool_use',
+        id: `tool_${Date.now()}`, // Generate an ID if none exists
+        name: toolCall.function.name,
+        input: toolCall.function.arguments,
+      })
+    })
+
+    return {
+      role: 'assistant',
+      content: contentBlocks,
+    }
+  } else {
+    // User messages and regular assistant messages
+    return {
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content
+        ? [
+            {
+              type: 'text',
+              text: msg.content,
+            },
+          ]
+        : [],
+    }
+  }
 }

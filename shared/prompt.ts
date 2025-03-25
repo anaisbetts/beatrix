@@ -1,7 +1,8 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
+import { Observable } from 'rxjs'
 
 export interface ServerWebsocketApi {
-  handlePromptRequest(prompt: string): Promise<MessageParam[]>
+  handlePromptRequest(prompt: string): Observable<MessageParam>
 }
 
 export function messagesToString(msgs: MessageParam[]) {

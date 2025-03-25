@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, JSX, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Send } from 'lucide-react'
+import { Send, ChevronDown } from 'lucide-react'
 import { useCommand } from '@anaisbetts/commands'
 import {
   ContentBlockParam,
@@ -12,6 +12,12 @@ import {
 import { cx } from '@/lib/utils'
 import { useWebSocket } from './ws-provider'
 import { firstValueFrom, share, toArray } from 'rxjs'
+import { Remark } from 'react-remark'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 
 export default function Chat() {
   const [input, setInput] = useState('')
@@ -54,8 +60,12 @@ export default function Chat() {
   const msgContent = useMemo(() => {
     return (
       <div className="flex flex-col gap-2">
-        {messages.map((msg, index) => (
-          <ChatMessage key={`message-${index}`} msg={msg} />
+        {messages.map((msg, i) => (
+          <ChatMessage
+            key={`message-${i}`}
+            msg={msg}
+            isLast={i === messages.length - 1}
+          />
         ))}
       </div>
     )
@@ -105,7 +115,13 @@ export default function Chat() {
   )
 }
 
-export function ChatMessage({ msg }: { msg: MessageParam }) {
+export function ChatMessage({
+  msg,
+  isLast,
+}: {
+  msg: MessageParam
+  isLast: boolean
+}) {
   const color = msg.role === 'assistant' ? 'bg-primary-400' : 'bg-secondary-400'
 
   const content =
@@ -119,29 +135,63 @@ export function ChatMessage({ msg }: { msg: MessageParam }) {
         'flex flex-col gap-1 rounded-2xl border-2 border-gray-500 p-2'
       )}
     >
-      {content.map((cb, index) => (
-        <ContentBlock key={`content-${index}`} msg={cb} />
+      {content.map((cb, i) => (
+        <ContentBlock key={`content-${i}`} msg={cb} isLastMsg={isLast} />
       ))}
     </div>
   )
 }
 
-export function ContentBlock({ msg }: { msg: ContentBlockParam }) {
+export function ContentBlock({
+  msg,
+  isLastMsg,
+}: {
+  msg: ContentBlockParam
+  isLastMsg: boolean
+}) {
   let content: JSX.Element
+  const [isOpen, setIsOpen] = useState(false)
 
   switch (msg.type) {
     case 'text':
-      content = <>{msg.text}</>
+      console.log('text!', msg.text)
+      content = <Remark>{msg.text ?? ''}</Remark>
       break
     case 'tool_use':
+      const spinner = isLastMsg ? (
+        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+      ) : null
+
       content = (
-        <>
-          Calling tool {msg.name}, {JSON.stringify(msg.input)}
-        </>
+        <div className="text-muted-foreground flex items-center gap-2 p-1 text-sm font-medium">
+          {spinner}
+          Calling tool {msg.name}...
+        </div>
       )
       break
     case 'tool_result':
-      content = <>Tool returned {JSON.stringify(msg.content)}</>
+      content = (
+        <Collapsible
+          className="w-full rounded border p-2"
+          open={isOpen}
+          onOpenChange={setIsOpen}
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-medium">Tool Result</span>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <ChevronDown className="h-4 w-4" />
+                <span className="sr-only">Toggle</span>
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="pt-2">
+            <pre className="bg-muted overflow-auto rounded p-2 text-sm">
+              {JSON.stringify(msg.content, null, 2)}
+            </pre>
+          </CollapsibleContent>
+        </Collapsible>
+      )
       break
     default:
       content = <>'Dunno!'</>

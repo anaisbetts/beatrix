@@ -9,6 +9,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { handlePromptRequest } from './api'
 import { createDatabase } from './db'
+import { ServerWebSocket } from 'bun'
+import { Subject } from 'rxjs'
+import { ServerMessage } from '../shared/ws-rpc'
+import { handleWebsocketRpc } from './ws-rpc'
 
 configDotenv()
 
@@ -21,12 +25,39 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
   const db = await createDatabase()
 
   console.log(`Starting server on port ${port} (testMode: ${options.testMode})`)
+  const subj: Subject<ServerMessage> = new Subject()
+
+  handleWebsocketRpc(
+    {
+      helloWorld: () => 'Hello world',
+    },
+    subj
+  )
+
   Bun.serve({
     port: port,
+    fetch(req, server) {
+      const u = URL.parse(req.url)
+      if (u?.pathname === '/api/ws' && server.upgrade(req)) {
+        return new Response()
+      }
+
+      return new Response('yes')
+    },
     routes: {
       '/': index,
       '/api/prompt': {
         POST: (req) => handlePromptRequest(db, llm, tools, req),
+      },
+    },
+    websocket: {
+      async message(ws: ServerWebSocket, message: string | Buffer) {
+        subj.next({
+          message: message,
+          reply: async (m) => {
+            ws.send(m, true)
+          },
+        })
       },
     },
   })

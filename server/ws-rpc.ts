@@ -166,7 +166,9 @@ function handleSingleResponse(
         const err: IpcResponse = {
           requestId: rq.requestId,
           type: 'error',
-          object: e,
+          object: {
+            message: e?.message || String(e)
+          },
         }
 
         return from(serverMessage.reply(JSON.stringify(err)))
@@ -202,7 +204,9 @@ function handleSingleResponse(
           const resp: IpcResponse = {
             requestId: rq.requestId,
             type: 'error',
-            object: e,
+            object: {
+              message: e?.message || String(e)
+            },
           }
           return serverMessage.reply(JSON.stringify(resp))
         }

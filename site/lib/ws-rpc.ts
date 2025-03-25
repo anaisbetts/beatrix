@@ -1,18 +1,4 @@
-import {
-  AsyncSubject,
-  EMPTY,
-  filter,
-  from,
-  mergeMap,
-  NEVER,
-  Observable,
-  of,
-  shareReplay,
-  Subject,
-  takeUntil,
-  takeWhile,
-  throwError,
-} from 'rxjs'
+import { from, mergeMap, Observable, shareReplay, tap } from 'rxjs'
 import { Asyncify, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
 import debug from 'debug'
 
@@ -32,8 +18,14 @@ export function createRemoteClient<T>(
       args: args,
     }
 
-    const retVal = handleSingleRequest(rq, messageStream).pipe(shareReplay())
-
+    const retVal = handleSingleRequest(rq, messageStream).pipe(
+      shareReplay(),
+      tap({
+        next: (x) => d('snext: %o', x),
+        error: (e) => d('serr: %o', e),
+        complete: () => d('sdone'),
+      })
+    )
     retVal.subscribe({ error: () => {} })
 
     return from(sender(JSON.stringify(rq))).pipe(mergeMap(() => retVal))
@@ -43,34 +35,54 @@ export function createRemoteClient<T>(
 }
 
 function handleSingleRequest(rq: IpcRequest, stream: Observable<IpcResponse>) {
-  const bail: Subject<void> = new AsyncSubject()
+  return new Observable<any>((subj) => {
+    let done = false
 
-  return stream.pipe(
-    filter((x) => x.requestId === rq.requestId),
-    takeUntil(bail),
-    mergeMap((x) => {
-      d('Got a response! %o', x)
+    return stream.subscribe({
+      next: (resp) => {
+        if (resp.requestId !== rq.requestId) return
 
-      switch (x.type) {
-        case 'item':
-          return of(x.object)
-        case 'error':
-          return throwError(() =>
-            'message' in x.object
-              ? new Error(x.object.message)
-              : new Error(x.object.toString())
-          )
-        case 'end':
-          bail.next()
-          return EMPTY
-        case 'reply':
-          bail.next()
-          return of(x.object)
-        default:
-          return throwError(() => new Error('invalid'))
-      }
+        d('Got an item: %o', resp)
+        switch (resp.type) {
+          case 'item':
+            subj.next(resp.object)
+            break
+          case 'end':
+            done = true
+            subj.complete()
+            break
+          case 'error':
+            done = true
+            d('hang up')
+            subj.error(
+              new Error(
+                typeof resp.object === 'object' && 'message' in resp.object
+                  ? resp.object.message
+                  : (resp.object ?? '(none)').toString()
+              )
+            )
+            break
+          case 'reply':
+            done = true
+            subj.next(resp.object)
+            subj.complete()
+            break
+          default:
+            done = true
+            subj.error(new Error('invalid'))
+            break
+        }
+      },
+      error: (e) => {
+        d('Websocket hung up with error: %o', e)
+        if (!done) subj.error(e)
+      },
+      complete: () => {
+        d('Websocket hung up?')
+        if (!done) subj.complete()
+      },
     })
-  )
+  })
 }
 
 /**

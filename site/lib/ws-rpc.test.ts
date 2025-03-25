@@ -1,16 +1,60 @@
-import { firstValueFrom, map, share, Subject } from 'rxjs'
+import {
+  concat,
+  delay,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  share,
+  Subject,
+  tap,
+  throwError,
+  timer,
+  toArray,
+} from 'rxjs'
 import { IpcResponse, ServerMessage } from '../../shared/ws-rpc'
 import { createRemoteClient, RecursiveProxyHandler } from './ws-rpc'
 import { describe, expect, it } from 'bun:test'
 import { handleWebsocketRpc } from '../../server/ws-rpc'
+import debug from 'debug'
 
 interface TestInterface {
   itShouldReturnAString(): string
+  add(a: number, b: number): number
+  addPromise(a: number, b: number): Promise<number>
+  addObservable(a: number, b: number): Observable<number>
+  itReturnsAnObservableThatThrows(): Observable<number>
+  itReturnsAPromiseThatRejects(): Promise<void>
 }
+
+const d = debug('ha:ws-rpc')
 
 class TestInterfaceImpl implements TestInterface {
   itShouldReturnAString(): string {
     return 'hello'
+  }
+
+  add(a: number, b: number): number {
+    return a + b
+  }
+
+  addPromise(a: number, b: number): Promise<number> {
+    return Promise.resolve(a + b)
+  }
+
+  addObservable(a: number, b: number): Observable<number> {
+    return of(a, b, a + b).pipe(delay(10))
+  }
+
+  itReturnsAnObservableThatThrows() {
+    return concat(
+      of(5),
+      throwError(() => new Error('Observable error!'))
+    )
+  }
+
+  itReturnsAPromiseThatRejects() {
+    return Promise.reject(new Error('Promise rejection!'))
   }
 }
 
@@ -39,6 +83,159 @@ describe('createRemoteClient', () => {
 
     const ret = await firstValueFrom(client.itShouldReturnAString())
     expect(ret).toBe('hello')
+  })
+
+  it('should add', async () => {
+    const subj: Subject<ServerMessage> = new Subject()
+    const resps: Subject<string> = new Subject()
+
+    const respMsgs = resps.pipe(
+      map((x) => JSON.parse(x) as IpcResponse),
+      share()
+    )
+
+    handleWebsocketRpc(new TestInterfaceImpl(), subj)
+
+    const client = createRemoteClient<TestInterface>((msg) => {
+      subj.next({
+        message: msg,
+        reply: (m) => {
+          resps.next(m as string)
+          return Promise.resolve()
+        },
+      })
+      return Promise.resolve()
+    }, respMsgs)
+
+    const ret = await firstValueFrom(client.itShouldReturnAString())
+    expect(ret).toBe('hello')
+  })
+
+  it('should addPromise', async () => {
+    const subj: Subject<ServerMessage> = new Subject()
+    const resps: Subject<string> = new Subject()
+
+    const respMsgs = resps.pipe(
+      map((x) => JSON.parse(x) as IpcResponse),
+      share()
+    )
+
+    handleWebsocketRpc(new TestInterfaceImpl(), subj)
+
+    const client = createRemoteClient<TestInterface>((msg) => {
+      subj.next({
+        message: msg,
+        reply: (m) => {
+          resps.next(m as string)
+          return Promise.resolve()
+        },
+      })
+      return Promise.resolve()
+    }, respMsgs)
+
+    const ret = await firstValueFrom(client.addPromise(5, 5))
+    expect(ret).toBe(10)
+  })
+
+  it('should itReturnsAPromiseThatRejects', async () => {
+    const subj: Subject<ServerMessage> = new Subject()
+    const resps: Subject<string> = new Subject()
+
+    const respMsgs = resps.pipe(
+      map((x) => JSON.parse(x) as IpcResponse),
+      share()
+    )
+
+    handleWebsocketRpc(new TestInterfaceImpl(), subj)
+
+    const client = createRemoteClient<TestInterface>((msg) => {
+      subj.next({
+        message: msg,
+        reply: (m) => {
+          resps.next(m as string)
+          return Promise.resolve()
+        },
+      })
+      return Promise.resolve()
+    }, respMsgs)
+
+    try {
+      await firstValueFrom(
+        client.itReturnsAPromiseThatRejects().pipe(
+          tap({
+            next: (x) => d('next: %o', x),
+            error: (e) => d('err: %o', e),
+            complete: () => d('done'),
+          })
+        )
+      )
+      expect(false).toBe(true)
+    } catch {}
+  })
+
+  it('should addObservable', async () => {
+    const subj: Subject<ServerMessage> = new Subject()
+    const resps: Subject<string> = new Subject()
+
+    const respMsgs = resps.pipe(
+      map((x) => JSON.parse(x) as IpcResponse),
+      share()
+    )
+
+    handleWebsocketRpc(new TestInterfaceImpl(), subj)
+
+    const client = createRemoteClient<TestInterface>((msg) => {
+      subj.next({
+        message: msg,
+        reply: (m) => {
+          resps.next(m as string)
+          return Promise.resolve()
+        },
+      })
+      return Promise.resolve()
+    }, respMsgs)
+
+    const ret = await firstValueFrom(client.addObservable(3, 4).pipe(toArray()))
+    expect(ret).toStrictEqual([3, 4, 7])
+  })
+
+  it('should throw itReturnsAnObservableThatThrows', async () => {
+    const subj: Subject<ServerMessage> = new Subject()
+    const resps: Subject<string> = new Subject()
+
+    const respMsgs = resps.pipe(
+      map((x) => JSON.parse(x) as IpcResponse),
+      share()
+    )
+
+    handleWebsocketRpc(new TestInterfaceImpl(), subj)
+
+    const client = createRemoteClient<TestInterface>((msg) => {
+      subj.next({
+        message: msg,
+        reply: (m) => {
+          resps.next(m as string)
+          return Promise.resolve()
+        },
+      })
+      return Promise.resolve()
+    }, respMsgs)
+
+    let didThrow = false
+    let didEnd = false
+    let items: any[] = []
+
+    client.itReturnsAnObservableThatThrows().subscribe({
+      next: (x) => items.push(x),
+      error: () => (didThrow = true),
+      complete: () => (didEnd = true),
+    })
+
+    await firstValueFrom(timer(100))
+
+    expect(items).toEqual([5])
+    expect(didThrow).toBeTrue()
+    expect(didEnd).toBeFalse()
   })
 })
 

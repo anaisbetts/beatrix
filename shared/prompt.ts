@@ -1,5 +1,9 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 
+export interface ServerWebsocketApi {
+  handlePromptRequest(prompt: string): Promise<MessageParam[]>
+}
+
 export function messagesToString(msgs: MessageParam[]) {
   return msgs
     .reduce((acc, msg) => {

@@ -7,12 +7,13 @@ import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
-import { handlePromptRequest } from './api'
+import { ServerWebsocketApiImpl } from './api'
 import { createDatabase } from './db'
 import { ServerWebSocket } from 'bun'
 import { Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
+import { ServerWebsocketApi } from '../shared/prompt'
 
 configDotenv()
 
@@ -27,10 +28,8 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
   console.log(`Starting server on port ${port} (testMode: ${options.testMode})`)
   const subj: Subject<ServerMessage> = new Subject()
 
-  handleWebsocketRpc(
-    {
-      helloWorld: () => 'Hello world',
-    },
+  handleWebsocketRpc<ServerWebsocketApi>(
+    new ServerWebsocketApiImpl(db, llm, tools),
     subj
   )
 
@@ -46,9 +45,6 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
     },
     routes: {
       '/': index,
-      '/api/prompt': {
-        POST: (req) => handlePromptRequest(db, llm, tools, req),
-      },
     },
     websocket: {
       async message(ws: ServerWebSocket, message: string | Buffer) {

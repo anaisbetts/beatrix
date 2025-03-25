@@ -10,39 +10,24 @@ import {
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import { cx } from '@/lib/utils'
-
-// Base URL for API requests
-const API_BASE_URL = '/api'
+import { useWebSocket } from './ws-provider'
+import { firstValueFrom } from 'rxjs'
 
 export default function Chat() {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { api } = useWebSocket()
 
   const [sendPrompt, result, reset] = useCommand(async () => {
     const before = performance.now()
-    const response = await fetch(`${API_BASE_URL}/prompt`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ prompt: input }),
-    })
+    if (!api) throw new Error('Not connected!')
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to send prompt')
-    }
-
-    if (data.error) {
-      throw new Error(data.error)
-    }
+    const messages = await firstValueFrom(api.handlePromptRequest(input))
 
     return {
-      messages: data.messages as MessageParam[],
+      messages: messages as MessageParam[],
       duration: performance.now() - before,
     }
-    return
   }, [input])
 
   const resetChat = useCallback(() => {

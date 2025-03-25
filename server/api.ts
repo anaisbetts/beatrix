@@ -1,19 +1,20 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { LargeLanguageProvider } from './llm'
-import { BunRequest } from 'bun'
 import { Kysely } from 'kysely'
 import { Schema } from './db-schema'
+import { ServerWebsocketApi } from '../shared/prompt'
+import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
-export async function handlePromptRequest(
-  db: Kysely<Schema>,
-  llm: LargeLanguageProvider,
-  tools: McpServer[],
-  req: BunRequest<'/api/prompt'>
-): Promise<Response> {
-  const { prompt } = await req.json()
-  try {
-    const resp = await llm.executePromptWithTools(prompt, tools)
-    await db
+export class ServerWebsocketApiImpl implements ServerWebsocketApi {
+  public constructor(
+    private db: Kysely<Schema>,
+    private llm: LargeLanguageProvider,
+    private tools: McpServer[]
+  ) {}
+
+  async handlePromptRequest(prompt: string): Promise<MessageParam[]> {
+    const resp = await this.llm.executePromptWithTools(prompt, this.tools)
+    await this.db
       .insertInto('automationLogs')
       .values({
         type: 'manual',
@@ -21,9 +22,6 @@ export async function handlePromptRequest(
       })
       .execute()
 
-    return Response.json({ prompt, messages: resp })
-  } catch (e) {
-    console.error(e)
-    return Response.json({ prompt, error: JSON.stringify(e) })
+    return resp
   }
 }

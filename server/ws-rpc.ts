@@ -1,6 +1,7 @@
 import {
   catchError,
   concat,
+  concatMap,
   defer,
   from,
   mergeMap,
@@ -12,18 +13,18 @@ import debug from 'debug'
 
 const d = debug('ha:ws-rpc')
 
-interface ServerMessage {
+export interface ServerMessage {
   message: string | Buffer
   reply: (msg: string | Buffer) => Promise<void>
 }
 
-interface IpcRequest {
+export interface IpcRequest {
   requestId: string
   method: string
   args: any[] | null
 }
 
-interface IpcResponse {
+export interface IpcResponse {
   requestId: string
   type: 'reply' | 'item' | 'end' | 'error'
   object: any
@@ -56,13 +57,20 @@ function validateRequest(
     }
   })
 
-  d('validateRequest: checking method %s against valid methods %o', rq.method, Object.keys(validKeys))
+  d(
+    'validateRequest: checking method %s against valid methods %o',
+    rq.method,
+    Object.keys(validKeys)
+  )
   if (!validKeys[rq.method]) {
     d('validateRequest: error - invalid method %s', rq.method)
     throw new Error('Invalid method')
   }
 
-  d('validateRequest: request validated successfully %o', { requestId: rq.requestId, method: rq.method })
+  d('validateRequest: request validated successfully %o', {
+    requestId: rq.requestId,
+    method: rq.method,
+  })
   return rq
 }
 
@@ -71,11 +79,12 @@ function handleSingleResponse(
   serverMessage: ServerMessage,
   retVal: any
 ): Observable<void> {
-  d('handleSingleResponse: handling request %s with return type %s', rq.requestId, 'subscribe' in retVal ? 'Observable' : 'then' in retVal ? 'Promise' : 'direct value')
-  
   // If our handler returns Observable<T>
-  if ('subscribe' in retVal) {
-    d('handleSingleResponse: processing Observable response for %s', rq.requestId)
+  if (retVal && typeof retVal === 'object' && 'subscribe' in retVal) {
+    d(
+      'handleSingleResponse: processing Observable response for %s',
+      rq.requestId
+    )
     const obs = retVal as Observable<any>
 
     const finished: IpcResponse = {
@@ -89,7 +98,7 @@ function handleSingleResponse(
     })
 
     const items = obs.pipe(
-      mergeMap((v) => {
+      concatMap((v) => {
         d('handleSingleResponse: sending item for %s: %o', rq.requestId, v)
         const resp: IpcResponse = {
           requestId: rq.requestId,
@@ -103,7 +112,11 @@ function handleSingleResponse(
 
     return concat(items, fobs).pipe(
       catchError((e: any) => {
-        d('handleSingleResponse: error in observable for %s: %o', rq.requestId, e)
+        d(
+          'handleSingleResponse: error in observable for %s: %o',
+          rq.requestId,
+          e
+        )
         const err: IpcResponse = {
           requestId: rq.requestId,
           type: 'error',
@@ -116,13 +129,17 @@ function handleSingleResponse(
   }
 
   // If our handler returns Promise<T>
-  if ('then' in retVal) {
+  if (retVal && typeof retVal === 'object' && 'then' in retVal) {
     d('handleSingleResponse: processing Promise response for %s', rq.requestId)
     const p = retVal as Promise<any>
     return from(
       p.then(
         (x) => {
-          d('handleSingleResponse: promise resolved for %s: %o', rq.requestId, x)
+          d(
+            'handleSingleResponse: promise resolved for %s: %o',
+            rq.requestId,
+            x
+          )
           const resp: IpcResponse = {
             requestId: rq.requestId,
             type: 'reply',
@@ -131,7 +148,11 @@ function handleSingleResponse(
           return serverMessage.reply(JSON.stringify(resp))
         },
         (e) => {
-          d('handleSingleResponse: promise rejected for %s: %o', rq.requestId, e)
+          d(
+            'handleSingleResponse: promise rejected for %s: %o',
+            rq.requestId,
+            e
+          )
           const resp: IpcResponse = {
             requestId: rq.requestId,
             type: 'error',
@@ -144,7 +165,11 @@ function handleSingleResponse(
   }
 
   // Basically anything else
-  d('handleSingleResponse: processing direct value response for %s: %o', rq.requestId, retVal)
+  d(
+    'handleSingleResponse: processing direct value response for %s: %o',
+    rq.requestId,
+    retVal
+  )
   const resp: IpcResponse = {
     requestId: rq.requestId,
     type: 'reply',
@@ -154,9 +179,10 @@ function handleSingleResponse(
   return from(serverMessage.reply(JSON.stringify(resp)))
 }
 
-export function handleWebsocketRpc<
-  T extends Record<string, (...args: any[]) => any>,
->(routes: T, socket: Observable<ServerMessage>) {
+export function handleWebsocketRpc<T extends object>(
+  routes: T,
+  socket: Observable<ServerMessage>
+) {
   d('handleWebsocketRpc: initializing with routes %o', Object.keys(routes))
   const validKeys = Object.fromEntries(
     getAllProperties(routes).map((k) => [k, true])
@@ -166,22 +192,32 @@ export function handleWebsocketRpc<
   return socket
     .pipe(
       mergeMap((sm) => {
-        d('handleWebsocketRpc: received message %s', typeof sm.message === 'string' ? sm.message.substring(0, 100) + '...' : '[Buffer]')
+        d(
+          'handleWebsocketRpc: received message %s',
+          typeof sm.message === 'string'
+            ? sm.message.substring(0, 100) + '...'
+            : '[Buffer]'
+        )
         let rq: IpcRequest | null = null
         try {
           rq = validateRequest(sm.message, validKeys)
-          d('handleWebsocketRpc: invoking method %s with args %o', rq.method, rq.args)
-          const retVal = routes[rq.method as keyof T].apply(
-            routes,
-            rq.args ?? []
+          d(
+            'handleWebsocketRpc: invoking method %s with args %o',
+            rq.method,
+            rq.args
           )
-          d('handleWebsocketRpc: method %s returned %s result', rq.method, 'subscribe' in retVal ? 'Observable' : 'then' in retVal ? 'Promise' : 'direct value')
+
+          const fn: any = routes[rq.method as keyof T]
+          const retVal = fn.apply(routes, rq.args ?? [])
 
           return handleSingleResponse(rq, sm, retVal)
         } catch (err) {
           d('handleWebsocketRpc: error handling request: %o', err)
           if (rq && rq.requestId) {
-            d('handleWebsocketRpc: sending error response for request %s', rq.requestId)
+            d(
+              'handleWebsocketRpc: sending error response for request %s',
+              rq.requestId
+            )
             const resp: IpcResponse = {
               requestId: rq?.requestId ?? '',
               type: 'error',
@@ -196,7 +232,7 @@ export function handleWebsocketRpc<
         }
       })
     )
-    .subscribe({ 
+    .subscribe({
       error: (e) => {
         d('handleWebsocketRpc: socket subscription failed: %o', e)
         console.error('Socket has failed!', e)

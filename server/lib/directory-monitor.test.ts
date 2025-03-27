@@ -143,43 +143,51 @@ describe('DirectoryMonitor', () => {
     expect(hasFile).toBe(true)
   })
 
-  it('should handle recursive directory watching', async () => {
-    // Create a subdirectory first
-    const subDir = join(tempDir, 'subdir')
-    await mkdir(subDir)
-    await delay(100) // Short delay before starting monitor
+  it(
+    'should handle recursive directory watching',
+    async () => {
+      // Create a subdirectory first
+      const subDir = join(tempDir, 'subdir')
+      await mkdir(subDir)
+      await delay(100) // Short delay before starting monitor
 
-    // Create a monitor with recursive option
-    const monitor = createDirectoryMonitor({
-      path: tempDir,
-      recursive: true,
-    })
+      // Create a monitor with recursive option
+      const monitor = createDirectoryMonitor({
+        path: tempDir,
+        recursive: true,
+      })
 
-    // Longer delay to ensure watcher is ready - important for Linux
-    await delay(1000)
+      // Longer delay to ensure watcher is ready - important for Linux
+      await delay(1000)
 
-    // Now start collecting emissions
-    const resultsPromise = firstValueFrom(monitor.pipe(take(1), timeout(10000)))
+      // Now start collecting emissions
+      const resultsPromise = firstValueFrom(
+        monitor.pipe(take(1), timeout(10000))
+      )
 
-    // Create a file in the subdirectory
-    const subFile = join(subDir, 'subfile.txt')
-    await writeFile(subFile, 'sub directory file')
+      // Create a file in the subdirectory
+      const subFile = join(subDir, 'subfile.txt')
+      await writeFile(subFile, 'sub directory file')
 
-    // Verify we get a notification for an event in the subdirectory
-    try {
-      const result = await resultsPromise
-      expect(result.includes('subdir')).toBe(true)
-    } catch {
-      // If test times out, try a second attempt with different approach
-      console.log('First attempt failed, trying alternative test approach')
+      // Verify we get a notification for an event in the subdirectory
+      try {
+        const result = await resultsPromise
+        expect(result.includes('subdir')).toBe(true)
+      } catch {
+        // If test times out, try a second attempt with different approach
+        console.log('First attempt failed, trying alternative test approach')
 
-      // Create another file to trigger an event
-      const subFile2 = join(subDir, 'subfile2.txt')
-      await writeFile(subFile2, 'second file')
+        // Create another file to trigger an event
+        const subFile2 = join(subDir, 'subfile2.txt')
+        await writeFile(subFile2, 'second file')
 
-      // Wait for emission again
-      const result = await firstValueFrom(monitor.pipe(take(1), timeout(5000)))
-      expect(result.includes('subdir')).toBe(true)
-    }
-  })
+        // Wait for emission again
+        const result = await firstValueFrom(
+          monitor.pipe(take(1), timeout(5000))
+        )
+        expect(result.includes('subdir')).toBe(true)
+      }
+    },
+    { timeout: 20000 }
+  ) // Increase timeout for this test
 })

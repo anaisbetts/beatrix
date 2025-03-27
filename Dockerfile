@@ -16,9 +16,8 @@ COPY . .
 RUN bun run build:ci
 
 # Production stage
-FROM alpine:latest
-
-WORKDIR /app
+FROM debian:stable
+WORKDIR /dist
 
 # Copy only the dist folder from the builder stage
 COPY --from=builder /app/dist /dist
@@ -28,7 +27,7 @@ ENV DATA_DIR=/data
 VOLUME ["${DATA_DIR}"]
 
 # Expose necessary ports
-ENV PORT=5432
+ENV PORT=8080
 ENV NODE_ENV=production
 EXPOSE ${PORT}
 

@@ -1,4 +1,4 @@
-import { smokeTestEval } from './evals/simple-evals'
+import { smokeTestEval, smokeTestToolsEval } from './evals/simple-evals'
 import { LargeLanguageProvider } from './llm'
 
 async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
@@ -10,5 +10,5 @@ async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
 }
 
 export function runAllEvals(llm: LargeLanguageProvider) {
-  return combine([smokeTestEval(llm)])
+  return combine([smokeTestEval(llm), smokeTestToolsEval(llm)])
 }

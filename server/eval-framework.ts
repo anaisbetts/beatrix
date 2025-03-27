@@ -75,7 +75,7 @@ export async function runScenario(
     { finalScore: 0, finalScorePossible: 0 }
   )
   d(
-    'Final score: %d/%d (%.1f%%)',
+    'Final score: %d/%d (%d)%%',
     finalScore,
     finalScorePossible,
     finalScorePossible > 0 ? (finalScore / finalScorePossible) * 100 : 0

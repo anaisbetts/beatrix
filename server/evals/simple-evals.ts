@@ -1,4 +1,5 @@
 import {
+  createDefaultMockedTools,
   gradeContentViaPrompt,
   gradeViaSearchForContent,
   runScenario,
@@ -18,17 +19,14 @@ export async function* smokeTestEval(llm: LargeLanguageProvider) {
       ),
     ]
   )
+}
 
+export async function* smokeTestToolsEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
-    'What is the capital of Germany?',
-    [],
-    'No tools',
-    [
-      gradeViaSearchForContent('Berlin', 'Germany', 'capital of Germany'),
-      gradeContentViaPrompt(
-        'Did the assistant answer Berlin concisely and without additional info?'
-      ),
-    ]
+    'What lights are in the foyer? Tell me the friendly names of each light.',
+    createDefaultMockedTools(llm),
+    'Default mocked tools',
+    [gradeViaSearchForContent('Bird', 'Sconces', 'Floor', 'Overhead')]
   )
 }

@@ -25,7 +25,7 @@ abstract class Scenario {
 }
 */
 
-type ScenarioResult = {
+export type ScenarioResult = {
   prompt: string
   toolsDescription: string
   messages: MessageParam[]
@@ -34,13 +34,14 @@ type ScenarioResult = {
   finalScorePossible: number
 }
 
-type GradeResult = {
+export type GradeResult = {
   score: number
   possible_score: number
   grader_info: string
 }
 
-type Grader = (messages: MessageParam[]) => Promise<GradeResult>
+export type Grader = (messages: MessageParam[]) => Promise<GradeResult>
+
 type LlmEvalResponse = {
   grade: number
   reasoning: string
@@ -129,9 +130,9 @@ export function gradeContentViaPrompt(goal: string): Grader {
   )
 
   return async (messages: MessageParam[]) => {
-    const lastMsg = messagesToString([messages[messages.length - 1]])
+    const allMsgs = messagesToString(messages)
     const evalMsg = await lastValueFrom(
-      llm.executePromptWithTools(evalPrompt(goal, lastMsg), [])
+      llm.executePromptWithTools(evalPrompt(goal, allMsgs), [])
     )
 
     const { grade, reasoning, suggestions } = JSON.parse(

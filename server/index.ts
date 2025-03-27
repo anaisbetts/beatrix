@@ -12,13 +12,14 @@ import { ServerWebSocket } from 'bun'
 import { Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
-import { ServerWebsocketApi } from '../shared/prompt'
+import { messagesToString, ServerWebsocketApi } from '../shared/prompt'
 import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
 import { AnthropicLargeLanguageProvider } from './anthropic'
 import { OllamaLargeLanguageProvider } from './ollama'
+import { runAllEvals } from './run-all-evals'
 
 configDotenv()
 
@@ -129,6 +130,30 @@ async function evalCommand(options: { model: string; driver: string }) {
   } else {
     throw new Error("Invalid driver specified. Use 'anthropic' or 'ollama'.")
   }
+
+  console.log('Running all evals...')
+  const results = []
+  for await (const result of runAllEvals(llm)) {
+    results.push(result)
+
+    console.log(`Eval: ${result.prompt} (tools: ${result.toolsDescription})`)
+    console.log(
+      `Last message: ${messagesToString([result.messages[result.messages.length - 1]])}`
+    )
+    console.log(`Score: ${result.finalScore}/${result.finalScorePossible}`)
+    console.log('\n')
+  }
+
+  const { score, possibleScore } = results.reduce(
+    (acc, x) => {
+      acc.score += x.finalScore
+      acc.possibleScore += x.finalScorePossible
+      return acc
+    },
+    { score: 0, possibleScore: 0 }
+  )
+
+  console.log(`Overall Score: ${score}/${possibleScore}`)
 }
 
 async function main() {
@@ -163,7 +188,7 @@ async function main() {
   program
     .command('evals')
     .description('Run evaluations for a given model')
-    .option('-m, --model', 'The model to evaluate')
+    .option('-m, --model <model>', 'The model to evaluate')
     .option(
       '-d, --driver <driver>',
       'The service to evaluate, either "anthropic" or "ollama"',

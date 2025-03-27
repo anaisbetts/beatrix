@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
 import { connectToHAWebsocket } from './lib/ha-ws-api'
-import { createBuiltinServers } from './llm'
+import { createBuiltinServers, LargeLanguageProvider } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -17,6 +17,8 @@ import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
+import { AnthropicLargeLanguageProvider } from './anthropic'
+import { OllamaLargeLanguageProvider } from './ollama'
 
 configDotenv()
 
@@ -103,6 +105,32 @@ async function mcpCommand(options: { testMode: boolean }) {
   */
 }
 
+async function evalCommand(options: { model: string; driver: string }) {
+  const { model, driver } = options
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error(
+      'ANTHROPIC_API_KEY is required, it is used for eval grading'
+    )
+  }
+
+  let llm: LargeLanguageProvider
+  if (driver === 'anthropic') {
+    llm = new AnthropicLargeLanguageProvider(
+      process.env.ANTHROPIC_API_KEY,
+      model
+    )
+  } else if (driver === 'ollama') {
+    if (!process.env.OLLAMA_HOST) {
+      throw new Error('OLLAMA_HOST is required for Ollama driver')
+    }
+
+    llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST, model)
+  } else {
+    throw new Error("Invalid driver specified. Use 'anthropic' or 'ollama'.")
+  }
+}
+
 async function main() {
   const program = new Command()
 
@@ -131,6 +159,17 @@ async function main() {
       false
     )
     .action(mcpCommand)
+
+  program
+    .command('evals')
+    .description('Run evaluations for a given model')
+    .option('-m, --model', 'The model to evaluate')
+    .option(
+      '-d, --driver <driver>',
+      'The service to evaluate, either "anthropic" or "ollama"',
+      'ollama'
+    )
+    .action(evalCommand)
 
   // Default command is 'serve' if no command is specified
   if (process.argv.length <= 2) {

@@ -9,6 +9,7 @@ import { LargeLanguageProvider } from './llm'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { asyncMap } from '@anaisbetts/commands'
 import { createNotifyServer } from './mcp/notify'
+import debug from 'debug'
 
 import mockServices from '../mocks/services.json'
 import mockStates from '../mocks/states.json'
@@ -16,14 +17,7 @@ import { HassServices } from 'home-assistant-js-websocket'
 import { fetchHAUserInformation } from './lib/ha-ws-api'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 
-/*
-abstract class Scenario {
-  // prompts[]
-  // tools[]
-  // graders[]
-  // - gets msg array, returns { score, possible_score }
-}
-*/
+const d = debug('ha:eval')
 
 export type ScenarioResult = {
   prompt: string
@@ -55,13 +49,23 @@ export async function runScenario(
   toolsDescription: string,
   graders: Grader[]
 ): Promise<ScenarioResult> {
+  d(
+    'Starting scenario with %d tools and %d graders',
+    tools.length,
+    graders.length
+  )
+  d('Prompt: %s', prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''))
+
   const messages = await firstValueFrom(
     llm.executePromptWithTools(prompt, tools).pipe(toArray())
   )
+  d('Received %d messages from LLM', messages.length)
 
+  d('Applying %d graders to messages', graders.length)
   const gradeResults = Array.from(
     (await asyncMap(graders, async (g) => g(messages), 2)).values()
   )
+
   const { finalScore, finalScorePossible } = gradeResults.reduce(
     (acc, x) => {
       acc.finalScore += x.score
@@ -69,6 +73,12 @@ export async function runScenario(
       return acc
     },
     { finalScore: 0, finalScorePossible: 0 }
+  )
+  d(
+    'Final score: %d/%d (%.1f%%)',
+    finalScore,
+    finalScorePossible,
+    finalScorePossible > 0 ? (finalScore / finalScorePossible) * 100 : 0
   )
 
   return {
@@ -86,6 +96,7 @@ export async function runScenario(
  */
 
 export function createDefaultMockedTools(llm: LargeLanguageProvider) {
+  d('Creating default mocked tools')
   return [
     createNotifyServer(null, {
       mockFetchServices: async () => mockServices as unknown as HassServices,
@@ -104,17 +115,26 @@ export function createDefaultMockedTools(llm: LargeLanguageProvider) {
  */
 
 export function gradeViaSearchForContent(...content: string[]): Grader {
+  d(
+    'Creating search content grader with %d terms to search for',
+    content.length
+  )
   return async (messages: MessageParam[]) => {
     const lastMsg = messagesToString([messages[messages.length - 1]])
+    d('Grading last message with length %d', lastMsg.length)
+
     const score = content.reduce((acc, needle) => {
-      if (lastMsg.includes(needle)) {
-        return acc + 1
-      } else {
-        return acc
-      }
+      const found = lastMsg.includes(needle)
+      d(
+        'Searching for "%s": %s',
+        needle.substring(0, 20) + (needle.length > 20 ? '...' : ''),
+        found ? 'FOUND' : 'NOT FOUND'
+      )
+      return found ? acc + 1 : acc
     }, 0)
 
     const info = content.map((x) => `"${x}"`).join(', ')
+    d('Search grader score: %d/%d', score, content.length)
     return {
       score: score,
       possible_score: content.length,
@@ -124,31 +144,51 @@ export function gradeViaSearchForContent(...content: string[]): Grader {
 }
 
 export function gradeContentViaPrompt(goal: string): Grader {
+  d(
+    'Creating LLM-based content evaluation grader with goal: %s',
+    goal.substring(0, 50) + (goal.length > 50 ? '...' : '')
+  )
+
   const llm = new AnthropicLargeLanguageProvider(
     process.env.ANTHROPIC_API_KEY!,
     ANTHROPIC_EVAL_MODEL
   )
 
   return async (messages: MessageParam[]) => {
+    d('Grading %d messages with LLM', messages.length)
     const allMsgs = messagesToString(messages)
+    d('Combined message length: %d characters', allMsgs.length)
+
+    d('Sending evaluation prompt to LLM')
     const evalMsg = await lastValueFrom(
       llm.executePromptWithTools(evalPrompt(goal, allMsgs), [])
     )
 
-    const { grade, reasoning, suggestions } = JSON.parse(
-      evalMsg.content.toString().trim()
-    ) as LlmEvalResponse
+    try {
+      const response = messagesToString([evalMsg]).trim()
+      d('Received LLM evaluation response: %s', response)
 
-    return {
-      score: grade,
-      possible_score: 5,
-      grader_info: `Reasoning: ${reasoning}, Suggestions: ${suggestions}`,
+      const { grade, reasoning, suggestions } = JSON.parse(
+        response
+      ) as LlmEvalResponse
+      d('LLM evaluation grade: %d/5', grade)
+
+      return {
+        score: grade,
+        possible_score: 5,
+        grader_info: `Reasoning: ${reasoning}, Suggestions: ${suggestions}`,
+      }
+    } catch (err) {
+      d('Error parsing LLM evaluation response: %o', err)
+      throw err
     }
   }
 }
 
-const evalPrompt = (goal: string, content: string) => `
-You are an objective evaluation grader. Based on how well the result meets the specified goal, assign a grade from 1-5.
+const evalPrompt = (
+  goal: string,
+  content: string
+) => `You are an objective evaluation grader. Based on how well the result meets the specified goal, assign a grade from 1-5.
 
 <DESIRED_GOAL>
 ${goal}
@@ -182,4 +222,6 @@ Remember that the grade should be a number from 1-5, where:
 3 = Satisfactory (Meets basic expectations)
 4 = Good (Exceeds expectations)
 5 = Excellent (Far exceeds expectations)
+
+Return **only** the JSON object, without any additional text or explanation. Do *not* include Markdown formatters.
 `

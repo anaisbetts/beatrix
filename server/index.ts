@@ -1,7 +1,6 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import index from '../site/index.html'
 import { connectToHAWebsocket } from './lib/ha-ws-api'
 import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
@@ -14,11 +13,30 @@ import { Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
 import { ServerWebsocketApi } from '../shared/prompt'
+import serveStatic from './serve-static-bun'
+
+import path from 'path'
+import { exists } from 'fs/promises'
 
 configDotenv()
 
+const DEFAULT_PORT = '8080'
+
+function repoRootDir() {
+  // If we are running as a single-file executable all of the normal node methods
+  // to get __dirname get Weird. However, if we're running in dev mode, we can use
+  // our usual tricks
+  const haystack = ['bun.exe', 'bun-profile.exe', 'bun', 'node']
+  const needle = path.basename(process.execPath)
+  if (haystack.includes(needle)) {
+    return path.resolve(__dirname, '..')
+  } else {
+    return path.dirname(process.execPath)
+  }
+}
+
 async function serveCommand(options: { port: string; testMode: boolean }) {
-  const port = options.port || process.env.PORT || '5432'
+  const port = options.port || process.env.PORT || DEFAULT_PORT
 
   const conn = await connectToHAWebsocket()
   const llm = createDefaultLLMProvider()
@@ -33,18 +51,24 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
     subj
   )
 
+  const isProdMode = await exists(path.join(repoRootDir(), 'assets'))
+  if (isProdMode) {
+    console.log('Running in Production Mode')
+  } else {
+    console.log('Running in development server-only mode')
+  }
+
+  const assetsServer = serveStatic(path.join(repoRootDir(), 'public'))
+
   Bun.serve({
     port: port,
-    fetch(req, server) {
+    async fetch(req, server) {
+      // XXX: This sucks, there's gotta be a better way
       const u = URL.parse(req.url)
       if (u?.pathname === '/api/ws' && server.upgrade(req)) {
         return new Response()
       }
-
-      return new Response('yes')
-    },
-    routes: {
-      '/': index,
+      return await assetsServer(req)
     },
     websocket: {
       async message(ws: ServerWebSocket, message: string | Buffer) {

@@ -6,6 +6,14 @@
   "scripts": {
     "lint": "eslint && tsc && prettier --check .",
     "fix": "eslint --fix && prettier --write .",
+    "build:all": "bun run build:vite && bun run build:server",
+    "build:server": "bun build --target bun --compile --outfile ./dist/server ./server/index.ts",
+    "build:vite": "vite build",
+    "build:ci": "bun run lint && bun run build:all",
+    "dev": "concurrently \"bun dev:server\" \"bun dev:vite\"",
+    "dev:debug": "DEBUG='*' concurrently \"bun dev:server\" \"bun dev:vite\"",
+    "dev:server": "bun run ./server/index.ts",
+    "dev:vite": "vite",
     "start": "bun run ./server/index.ts",
     "start:debug": "DEBUG='*' bun run ./server/index.ts",
     "serve": "bun run ./server/index.ts serve",
@@ -13,16 +21,21 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@tailwindcss/vite": "^4.0.16",
     "@types/bun": "^1.2.5",
     "@types/debug": "^4.1.12",
+    "@types/mime-types": "^2.1.4",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "bun-types": "latest",
+    "concurrently": "^9.1.2",
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
-    "prettier-plugin-tailwindcss": "^0.6.11"
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "vite": "^6.2.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -54,6 +67,7 @@
     "react-dom": "^19.0.0",
     "react-remark": "^2.1.0",
     "rxjs": "^7.8.2",
+    "serve-static-bun": "^0.5.3",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.14",
     "tailwindcss-animate": "^1.0.7",

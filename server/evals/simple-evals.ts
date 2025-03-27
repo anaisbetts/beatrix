@@ -27,7 +27,7 @@ export async function* smokeTestEval(llm: LargeLanguageProvider) {
     [
       gradeViaSearchForContent('Berlin', 'Germany', 'capital of Germany'),
       gradeContentViaPrompt(
-        'Did the assistant answer Germany concisely and without additional info?'
+        'Did the assistant answer Berlin concisely and without additional info?'
       ),
     ]
   )

@@ -17,7 +17,7 @@ import debug from 'debug'
 const d = debug('ha:notify')
 
 export function createNotifyServer(
-  connection: Connection,
+  connection: Connection | null,
   opts: {
     testMode?: boolean
     mockFetchServices?: (
@@ -38,14 +38,15 @@ export function createNotifyServer(
   } = {}
 ) {
   const testMode = opts?.testMode ?? false
+
   const fetchServicesCall =
-    opts?.mockFetchServices ?? (() => fetchServices(connection))
+    opts?.mockFetchServices ?? (() => fetchServices(connection!))
   const fetchUsersCall =
     opts?.mockFetchUsers ?? (() => fetchHAUserInformation(connection))
   const sendNotificationCall =
     opts?.mockSendNotification ??
     ((_tool, _ctx, target, message, title) =>
-      sendNotification(testMode, connection, target, message, title))
+      sendNotification(testMode, connection!, target, message, title))
 
   const server = new McpServer({
     name: 'notify',

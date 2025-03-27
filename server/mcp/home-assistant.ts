@@ -20,7 +20,7 @@ import { firstValueFrom, toArray } from 'rxjs'
 const d = debug('ha:home-assistant')
 
 export function createHomeAssistantServer(
-  connection: Connection,
+  connection: Connection | null,
   llm: LargeLanguageProvider,
   opts: {
     testMode?: boolean
@@ -29,7 +29,7 @@ export function createHomeAssistantServer(
 ) {
   const testMode = opts?.testMode ?? false
   const fetchStatesCall =
-    opts?.mockFetchStates ?? (() => fetchStates(connection))
+    opts?.mockFetchStates ?? (() => fetchStates(connection!))
 
   const server = new McpServer({
     name: 'home-assistant',
@@ -176,7 +176,7 @@ export function createHomeAssistantServer(
       try {
         let serviceCalledCount = 0
         const tools = [
-          createCallServiceServer(connection, () => serviceCalledCount++, {
+          createCallServiceServer(connection!, () => serviceCalledCount++, {
             testMode,
           }),
         ]

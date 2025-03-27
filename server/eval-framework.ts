@@ -1,13 +1,20 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
-import { messagesToString } from '../../shared/prompt'
+import { messagesToString } from '../shared/prompt'
 import {
   ANTHROPIC_EVAL_MODEL,
   AnthropicLargeLanguageProvider,
-} from '../anthropic'
+} from './anthropic'
 import { firstValueFrom, lastValueFrom, toArray } from 'rxjs'
-import { LargeLanguageProvider } from '../llm'
+import { LargeLanguageProvider } from './llm'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { asyncMap } from '@anaisbetts/commands'
+import { createNotifyServer } from './mcp/notify'
+
+import mockServices from '../mocks/services.json'
+import mockStates from '../mocks/states.json'
+import { HassServices } from 'home-assistant-js-websocket'
+import { fetchHAUserInformation } from './lib/ha-ws-api'
+import { createHomeAssistantServer } from './mcp/home-assistant'
 
 /*
 abstract class Scenario {
@@ -73,7 +80,29 @@ export async function runScenario(
   }
 }
 
-export function searchForContentInOutput(...content: string[]): Grader {
+/*
+ * Tools
+ */
+
+export function createDefaultMockedTools(llm: LargeLanguageProvider) {
+  return [
+    createNotifyServer(null, {
+      mockFetchServices: async () => mockServices as unknown as HassServices,
+      mockFetchUsers: async () => fetchHAUserInformation(null, { mockStates }),
+      mockSendNotification: async () => {},
+    }),
+    createHomeAssistantServer(null, llm, {
+      testMode: true,
+      mockFetchStates: async () => mockStates,
+    }),
+  ]
+}
+
+/*
+ * Graders
+ */
+
+export function gradeViaSearchForContent(...content: string[]): Grader {
   return async (messages: MessageParam[]) => {
     const lastMsg = messagesToString([messages[messages.length - 1]])
     const score = content.reduce((acc, needle) => {

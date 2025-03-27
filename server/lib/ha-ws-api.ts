@@ -103,8 +103,11 @@ export function eventsObservable(
   })
 }
 
-export async function fetchHAUserInformation(connection: Connection) {
-  const states = await fetchStates(connection)
+export async function fetchHAUserInformation(
+  connection: Connection | null,
+  opts: { mockStates?: HassState[] } = {}
+) {
+  const states = opts.mockStates ?? (await fetchStates(connection!))
 
   const people = states.filter((state) => state.entity_id.startsWith('person.'))
   d('people: %o', people)

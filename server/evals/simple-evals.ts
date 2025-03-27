@@ -1,5 +1,6 @@
 import {
   createDefaultMockedTools,
+  failureGrader,
   gradeContentViaPrompt,
   gradeViaSearchForContent,
   runScenario,
@@ -13,6 +14,7 @@ export async function* smokeTestEval(llm: LargeLanguageProvider) {
     [],
     'No tools',
     [
+      failureGrader(),
       gradeViaSearchForContent('Paris', 'France', 'capital of France'),
       gradeContentViaPrompt(
         'Did the assistant answer Paris concisely and without additional info?'
@@ -27,6 +29,12 @@ export async function* smokeTestToolsEval(llm: LargeLanguageProvider) {
     'What lights are in the foyer? Tell me the friendly names of each light.',
     createDefaultMockedTools(llm),
     'Default mocked tools',
-    [gradeViaSearchForContent('Bird', 'Sconces', 'Floor', 'Overhead')]
+    [
+      failureGrader(),
+      gradeViaSearchForContent('Bird', 'Sconces', 'Floor', 'Overhead'),
+      gradeContentViaPrompt(
+        "The assistant should answer with three lights and *only* three lights. If they don't answer with lights, it's a failure"
+      ),
+    ]
   )
 }

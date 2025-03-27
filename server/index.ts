@@ -125,6 +125,7 @@ async function evalCommand(options: {
   model: string
   driver: string
   verbose: boolean
+  num: number
 }) {
   const { model, driver } = options
 
@@ -152,15 +153,19 @@ async function evalCommand(options: {
 
   console.log('Running all evals...')
   const results = []
-  for await (const result of runAllEvals(llm)) {
-    results.push(result)
-    if (options.verbose) {
-      console.log(JSON.stringify(result, null, 2))
-    } else {
-      printResult(result)
-    }
+  for (let i = 0; i < options.num; i++) {
+    console.log(`Run ${i + 1} of ${options.num}`)
 
-    console.log('\n')
+    for await (const result of runAllEvals(llm)) {
+      results.push(result)
+      if (options.verbose) {
+        console.log(JSON.stringify(result, null, 2))
+      } else {
+        printResult(result)
+      }
+
+      console.log('\n')
+    }
   }
 
   const { score, possibleScore } = results.reduce(
@@ -172,7 +177,9 @@ async function evalCommand(options: {
     { score: 0, possibleScore: 0 }
   )
 
-  console.log(`Overall Score: ${score}/${possibleScore}`)
+  console.log(
+    `Overall Score: ${score}/${possibleScore} (${(score / possibleScore) * 100.0}%`
+  )
 }
 
 async function main() {
@@ -213,6 +220,7 @@ async function main() {
       'The service to evaluate, either "anthropic" or "ollama"',
       'ollama'
     )
+    .option('-n, --num <num>', 'Number of repetitions to run', 1)
     .option('-v, --verbose', 'Enable verbose output', false)
 
     .action(evalCommand)

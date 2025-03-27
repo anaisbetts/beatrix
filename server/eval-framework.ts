@@ -30,8 +30,8 @@ export type ScenarioResult = {
 
 export type GradeResult = {
   score: number
-  possible_score: number
-  grader_info: string
+  possibleScore: number
+  graderInfo: string
 }
 
 export type Grader = (messages: MessageParam[]) => Promise<GradeResult>
@@ -56,9 +56,21 @@ export async function runScenario(
   )
   d('Prompt: %s', prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''))
 
-  const messages = await firstValueFrom(
-    llm.executePromptWithTools(prompt, tools).pipe(toArray())
-  )
+  let messages: MessageParam[] = []
+  try {
+    messages = await firstValueFrom(
+      llm.executePromptWithTools(prompt, tools).pipe(toArray())
+    )
+  } catch (e: any) {
+    d('Error executing prompt with tools: %o', e)
+    messages = [
+      {
+        role: 'assistant',
+        content: `!!!Error!!! executing prompt with tools, this should always fail ${e.message}\n${e.stack}`,
+      },
+    ]
+  }
+
   d('Received %d messages from LLM', messages.length)
 
   d('Applying %d graders to messages', graders.length)
@@ -69,7 +81,7 @@ export async function runScenario(
   const { finalScore, finalScorePossible } = gradeResults.reduce(
     (acc, x) => {
       acc.finalScore += x.score
-      acc.finalScorePossible += x.possible_score
+      acc.finalScorePossible += x.possibleScore
       return acc
     },
     { finalScore: 0, finalScorePossible: 0 }
@@ -114,6 +126,19 @@ export function createDefaultMockedTools(llm: LargeLanguageProvider) {
  * Graders
  */
 
+export function failureGrader(): Grader {
+  return async (messages: MessageParam[]) => {
+    const lastMsg = messagesToString([messages[messages.length - 1]])
+    const hasError = lastMsg.includes('!!!Error!!!')
+
+    return {
+      score: hasError ? 0 : 1,
+      possibleScore: 1,
+      graderInfo: hasError ? lastMsg : 'No error found',
+    }
+  }
+}
+
 export function gradeViaSearchForContent(...content: string[]): Grader {
   d(
     'Creating search content grader with %d terms to search for',
@@ -137,8 +162,8 @@ export function gradeViaSearchForContent(...content: string[]): Grader {
     d('Search grader score: %d/%d', score, content.length)
     return {
       score: score,
-      possible_score: content.length,
-      grader_info: `Looking for ${info}`,
+      possibleScore: content.length,
+      graderInfo: `Looking for ${info}`,
     }
   }
 }
@@ -175,8 +200,8 @@ export function gradeContentViaPrompt(goal: string): Grader {
 
       return {
         score: grade,
-        possible_score: 5,
-        grader_info: `Reasoning: ${reasoning}, Suggestions: ${suggestions}`,
+        possibleScore: 5,
+        graderInfo: `Reasoning: ${reasoning}, Suggestions: ${suggestions}`,
       }
     } catch (err) {
       d('Error parsing LLM evaluation response: %o', err)

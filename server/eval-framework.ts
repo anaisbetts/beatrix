@@ -156,7 +156,7 @@ export function gradeContentViaPrompt(goal: string): Grader {
 
   return async (messages: MessageParam[]) => {
     d('Grading %d messages with LLM', messages.length)
-    const allMsgs = messagesToString(messages)
+    const allMsgs = messagesToString(messages, true)
     d('Combined message length: %d characters', allMsgs.length)
 
     d('Sending evaluation prompt to LLM')

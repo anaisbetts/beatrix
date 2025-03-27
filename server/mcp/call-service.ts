@@ -22,7 +22,7 @@ export function createCallServiceServer(
     target: string,
     data: any
   ) => unknown,
-  opts?: { testMode: boolean }
+  opts: { testMode?: boolean } = {}
 ) {
   const testMode = opts?.testMode ?? false
   const server = new McpServer({

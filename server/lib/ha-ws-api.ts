@@ -21,7 +21,7 @@ export interface HassState {
   last_updated: string
 }
 
-interface HAPersonInformation {
+export interface HAPersonInformation {
   name: string
   notifiers: string[]
   state: string

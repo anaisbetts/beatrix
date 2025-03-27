@@ -1,12 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Connection } from 'home-assistant-js-websocket'
+import { Connection, HassServices } from 'home-assistant-js-websocket'
 import {
   connectToHAWebsocket,
   extractNotifiers,
   fetchHAUserInformation,
   fetchServices,
+  HAPersonInformation,
   sendNotification,
 } from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
@@ -17,9 +18,35 @@ const d = debug('ha:notify')
 
 export function createNotifyServer(
   connection: Connection,
-  opts?: { testMode: boolean }
+  opts: {
+    testMode?: boolean
+    mockFetchServices?: (
+      tool: string,
+      context: string[]
+    ) => Promise<HassServices>
+    mockFetchUsers?: (
+      tool: string,
+      context: string[]
+    ) => Promise<Record<string, HAPersonInformation>>
+    mockSendNotification?: (
+      tool: string,
+      context: string[],
+      target: string,
+      message: string,
+      title: string | undefined
+    ) => Promise<void>
+  } = {}
 ) {
   const testMode = opts?.testMode ?? false
+  const fetchServicesCall =
+    opts?.mockFetchServices ?? (() => fetchServices(connection))
+  const fetchUsersCall =
+    opts?.mockFetchUsers ?? (() => fetchHAUserInformation(connection))
+  const sendNotificationCall =
+    opts?.mockSendNotification ??
+    ((_tool, _ctx, target, message, title) =>
+      sendNotification(testMode, connection, target, message, title))
+
   const server = new McpServer({
     name: 'notify',
     version: pkg.version,
@@ -31,7 +58,7 @@ export function createNotifyServer(
     {},
     async () => {
       try {
-        const svcs = await fetchServices(connection)
+        const svcs = await fetchServicesCall('list-notify-targets', [])
         const resp = await extractNotifiers(svcs)
 
         d('list-notify-targets: %o', resp)
@@ -53,7 +80,7 @@ export function createNotifyServer(
     {},
     async () => {
       try {
-        const info = await fetchHAUserInformation(connection)
+        const info = await fetchUsersCall('list-people', [])
         d('list-people: %o', info)
 
         return {
@@ -84,12 +111,18 @@ export function createNotifyServer(
     async ({ target, message, title }) => {
       try {
         d('send-notification: %s %s', target, message)
-        const info = await fetchHAUserInformation(connection)
+        const info = await fetchUsersCall('send-notification-to-person', [
+          target,
+          message,
+          title ?? '',
+        ])
+
         if (!info[target]) {
           throw new Error(
             `Person ${target} not found. Use the list-people tool to get the list of people`
           )
         }
+
         const notifiers = info[target].notifiers
         if (notifiers.length === 0) {
           throw new Error("Person doesn't have any notifiers, sorry")
@@ -100,9 +133,9 @@ export function createNotifyServer(
           let errCount = 0
 
           try {
-            await sendNotification(
-              testMode,
-              connection,
+            await sendNotificationCall(
+              'send-notification',
+              [],
               notifier,
               message,
               title
@@ -138,7 +171,13 @@ export function createNotifyServer(
     async ({ target, message, title }) => {
       try {
         d('send-notification: %s %s', target, message)
-        await sendNotification(testMode, connection, target, message, title)
+        await sendNotificationCall(
+          'send-notification',
+          [],
+          target,
+          message,
+          title
+        )
 
         return {
           content: [{ type: 'text', text: 'Notification sent' }],

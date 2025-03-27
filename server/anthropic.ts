@@ -133,7 +133,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
             max_tokens: responseTokens,
             messages: msgs,
             tools: anthropicTools,
-            tool_choice: { type: 'auto' },
+            tool_choice: toolServers?.length > 0 ? { type: 'auto' } : undefined,
           }),
           AnthropicLargeLanguageProvider.ANTHROPIC_API_TIMEOUT,
           `Anthropic API call timed out after ${AnthropicLargeLanguageProvider.ANTHROPIC_API_TIMEOUT}ms`
@@ -278,7 +278,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
     }
 
     d(
-      'Conversation complete. Used %d/%d tokens (%.1f%%)',
+      'Conversation complete. Used %d/%d tokens (%d)',
       usedTokens,
       tokenBudget,
       (usedTokens / tokenBudget) * 100

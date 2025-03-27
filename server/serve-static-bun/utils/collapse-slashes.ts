@@ -1,17 +1,17 @@
 interface CollapseSlashesOptions {
-	/**
-	 * Keep leading slashes.
-	 *
-	 * @default true
-	 */
-	keepLeading?: boolean;
+  /**
+   * Keep leading slashes.
+   *
+   * @default true
+   */
+  keepLeading?: boolean
 
-	/**
-	 * Keep trailing slashes.
-	 *
-	 * @default true
-	 */
-	keepTrailing?: boolean;
+  /**
+   * Keep trailing slashes.
+   *
+   * @default true
+   */
+  keepTrailing?: boolean
 }
 
 /**
@@ -21,18 +21,21 @@ interface CollapseSlashesOptions {
  * @param options
  * @returns New string with slashes normalized
  */
-export function collapseSlashes(str: string, options: CollapseSlashesOptions = {}) {
-	const { keepLeading = true, keepTrailing = true } = options;
+export function collapseSlashes(
+  str: string,
+  options: CollapseSlashesOptions = {}
+) {
+  const { keepLeading = true, keepTrailing = true } = options
 
-	str = `/${str}/`.replaceAll(/[/]+/g, "/");
+  str = `/${str}/`.replaceAll(/[/]+/g, '/')
 
-	if (!keepLeading) {
-		str = str.substring(1);
-	}
+  if (!keepLeading) {
+    str = str.substring(1)
+  }
 
-	if (!keepTrailing) {
-		str = str.substring(0, str.length - 1);
-	}
+  if (!keepTrailing) {
+    str = str.substring(0, str.length - 1)
+  }
 
-	return str;
+  return str
 }

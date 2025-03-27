@@ -13,7 +13,7 @@ import { Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
 import { ServerWebsocketApi } from '../shared/prompt'
-import serveStatic from 'serve-static-bun'
+import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
@@ -51,31 +51,25 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
     subj
   )
 
-  let routes: Record<string, (req: Request) => Response | Promise<Response>> =
-    {}
-  if (await exists(path.join(repoRootDir(), 'assets'))) {
+  const isProdMode = await exists(path.join(repoRootDir(), 'assets'))
+  if (isProdMode) {
     console.log('Running in Production Mode')
-
-    routes = {
-      '/assets': serveStatic(path.join(repoRootDir(), 'assets'), {}),
-      '/': async () =>
-        new Response(Bun.file(path.join(repoRootDir(), 'index.html'))),
-    }
   } else {
     console.log('Running in development server-only mode')
   }
 
+  const assetsServer = serveStatic(path.join(repoRootDir(), 'public'))
+
   Bun.serve({
     port: port,
-    fetch(req, server) {
+    async fetch(req, server) {
+      // XXX: This sucks, there's gotta be a better way
       const u = URL.parse(req.url)
       if (u?.pathname === '/api/ws' && server.upgrade(req)) {
         return new Response()
       }
-
-      return new Response('yes')
+      return await assetsServer(req)
     },
-    routes,
     websocket: {
       async message(ws: ServerWebSocket, message: string | Buffer) {
         subj.next({

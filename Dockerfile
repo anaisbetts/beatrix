@@ -16,7 +16,7 @@ COPY . .
 RUN bun run build:ci
 
 # Production stage
-FROM oven/bun:latest
+FROM alpine:latest
 
 WORKDIR /app
 

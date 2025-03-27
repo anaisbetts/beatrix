@@ -6,6 +6,10 @@
   "scripts": {
     "lint": "eslint && tsc && prettier --check .",
     "fix": "eslint --fix && prettier --write .",
+    "dev": "concurrently \"bun dev:server\" \"bun dev:vite\"",
+    "dev:debug": "DEBUG='*' concurrently \"bun dev:server\" \"bun dev:vite\"",
+    "dev:server": "bun run ./server/index.ts",
+    "dev:vite": "vite",
     "start": "bun run ./server/index.ts",
     "start:debug": "DEBUG='*' bun run ./server/index.ts",
     "serve": "bun run ./server/index.ts serve",
@@ -22,6 +26,7 @@
     "@typescript-eslint/parser": "^8.26.1",
     "@vitejs/plugin-react": "^4.3.4",
     "bun-types": "latest",
+    "concurrently": "^9.1.2",
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.11",

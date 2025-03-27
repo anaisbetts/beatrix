@@ -1,7 +1,6 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import index from '../site/index.html'
 import { connectToHAWebsocket } from './lib/ha-ws-api'
 import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
@@ -17,8 +16,10 @@ import { ServerWebsocketApi } from '../shared/prompt'
 
 configDotenv()
 
+const DEFAULT_PORT = '8080'
+
 async function serveCommand(options: { port: string; testMode: boolean }) {
-  const port = options.port || process.env.PORT || '5432'
+  const port = options.port || process.env.PORT || DEFAULT_PORT
 
   const conn = await connectToHAWebsocket()
   const llm = createDefaultLLMProvider()
@@ -44,7 +45,7 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
       return new Response('yes')
     },
     routes: {
-      '/': index,
+      //      '/': index,
     },
     websocket: {
       async message(ws: ServerWebSocket, message: string | Buffer) {

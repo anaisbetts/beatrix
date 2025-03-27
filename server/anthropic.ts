@@ -68,15 +68,19 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       client,
       toolServers.map((x) => x.server)
     )
-    const toolList = await client.listTools()
 
-    const anthropicTools = toolList.tools.map((tool) => {
-      return {
-        name: tool.name,
-        description: tool.description || '',
-        input_schema: tool.inputSchema,
-      }
-    })
+    let anthropicTools: any[] = []
+    if (toolServers.length > 0) {
+      const toolList = await client.listTools()
+
+      anthropicTools = toolList.tools.map((tool) => {
+        return {
+          name: tool.name,
+          description: tool.description || '',
+          input_schema: tool.inputSchema,
+        }
+      })
+    }
 
     const msgs: MessageParam[] = [
       {

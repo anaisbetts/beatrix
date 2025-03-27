@@ -58,19 +58,22 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
       toolServers.map((x) => x.server)
     )
 
-    const toolList = await client.listTools()
+    let ollamaTools: Tool[] = []
+    if (toolServers.length > 0) {
+      const toolList = await client.listTools()
 
-    // Format tools for Ollama's format
-    const ollamaTools: Tool[] = toolList.tools.map((tool) => {
-      return {
-        type: 'function',
-        function: {
-          name: tool.name,
-          description: tool.description || '',
-          parameters: tool.inputSchema as any,
-        },
-      }
-    })
+      // Format tools for Ollama's format
+      ollamaTools = toolList.tools.map((tool) => {
+        return {
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description || '',
+            parameters: tool.inputSchema as any,
+          },
+        }
+      })
+    }
 
     // Track conversation and tool use to avoid infinite loops
     let iterationCount = 0

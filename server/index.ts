@@ -20,6 +20,7 @@ import { exists } from 'fs/promises'
 import { AnthropicLargeLanguageProvider } from './anthropic'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { runAllEvals } from './run-all-evals'
+import { ScenarioResult } from './eval-framework'
 
 configDotenv()
 
@@ -106,7 +107,25 @@ async function mcpCommand(options: { testMode: boolean }) {
   */
 }
 
-async function evalCommand(options: { model: string; driver: string }) {
+function printResult(result: ScenarioResult) {
+  // Indent the message if it has >1 line
+  const lastMsg = messagesToString([
+    result.messages[result.messages.length - 1],
+  ])
+    .split('\n')
+    .map((l) => `    ${l}`)
+    .join('\n')
+
+  console.log(`Eval: ${result.prompt} (tools: ${result.toolsDescription})`)
+  console.log(`Last message: ${lastMsg}`)
+  console.log(`Score: ${result.finalScore}/${result.finalScorePossible}`)
+}
+
+async function evalCommand(options: {
+  model: string
+  driver: string
+  verbose: boolean
+}) {
   const { model, driver } = options
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -135,12 +154,12 @@ async function evalCommand(options: { model: string; driver: string }) {
   const results = []
   for await (const result of runAllEvals(llm)) {
     results.push(result)
+    if (options.verbose) {
+      console.log(JSON.stringify(result, null, 2))
+    } else {
+      printResult(result)
+    }
 
-    console.log(`Eval: ${result.prompt} (tools: ${result.toolsDescription})`)
-    console.log(
-      `Last message: ${messagesToString([result.messages[result.messages.length - 1]])}`
-    )
-    console.log(`Score: ${result.finalScore}/${result.finalScorePossible}`)
     console.log('\n')
   }
 
@@ -194,6 +213,8 @@ async function main() {
       'The service to evaluate, either "anthropic" or "ollama"',
       'ollama'
     )
+    .option('-v, --verbose', 'Enable verbose output', false)
+
     .action(evalCommand)
 
   // Default command is 'serve' if no command is specified

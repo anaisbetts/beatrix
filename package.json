@@ -6,6 +6,9 @@
   "scripts": {
     "lint": "eslint && tsc && prettier --check .",
     "fix": "eslint --fix && prettier --write .",
+    "build:all": "git clean -xdf dist && bun run build:vite && bun run build:server",
+    "build:server": "bun build --target bun --compile --outfile ./dist/server ./server/index.ts",
+    "build:vite": "vite build",
     "dev": "concurrently \"bun dev:server\" \"bun dev:vite\"",
     "dev:debug": "DEBUG='*' concurrently \"bun dev:server\" \"bun dev:vite\"",
     "dev:server": "bun run ./server/index.ts",
@@ -62,6 +65,7 @@
     "react-dom": "^19.0.0",
     "react-remark": "^2.1.0",
     "rxjs": "^7.8.2",
+    "serve-static-bun": "^0.5.3",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.14",
     "tailwindcss-animate": "^1.0.7",

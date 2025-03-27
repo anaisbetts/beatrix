@@ -13,10 +13,27 @@ import { Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
 import { ServerWebsocketApi } from '../shared/prompt'
+import serveStatic from 'serve-static-bun'
+
+import path from 'path'
+import { exists } from 'fs/promises'
 
 configDotenv()
 
 const DEFAULT_PORT = '8080'
+
+function repoRootDir() {
+  // If we are running as a single-file executable all of the normal node methods
+  // to get __dirname get Weird. However, if we're running in dev mode, we can use
+  // our usual tricks
+  const haystack = ['bun.exe', 'bun-profile.exe', 'bun', 'node']
+  const needle = path.basename(process.execPath)
+  if (haystack.includes(needle)) {
+    return path.resolve(__dirname, '..')
+  } else {
+    return path.dirname(process.execPath)
+  }
+}
 
 async function serveCommand(options: { port: string; testMode: boolean }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
@@ -34,6 +51,20 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
     subj
   )
 
+  let routes: Record<string, (req: Request) => Response | Promise<Response>> =
+    {}
+  if (await exists(path.join(repoRootDir(), 'assets'))) {
+    console.log('Running in Production Mode')
+
+    routes = {
+      '/assets': serveStatic(path.join(repoRootDir(), 'assets'), {}),
+      '/': async () =>
+        new Response(Bun.file(path.join(repoRootDir(), 'index.html'))),
+    }
+  } else {
+    console.log('Running in development server-only mode')
+  }
+
   Bun.serve({
     port: port,
     fetch(req, server) {
@@ -44,9 +75,7 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
 
       return new Response('yes')
     },
-    routes: {
-      //      '/': index,
-    },
+    routes,
     websocket: {
       async message(ws: ServerWebSocket, message: string | Buffer) {
         subj.next({

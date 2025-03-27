@@ -45,7 +45,7 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
 
   return (
     <>
-      <SidebarHeader className={bg}></SidebarHeader>
+      <SidebarHeader className={bg}>{headerContent}</SidebarHeader>
       <SidebarContent className={bg}>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -80,15 +80,15 @@ export default function Home() {
   }, [page])
 
   return (
-    <div className="bg-background h-screen">
+    <div className="bg-background min-h-screen">
       <SidebarProvider defaultOpen={defaultOpen}>
         <Sidebar variant="floating" collapsible="icon">
           <AppSidebar onPageClicked={setPage} />
         </Sidebar>
 
-        <main className="w-full flex-1">
-          <SidebarTrigger className="absolute top-2 right-2" />
-          <div className="h-full pr-8">{mainContent}</div>
+        <main className="flex w-full flex-1 flex-row">
+          <div className="flex-1">{mainContent}</div>
+          <SidebarTrigger className="mt-5" />
         </main>
       </SidebarProvider>
     </div>

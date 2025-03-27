@@ -6,6 +6,7 @@ import {
   connectToHAWebsocket,
   fetchStates,
   filterUncommonEntities,
+  HassState,
 } from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
@@ -21,9 +22,14 @@ const d = debug('ha:home-assistant')
 export function createHomeAssistantServer(
   connection: Connection,
   llm: LargeLanguageProvider,
-  opts?: { testMode: boolean }
+  opts: {
+    testMode?: boolean
+    mockFetchStates?: (tool: string, context: string[]) => Promise<HassState[]>
+  } = {}
 ) {
   const testMode = opts?.testMode ?? false
+  const fetchStatesCall =
+    opts?.mockFetchStates ?? (() => fetchStates(connection))
 
   const server = new McpServer({
     name: 'home-assistant',
@@ -49,7 +55,12 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = filterUncommonEntities(await fetchStates(connection))
+        const states = filterUncommonEntities(
+          await fetchStatesCall(
+            'get-entities-by-prefix',
+            Object.keys(prefixMap)
+          )
+        )
 
         const matchingStates = states
           .filter((state) => prefixMap[state.entity_id.replace(/\..*$/, '')])
@@ -88,7 +99,12 @@ export function createHomeAssistantServer(
             true,
           ])
         )
-        const states = await fetchStates(connection)
+
+        const states = await fetchStatesCall(
+          'get-state-for-entity',
+          Object.keys(ids)
+        )
+
         const entityState = states.filter((state) => ids[state.entity_id])
 
         if (entityState.length !== Object.keys(ids).length) {
@@ -116,7 +132,7 @@ export function createHomeAssistantServer(
     'Get a filtered list of all Home Assistant entities, excluding uncommon or utility entities',
     async () => {
       try {
-        const allStates = await fetchStates(connection)
+        const allStates = await fetchStatesCall('get-all-entities', [])
         const states = filterUncommonEntities(allStates).map((x) => x.entity_id)
 
         d('get-all-entities: %d entities', states.length)
@@ -135,21 +151,27 @@ export function createHomeAssistantServer(
 
   server.tool(
     'call-service',
-    'Asks an entity or multiple entities to do a specific task in plain English',
+    'Asks an entity or multiple entities to do a specific task in plain English. The returned value will be the new entity states',
     {
       prompt: z
         .string()
         .describe(
           'An english description of what operation the entity should perform'
         ),
-      entity_id: z
+      entity_ids: z
         .union([z.string(), z.array(z.string())])
         .describe(
           'The entity ID or array of entity IDs to perform the action on (e.g. "light.living_room", ["light.living_room", "light.kitchen"])'
         ),
     },
-    async ({ prompt, entity_id }) => {
+    async ({ prompt, entity_ids }) => {
       let msgs: MessageParam[] | undefined = undefined
+      const ids = Object.fromEntries(
+        (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((k) => [
+          k,
+          true,
+        ])
+      )
 
       try {
         let serviceCalledCount = 0
@@ -158,9 +180,13 @@ export function createHomeAssistantServer(
             testMode,
           }),
         ]
+
         msgs = await firstValueFrom(
           llm
-            .executePromptWithTools(callServicePrompt(prompt, entity_id), tools)
+            .executePromptWithTools(
+              callServicePrompt(prompt, entity_ids),
+              tools
+            )
             .pipe(toArray())
         )
 
@@ -168,10 +194,11 @@ export function createHomeAssistantServer(
           throw new Error('callService not called!')
         }
 
+        const newState = await fetchStatesCall('call-service', Object.keys(ids))
+        const entityStates = newState.filter((state) => ids[state.entity_id])
+
         return {
-          content: [
-            { type: 'text', text: 'The operation completed successfully' },
-          ],
+          content: [{ type: 'text', text: JSON.stringify(entityStates) }],
         }
       } catch (err: any) {
         d('call-service Error: %s', err)

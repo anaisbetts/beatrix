@@ -17,7 +17,8 @@
     "start": "bun run ./server/index.ts",
     "start:debug": "DEBUG='*' bun run ./server/index.ts",
     "serve": "bun run ./server/index.ts serve",
-    "mcp": "bun run ./server/index.ts mcp"
+    "mcp": "bun run ./server/index.ts mcp",
+    "evals": "bun run ./server/index.ts evals"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",

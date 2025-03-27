@@ -62,5 +62,8 @@ You must configure either Anthropic Claude or Ollama by setting one of these pai
 ```bash
 cp .env.example .env && vim .env  ## Fill this in
 bun install
-bun start
+bun dev
+
+### Shit ain't workin' good?
+bun dev:debug
 ```

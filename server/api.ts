@@ -4,7 +4,10 @@ import { Kysely } from 'kysely'
 import { Schema } from './db-schema'
 import { ServerWebsocketApi } from '../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import { mergeMap, Observable, toArray } from 'rxjs'
+import { concatMap, from, generate, mergeMap, Observable, toArray } from 'rxjs'
+import { ScenarioResult } from '../shared/types'
+import { runAllEvals } from './run-all-evals'
+import { createLLMDriver } from './eval-framework'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
@@ -30,5 +33,21 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     )
 
     return resp
+  }
+
+  runAllEvals(
+    model: string,
+    driver: 'ollama' | 'anthropic',
+    count: number
+  ): Observable<ScenarioResult> {
+    const llm = createLLMDriver(model, driver)
+
+    const counter = generate({
+      initialState: 0,
+      iterate: (x) => x + 1,
+      condition: (x) => x < count,
+    })
+
+    return from(counter.pipe(concatMap(() => runAllEvals(llm))))
   }
 }

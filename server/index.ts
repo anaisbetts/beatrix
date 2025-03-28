@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
 import { connectToHAWebsocket } from './lib/ha-ws-api'
-import { createBuiltinServers, LargeLanguageProvider } from './llm'
+import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -17,10 +17,9 @@ import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
-import { AnthropicLargeLanguageProvider } from './anthropic'
-import { OllamaLargeLanguageProvider } from './ollama'
 import { runAllEvals } from './run-all-evals'
-import { ScenarioResult } from './eval-framework'
+import { ScenarioResult } from '../shared/types'
+import { createLLMDriver } from './eval-framework'
 
 configDotenv()
 
@@ -129,27 +128,7 @@ async function evalCommand(options: {
 }) {
   const { model, driver } = options
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error(
-      'ANTHROPIC_API_KEY is required, it is used for eval grading'
-    )
-  }
-
-  let llm: LargeLanguageProvider
-  if (driver === 'anthropic') {
-    llm = new AnthropicLargeLanguageProvider(
-      process.env.ANTHROPIC_API_KEY,
-      model
-    )
-  } else if (driver === 'ollama') {
-    if (!process.env.OLLAMA_HOST) {
-      throw new Error('OLLAMA_HOST is required for Ollama driver')
-    }
-
-    llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST, model)
-  } else {
-    throw new Error("Invalid driver specified. Use 'anthropic' or 'ollama'.")
-  }
+  const llm = createLLMDriver(model, driver)
 
   console.log('Running all evals...')
   const results = []

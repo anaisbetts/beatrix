@@ -66,9 +66,15 @@ export function createCallServiceServer(
     }
   )
 
+  // NB: In test-mode so that we don't confuse evals that see that the state
+  // didn't actually change, we're gonna return a simple "yep it worked"
+  const callServiceDescription = testMode
+    ? 'Call any Home Assistant service for a specific entity or a list of entities. Response will indicate success.'
+    : 'Call any Home Assistant service for a specific entity or a list of entities. Response contains the new state of the entities.'
+
   server.tool(
     'call-service',
-    'Call any Home Assistant service for a specific entity or a list of entities. Response contains the new state of the entities.',
+    callServiceDescription,
     {
       domain: z
         .string()
@@ -116,6 +122,17 @@ export function createCallServiceServer(
           )
 
           onCallService?.(domain, service, id, service_data)
+        }
+
+        if (testMode) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'The operation completed successfully.',
+              },
+            ],
+          }
         }
 
         const states = await api.fetchStates()

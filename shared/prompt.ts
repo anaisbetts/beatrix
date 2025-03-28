@@ -1,8 +1,14 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
+import { ScenarioResult } from './types'
 
 export interface ServerWebsocketApi {
   handlePromptRequest(prompt: string): Observable<MessageParam>
+  runAllEvals(
+    model: string,
+    driver: 'ollama' | 'anthropic',
+    count: number
+  ): Observable<ScenarioResult>
 }
 
 export function messagesToString(

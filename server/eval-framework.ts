@@ -16,23 +16,10 @@ import mockStates from '../mocks/states.json'
 import { HassServices } from 'home-assistant-js-websocket'
 import { fetchHAUserInformation } from './lib/ha-ws-api'
 import { createHomeAssistantServer } from './mcp/home-assistant'
+import { GradeResult, ScenarioResult } from '../shared/types'
+import { OllamaLargeLanguageProvider } from './ollama'
 
 const d = debug('ha:eval')
-
-export type ScenarioResult = {
-  prompt: string
-  toolsDescription: string
-  messages: MessageParam[]
-  gradeResults: GradeResult[]
-  finalScore: number
-  finalScorePossible: number
-}
-
-export type GradeResult = {
-  score: number
-  possibleScore: number
-  graderInfo: string
-}
 
 export type Grader = (messages: MessageParam[]) => Promise<GradeResult>
 
@@ -40,6 +27,29 @@ type LlmEvalResponse = {
   grade: number
   reasoning: string
   suggestions: string
+}
+
+export function createLLMDriver(model: string, driver: string) {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error(
+      'ANTHROPIC_API_KEY is required, it is used for eval grading'
+    )
+  }
+
+  if (driver === 'anthropic') {
+    return new AnthropicLargeLanguageProvider(
+      process.env.ANTHROPIC_API_KEY,
+      model
+    )
+  } else if (driver === 'ollama') {
+    if (!process.env.OLLAMA_HOST) {
+      throw new Error('OLLAMA_HOST is required for Ollama driver')
+    }
+
+    return new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST, model)
+  }
+
+  throw new Error("Invalid driver specified. Use 'anthropic' or 'ollama'.")
 }
 
 export async function runScenario(

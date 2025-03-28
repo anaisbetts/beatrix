@@ -17,12 +17,12 @@ export async function* listEntitiesEval(llm: LargeLanguageProvider) {
     [
       failureGrader(),
       gradeViaSearchForContent(
-        'Living Room Lamp',
-        'Living Room Ceiling',
-        'TV Backlight'
+        'Bookshelf Light',
+        'Overhead Light',
+        'TV Lightstrip'
       ),
       gradeContentViaPrompt(
-        'Did the assistant list only the living room lights with their friendly names? It should not include other rooms or entity types.'
+        'Did the assistant list only the six living room lights with their friendly names? It should not include other rooms or entity types.'
       ),
     ]
   )
@@ -37,7 +37,10 @@ export async function* bulkLightOperationsEval(llm: LargeLanguageProvider) {
     'Bulk light operations',
     [
       failureGrader(),
-      gradeViaSearchForContent('light.turn_off', 'kitchen'),
+      gradeViaSearchForContent(
+        'light.turn_off',
+        'kitchen_dining_room_chandelier'
+      ),
       gradeContentViaPrompt(
         'Did the assistant correctly identify all kitchen lights and turn them off using a single bulk operation or multiple service calls? It should not affect lights in other rooms.'
       ),
@@ -54,7 +57,12 @@ export async function* multiEntityStatusEval(llm: LargeLanguageProvider) {
     'Multi-entity status checking',
     [
       failureGrader(),
-      gradeViaSearchForContent('light', 'media_player', 'on'),
+      gradeViaSearchForContent(
+        'nVidia Shield',
+        'Living Room Sonos Arc',
+        'playing',
+        'Maya Fairy Lights'
+      ),
       gradeContentViaPrompt(
         'Did the assistant correctly identify all lights and media players that are in the "on" state? The response should include friendly names and possibly room locations.'
       ),
@@ -72,9 +80,9 @@ export async function* climateControlEval(llm: LargeLanguageProvider) {
     [
       failureGrader(),
       gradeViaSearchForContent(
-        'climate.set_temperature',
-        'climate.set_hvac_mode',
-        'heat'
+        'call-service',
+        'get-entities-by-prefix',
+        'climate'
       ),
       gradeContentViaPrompt(
         'Did the assistant correctly set all thermostats to 72 degrees and switch them to heat mode? It should have used the appropriate climate services.'
@@ -92,10 +100,7 @@ export async function* sceneActivationEval(llm: LargeLanguageProvider) {
     'Scene activation',
     [
       failureGrader(),
-      gradeViaSearchForContent(
-        'scene.turn_on',
-        'scene.night_mode_opening_scene'
-      ),
+      gradeViaSearchForContent('scene.night_mode_opening_scene'),
       gradeContentViaPrompt(
         'Did the assistant correctly activate the movie night scene? It should have used the scene.turn_on service with the appropriate scene entity.'
       ),
@@ -131,7 +136,7 @@ export async function* complexAutomationEval(llm: LargeLanguageProvider) {
       failureGrader(),
       gradeViaSearchForContent('light.turn_off', 'media_player.turn_off'),
       gradeContentViaPrompt(
-        'Did the assistant execute both requested actions? It should have turned off all lights, set thermostats to eco mode, and turned off all media players.'
+        'Did the assistant execute both requested actions? It should have turned off all lights and turned off all media players.'
       ),
     ]
   )

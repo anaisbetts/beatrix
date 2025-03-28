@@ -7,6 +7,7 @@ import {
   multiEntityStatusEval,
   sceneActivationEval,
 } from './evals/home-assistant'
+import { notificationEval } from './evals/notify'
 import { smokeTestEval, smokeTestToolsEval } from './evals/simple-evals'
 import { LargeLanguageProvider } from './llm'
 
@@ -29,5 +30,6 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     sceneActivationEval(llm),
     entityAttributeQueryEval(llm),
     complexAutomationEval(llm),
+    notificationEval(llm),
   ])
 }

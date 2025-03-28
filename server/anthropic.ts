@@ -134,6 +134,11 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
             messages: msgs,
             tools: anthropicTools,
             tool_choice: toolServers?.length > 0 ? { type: 'auto' } : undefined,
+            temperature: 0.7,
+            top_p: 0.9,
+            top_k: 40,
+            system:
+              'You are a helpful assistant that helps users with home automation tasks using Home Assistant.',
           }),
           AnthropicLargeLanguageProvider.ANTHROPIC_API_TIMEOUT,
           `Anthropic API call timed out after ${AnthropicLargeLanguageProvider.ANTHROPIC_API_TIMEOUT}ms`

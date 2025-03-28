@@ -103,8 +103,8 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
               temperature: 0.7,
               top_p: 0.9,
               top_k: 40,
-              num_predict: 512
-            }
+              num_predict: 512,
+            },
           }),
           OllamaLargeLanguageProvider.OLLAMA_API_TIMEOUT,
           `Ollama API call timed out after ${OllamaLargeLanguageProvider.OLLAMA_API_TIMEOUT}ms`

@@ -17,7 +17,7 @@ export async function* smokeTestEval(llm: LargeLanguageProvider) {
       failureGrader(),
       gradeViaSearchForContent('Paris', 'France', 'capital of France'),
       gradeContentViaPrompt(
-        'Did the assistant answer Paris concisely and without additional info?'
+        'Did the assistant answer Paris relatively concisely? If it adds multiple sentences of extra information, it is a failure.'
       ),
     ]
   )

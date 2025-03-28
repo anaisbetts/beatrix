@@ -5,14 +5,19 @@ export interface ServerWebsocketApi {
   handlePromptRequest(prompt: string): Observable<MessageParam>
 }
 
-export function messagesToString(msgs: MessageParam[]) {
+export function messagesToString(
+  msgs: MessageParam[],
+  annotateSides: boolean = false
+) {
   return msgs
     .reduce((acc, msg) => {
+      const side = annotateSides ? `${msg.role}: ` : ''
+
       if (msg.content instanceof Array) {
         msg.content.forEach((subMsg) => {
           switch (subMsg.type) {
             case 'text':
-              acc.push(subMsg.text)
+              acc.push(side + subMsg.text)
               break
             case 'tool_use':
               acc.push(
@@ -25,7 +30,7 @@ export function messagesToString(msgs: MessageParam[]) {
           }
         })
       } else {
-        acc.push(msg.content)
+        acc.push(side + msg.content)
       }
 
       return acc

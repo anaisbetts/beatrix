@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
 import { connectToHAWebsocket } from './lib/ha-ws-api'
-import { createBuiltinServers } from './llm'
+import { createBuiltinServers, LargeLanguageProvider } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -12,11 +12,15 @@ import { ServerWebSocket } from 'bun'
 import { Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
-import { ServerWebsocketApi } from '../shared/prompt'
+import { messagesToString, ServerWebsocketApi } from '../shared/prompt'
 import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
+import { AnthropicLargeLanguageProvider } from './anthropic'
+import { OllamaLargeLanguageProvider } from './ollama'
+import { runAllEvals } from './run-all-evals'
+import { ScenarioResult } from './eval-framework'
 
 configDotenv()
 
@@ -103,6 +107,81 @@ async function mcpCommand(options: { testMode: boolean }) {
   */
 }
 
+function printResult(result: ScenarioResult) {
+  // Indent the message if it has >1 line
+  const lastMsg = messagesToString([
+    result.messages[result.messages.length - 1],
+  ])
+    .split('\n')
+    .map((l) => `    ${l}`)
+    .join('\n')
+
+  console.log(`Eval: ${result.prompt} (tools: ${result.toolsDescription})`)
+  console.log(`Last message: ${lastMsg}`)
+  console.log(`Score: ${result.finalScore}/${result.finalScorePossible}`)
+}
+
+async function evalCommand(options: {
+  model: string
+  driver: string
+  verbose: boolean
+  num: string
+}) {
+  const { model, driver } = options
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error(
+      'ANTHROPIC_API_KEY is required, it is used for eval grading'
+    )
+  }
+
+  let llm: LargeLanguageProvider
+  if (driver === 'anthropic') {
+    llm = new AnthropicLargeLanguageProvider(
+      process.env.ANTHROPIC_API_KEY,
+      model
+    )
+  } else if (driver === 'ollama') {
+    if (!process.env.OLLAMA_HOST) {
+      throw new Error('OLLAMA_HOST is required for Ollama driver')
+    }
+
+    llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST, model)
+  } else {
+    throw new Error("Invalid driver specified. Use 'anthropic' or 'ollama'.")
+  }
+
+  console.log('Running all evals...')
+  const results = []
+  for (let i = 0; i < parseInt(options.num); i++) {
+    console.log(`Run ${i + 1} of ${options.num}`)
+
+    for await (const result of runAllEvals(llm)) {
+      results.push(result)
+      if (options.verbose) {
+        console.log(JSON.stringify(result, null, 2))
+      } else {
+        printResult(result)
+      }
+
+      console.log('\n')
+    }
+  }
+
+  const { score, possibleScore } = results.reduce(
+    (acc, x) => {
+      acc.score += x.finalScore
+      acc.possibleScore += x.finalScorePossible
+      return acc
+    },
+    { score: 0, possibleScore: 0 }
+  )
+
+  console.log(
+    `Overall Score: ${score}/${possibleScore} (${(score / possibleScore) * 100.0}%)`
+  )
+}
+
 async function main() {
   const program = new Command()
 
@@ -131,6 +210,20 @@ async function main() {
       false
     )
     .action(mcpCommand)
+
+  program
+    .command('evals')
+    .description('Run evaluations for a given model')
+    .option('-m, --model <model>', 'The model to evaluate')
+    .option(
+      '-d, --driver <driver>',
+      'The service to evaluate, either "anthropic" or "ollama"',
+      'ollama'
+    )
+    .option('-n, --num <num>', 'Number of repetitions to run', '1')
+    .option('-v, --verbose', 'Enable verbose output', false)
+
+    .action(evalCommand)
 
   // Default command is 'serve' if no command is specified
   if (process.argv.length <= 2) {

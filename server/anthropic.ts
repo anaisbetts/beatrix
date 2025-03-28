@@ -20,6 +20,8 @@ const MAX_ITERATIONS = 10 // Safety limit for iterations
 // Timeout configuration (in milliseconds)
 const TOOL_EXECUTION_TIMEOUT = 60 * 1000
 
+export const ANTHROPIC_EVAL_MODEL = 'claude-3-7-sonnet-20250219'
+
 export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
   static ANTHROPIC_API_TIMEOUT = 100 * 1000
 
@@ -66,15 +68,19 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       client,
       toolServers.map((x) => x.server)
     )
-    const toolList = await client.listTools()
 
-    const anthropicTools = toolList.tools.map((tool) => {
-      return {
-        name: tool.name,
-        description: tool.description || '',
-        input_schema: tool.inputSchema,
-      }
-    })
+    let anthropicTools: any[] = []
+    if (toolServers.length > 0) {
+      const toolList = await client.listTools()
+
+      anthropicTools = toolList.tools.map((tool) => {
+        return {
+          name: tool.name,
+          description: tool.description || '',
+          input_schema: tool.inputSchema,
+        }
+      })
+    }
 
     const msgs: MessageParam[] = [
       {
@@ -127,7 +133,12 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
             max_tokens: responseTokens,
             messages: msgs,
             tools: anthropicTools,
-            tool_choice: { type: 'auto' },
+            tool_choice: toolServers?.length > 0 ? { type: 'auto' } : undefined,
+            temperature: 0.7,
+            top_p: 0.9,
+            top_k: 40,
+            system:
+              'You are a helpful assistant that helps users with home automation tasks using Home Assistant.',
           }),
           AnthropicLargeLanguageProvider.ANTHROPIC_API_TIMEOUT,
           `Anthropic API call timed out after ${AnthropicLargeLanguageProvider.ANTHROPIC_API_TIMEOUT}ms`
@@ -272,7 +283,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
     }
 
     d(
-      'Conversation complete. Used %d/%d tokens (%.1f%%)',
+      'Conversation complete. Used %d/%d tokens (%d)',
       usedTokens,
       tokenBudget,
       (usedTokens / tokenBudget) * 100

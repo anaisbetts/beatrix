@@ -1,4 +1,5 @@
 import Chat from '@/components/chat'
+import Evals from '@/components/evals'
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +17,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from './components/ui/sidebar'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, Beaker } from 'lucide-react'
 import { useIsMobile } from './hooks/use-mobile'
 import { useCallback, useMemo, useState } from 'react'
 
@@ -58,6 +59,14 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="#" onClick={() => nav('evals')}>
+                    <Beaker size={18} />
+                    <span className="ms-1">Evals</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -74,6 +83,8 @@ export default function Home() {
     switch (page) {
       case 'debug':
         return <Chat />
+      case 'evals':
+        return <Evals />
       default:
         throw new Error('u blew it')
     }

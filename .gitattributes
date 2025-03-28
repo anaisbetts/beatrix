@@ -1,0 +1,4 @@
+# Linguist overrides
+
+# Mark mocks directory as vendored to exclude from language statistics
+mocks/* linguist-vendored

@@ -39,102 +39,159 @@ export interface CallServiceOptions {
   return_response?: boolean
 }
 
-export async function connectToHAWebsocket() {
-  const auth = createLongLivedTokenAuth(
-    process.env.HA_BASE_URL!,
-    process.env.HA_TOKEN!
-  )
-
-  const connection = await createConnection({ auth })
-  return connection
-}
-
 const cache = new LRUCache<string, any>({
   ttl: 5 * 60 * 1000,
   max: 100,
   ttlAutopurge: false,
 })
 
-export async function fetchServices(
-  connection: Connection
-): Promise<HassServices> {
-  if (cache.has('services')) {
-    return cache.get('services') as HassServices
+export class LiveHomeAssistantApi {
+  constructor(
+    private connection: Connection,
+    private testMode: boolean = false
+  ) {}
+
+  static async createViaEnv() {
+    const auth = createLongLivedTokenAuth(
+      process.env.HA_BASE_URL!,
+      process.env.HA_TOKEN!
+    )
+
+    const connection = await createConnection({ auth })
+    return new LiveHomeAssistantApi(connection)
   }
 
-  const ret = await connection.sendMessagePromise<HassServices>({
-    type: 'get_services',
-  })
+  async fetchServices(): Promise<HassServices> {
+    if (cache.has('services')) {
+      return cache.get('services') as HassServices
+    }
 
-  cache.set('services', ret)
-  return ret
-}
+    const ret = await this.connection.sendMessagePromise<HassServices>({
+      type: 'get_services',
+    })
 
-export async function fetchStates(
-  connection: Connection
-): Promise<HassState[]> {
-  if (cache.has('states')) {
-    return cache.get('states') as HassState[]
+    cache.set('services', ret)
+    return ret
   }
 
-  const ret = await connection.sendMessagePromise<HassState[]>({
-    type: 'get_states',
-  })
+  async fetchStates(): Promise<HassState[]> {
+    if (cache.has('states')) {
+      return cache.get('states') as HassState[]
+    }
 
-  ret.forEach((x: any) => delete x.context)
-  cache.set('states', ret, { ttl: 1000 })
-  return ret
-}
+    const ret = await this.connection.sendMessagePromise<HassState[]>({
+      type: 'get_states',
+    })
 
-export function eventsObservable(
-  connection: Connection
-): Observable<HassEventBase> {
-  return new Observable((subj) => {
-    const disp = new Subscription()
+    ret.forEach((x: any) => delete x.context)
+    cache.set('states', ret, { ttl: 1000 })
+    return ret
+  }
 
-    connection
-      .subscribeEvents<HassEventBase>((ev) => subj.next(ev))
-      .then(
-        (unsub) => disp.add(() => void unsub()),
-        (err) => subj.error(err)
-      )
+  eventsObservable(): Observable<HassEventBase> {
+    return new Observable((subj) => {
+      const disp = new Subscription()
 
-    return disp
-  })
-}
+      this.connection
+        .subscribeEvents<HassEventBase>((ev) => subj.next(ev))
+        .then(
+          (unsub) => disp.add(() => void unsub()),
+          (err) => subj.error(err)
+        )
 
-export async function fetchHAUserInformation(
-  connection: Connection | null,
-  opts: { mockStates?: HassState[] } = {}
-) {
-  const states = opts.mockStates ?? (await fetchStates(connection!))
+      return disp
+    })
+  }
 
-  const people = states.filter((state) => state.entity_id.startsWith('person.'))
-  d('people: %o', people)
+  async fetchHAUserInformation(opts: { mockStates?: HassState[] } = {}) {
+    const states = opts.mockStates ?? (await this.fetchStates())
 
-  const ret = people.reduce(
-    (acc, x) => {
-      const name =
-        (x.attributes.friendly_name as string) ??
-        x.entity_id.replace('person.', '')
+    const people = states.filter((state) =>
+      state.entity_id.startsWith('person.')
+    )
+    d('people: %o', people)
 
-      const notifiers = ((x.attributes.device_trackers as string[]) ?? []).map(
-        (t: string) => deviceTrackerNameToNotifyName(t)
-      )
+    const ret = people.reduce(
+      (acc, x) => {
+        const name =
+          (x.attributes.friendly_name as string) ??
+          x.entity_id.replace('person.', '')
 
-      acc[x.entity_id.replace('person.', '')] = {
-        name,
-        notifiers,
-        state: x.state,
+        const notifiers = (
+          (x.attributes.device_trackers as string[]) ?? []
+        ).map((t: string) => deviceTrackerNameToNotifyName(t))
+
+        acc[x.entity_id.replace('person.', '')] = {
+          name,
+          notifiers,
+          state: x.state,
+        }
+
+        return acc
+      },
+      {} as Record<string, HAPersonInformation>
+    )
+
+    d('ret: %o', ret)
+    return ret
+  }
+
+  async sendNotification(
+    target: string,
+    message: string,
+    title: string | undefined
+  ) {
+    if (this.testMode) {
+      const svcs = await this.fetchServices()
+      const notifiers = await extractNotifiers(svcs)
+
+      if (!notifiers.find((n) => n.name === target)) {
+        throw new Error('Target not found')
+      }
+    } else {
+      await this.connection.sendMessagePromise({
+        type: 'call_service',
+        domain: 'notify',
+        service: target,
+        service_data: { message, ...(title ? { title } : {}) },
+      })
+    }
+  }
+
+  async callService<T = any>(
+    options: CallServiceOptions,
+    testModeOverride?: boolean
+  ): Promise<T | null> {
+    const useTestMode =
+      testModeOverride !== undefined ? testModeOverride : this.testMode
+
+    if (useTestMode) {
+      // In test mode, validate that entity_id starts with domain
+      const entityId = options.target?.entity_id
+
+      if (entityId) {
+        // Handle both string and array cases
+        const entities = Array.isArray(entityId) ? entityId : [entityId]
+
+        for (const entity of entities) {
+          if (!entity.startsWith(`${options.domain}.`)) {
+            throw new Error(
+              `Entity ID ${entity} doesn't match domain ${options.domain}`
+            )
+          }
+        }
       }
 
-      return acc
-    },
-    {} as Record<string, HAPersonInformation>
-  )
+      return null
+    }
 
-  d('ret: %o', ret)
-  return ret
+    const message = {
+      type: 'call_service',
+      ...options,
+    }
+
+    return this.connection.sendMessagePromise<T>(message)
+  }
 }
 
 export async function extractNotifiers(svcs: HassServices) {
@@ -150,63 +207,6 @@ export async function extractNotifiers(svcs: HassServices) {
     },
     [] as { name: string; description: string }[]
   )
-}
-
-export async function sendNotification(
-  testMode: boolean,
-  connection: Connection,
-  target: string,
-  message: string,
-  title: string | undefined
-) {
-  if (testMode) {
-    const svcs = await fetchServices(connection)
-    const notifiers = await extractNotifiers(svcs)
-
-    if (!notifiers.find((n) => n.name === target)) {
-      throw new Error('Target not found')
-    }
-  } else {
-    await connection.sendMessagePromise({
-      type: 'call_service',
-      domain: 'notify',
-      service: target,
-      service_data: { message, ...(title ? { title } : {}) },
-    })
-  }
-}
-
-export async function callService<T = any>(
-  connection: Connection,
-  options: CallServiceOptions,
-  testMode = false
-): Promise<T | null> {
-  if (testMode) {
-    // In test mode, validate that entity_id starts with domain
-    const entityId = options.target?.entity_id
-
-    if (entityId) {
-      // Handle both string and array cases
-      const entities = Array.isArray(entityId) ? entityId : [entityId]
-
-      for (const entity of entities) {
-        if (!entity.startsWith(`${options.domain}.`)) {
-          throw new Error(
-            `Entity ID ${entity} doesn't match domain ${options.domain}`
-          )
-        }
-      }
-    }
-
-    return null
-  }
-
-  const message = {
-    type: 'call_service',
-    ...options,
-  }
-
-  return connection.sendMessagePromise<T>(message)
 }
 
 function deviceTrackerNameToNotifyName(tracker: string) {

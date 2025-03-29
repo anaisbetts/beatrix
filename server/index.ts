@@ -18,7 +18,7 @@ import path from 'path'
 import { exists } from 'fs/promises'
 import { runAllEvals } from './run-all-evals'
 import { ScenarioResult } from '../shared/types'
-import { createLLMDriver } from './eval-framework'
+import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 
 configDotenv()
@@ -38,15 +38,23 @@ function repoRootDir() {
   }
 }
 
-async function serveCommand(options: { port: string; testMode: boolean }) {
+async function serveCommand(options: {
+  port: string
+  testMode: boolean
+  evalMode: boolean
+}) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
   const conn = await LiveHomeAssistantApi.createViaEnv()
   const llm = createDefaultLLMProvider()
-  const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
+  const tools = options.evalMode
+    ? createDefaultMockedTools(llm)
+    : createBuiltinServers(conn, llm, { testMode: options.testMode })
   const db = await createDatabase()
 
-  console.log(`Starting server on port ${port} (testMode: ${options.testMode})`)
+  console.log(
+    `Starting server on port ${port} (testMode: ${options.testMode}, evalMode: ${options.evalMode}})`
+  )
   const subj: Subject<ServerMessage> = new Subject()
 
   handleWebsocketRpc<ServerWebsocketApi>(
@@ -176,6 +184,11 @@ async function main() {
     .option(
       '-t, --test-mode',
       'enable read-only mode that simulates write operations',
+      false
+    )
+    .option(
+      '-e, --eval-mode',
+      'Runs the server in eval mode which makes the debug chat target the evals data. Implies -t',
       false
     )
     .action(serveCommand)

@@ -125,6 +125,7 @@ export function createCallServiceServer(
         }
 
         if (testMode) {
+          d('Returning faked value for call-service in test mode')
           return {
             content: [
               {

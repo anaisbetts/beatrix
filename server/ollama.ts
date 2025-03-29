@@ -1,4 +1,3 @@
-import { Connection as HAConnection } from 'home-assistant-js-websocket'
 import { createNotifyServer } from './mcp/notify'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import pkg from '../package.json'
@@ -16,6 +15,7 @@ import { Ollama, Message, Tool } from 'ollama'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { LargeLanguageProvider } from './llm'
 import { from, map, Observable } from 'rxjs'
+import { HomeAssistantApi } from './lib/ha-ws-api'
 
 const d = debug('ha:llm')
 
@@ -162,15 +162,15 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
 }
 
 export function createBuiltinServers(
-  connection: HAConnection,
+  api: HomeAssistantApi,
   llm: LargeLanguageProvider,
   opts?: { testMode?: boolean }
 ) {
   const { testMode } = opts ?? {}
 
   return [
-    createNotifyServer(connection, { testMode: testMode ?? false }),
-    createHomeAssistantServer(connection, llm, { testMode: testMode ?? false }),
+    createNotifyServer(api),
+    createHomeAssistantServer(api, llm, { testMode: testMode ?? false }),
   ]
 }
 

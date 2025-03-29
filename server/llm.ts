@@ -1,7 +1,6 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { AnthropicLargeLanguageProvider } from './anthropic'
-import { Connection as HAConnection } from 'home-assistant-js-websocket'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { createNotifyServer } from './mcp/notify'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -10,6 +9,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { Observable } from 'rxjs'
+import { HomeAssistantApi } from './lib/ha-ws-api'
 
 export interface LargeLanguageProvider {
   executePromptWithTools(
@@ -40,15 +40,15 @@ export function createDefaultLLMProvider() {
 }
 
 export function createBuiltinServers(
-  connection: HAConnection,
+  api: HomeAssistantApi,
   llm: LargeLanguageProvider,
   opts?: { testMode?: boolean }
 ) {
   const { testMode } = opts ?? {}
 
   return [
-    createNotifyServer(connection, { testMode: testMode ?? false }),
-    createHomeAssistantServer(connection, llm, { testMode: testMode ?? false }),
+    createNotifyServer(api),
+    createHomeAssistantServer(api, llm, { testMode: testMode ?? false }),
   ]
 }
 

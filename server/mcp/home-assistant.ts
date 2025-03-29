@@ -1,12 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Connection } from 'home-assistant-js-websocket'
 import {
-  connectToHAWebsocket,
-  fetchStates,
   filterUncommonEntities,
-  HassState,
+  HomeAssistantApi,
+  LiveHomeAssistantApi,
 } from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
@@ -20,16 +18,11 @@ import { firstValueFrom, toArray } from 'rxjs'
 const d = debug('ha:home-assistant')
 
 export function createHomeAssistantServer(
-  connection: Connection | null,
+  api: HomeAssistantApi,
   llm: LargeLanguageProvider,
-  opts: {
-    testMode?: boolean
-    mockFetchStates?: (tool: string, context: string[]) => Promise<HassState[]>
-  } = {}
+  opts: { testMode?: boolean } = {}
 ) {
   const testMode = opts?.testMode ?? false
-  const fetchStatesCall =
-    opts?.mockFetchStates ?? (() => fetchStates(connection!))
 
   const server = new McpServer({
     name: 'home-assistant',
@@ -55,12 +48,7 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = filterUncommonEntities(
-          await fetchStatesCall(
-            'get-entities-by-prefix',
-            Object.keys(prefixMap)
-          )
-        )
+        const states = filterUncommonEntities(await api.fetchStates())
 
         const matchingStates = states
           .filter((state) => prefixMap[state.entity_id.replace(/\..*$/, '')])
@@ -100,10 +88,7 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = await fetchStatesCall(
-          'get-state-for-entity',
-          Object.keys(ids)
-        )
+        const states = await api.fetchStates()
 
         const entityState = states.filter((state) => ids[state.entity_id])
 
@@ -136,7 +121,7 @@ export function createHomeAssistantServer(
     },
     async () => {
       try {
-        const allStates = await fetchStatesCall('get-all-entities', [])
+        const allStates = await api.fetchStates()
         const states = filterUncommonEntities(allStates).map((x) => x.entity_id)
 
         d('get-all-entities: %d entities', states.length)
@@ -180,7 +165,7 @@ export function createHomeAssistantServer(
       try {
         let serviceCalledCount = 0
         const tools = [
-          createCallServiceServer(connection!, () => serviceCalledCount++, {
+          createCallServiceServer(api, () => serviceCalledCount++, {
             testMode,
           }),
         ]
@@ -198,7 +183,7 @@ export function createHomeAssistantServer(
           throw new Error('callService not called!')
         }
 
-        const newState = await fetchStatesCall('call-service', Object.keys(ids))
+        const newState = await api.fetchStates()
         const entityStates = newState.filter((state) => ids[state.entity_id])
 
         return {
@@ -294,9 +279,9 @@ const isMainModule =
   import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
 
 async function main() {
-  const connection = await connectToHAWebsocket()
+  const api = await LiveHomeAssistantApi.createViaEnv()
   const llm = createDefaultLLMProvider()
-  const server = createHomeAssistantServer(connection, llm)
+  const server = createHomeAssistantServer(api, llm)
 
   await server.connect(new StdioServerTransport())
 }

@@ -1,7 +1,6 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import { connectToHAWebsocket } from './lib/ha-ws-api'
 import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -20,6 +19,7 @@ import { exists } from 'fs/promises'
 import { runAllEvals } from './run-all-evals'
 import { ScenarioResult } from '../shared/types'
 import { createLLMDriver } from './eval-framework'
+import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 
 configDotenv()
 
@@ -41,7 +41,7 @@ function repoRootDir() {
 async function serveCommand(options: { port: string; testMode: boolean }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
-  const conn = await connectToHAWebsocket()
+  const conn = await LiveHomeAssistantApi.createViaEnv()
   const llm = createDefaultLLMProvider()
   const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
   const db = await createDatabase()
@@ -87,13 +87,13 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
 }
 
 async function mcpCommand(options: { testMode: boolean }) {
-  const conn = await connectToHAWebsocket()
+  const api = await LiveHomeAssistantApi.createViaEnv()
   const llm = createDefaultLLMProvider()
 
   // XXX: Ugh, there's no way to expose multiple servers in one go. For now, just expose
   // Home Assistant
   //const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
-  const ha = createHomeAssistantServer(conn, llm, {
+  const ha = createHomeAssistantServer(api, llm, {
     testMode: options.testMode,
   })
   await ha.server.connect(new StdioServerTransport())

@@ -47,9 +47,11 @@ const cache = new LRUCache<string, any>({
 
 export interface HomeAssistantApi {
   fetchServices(): Promise<HassServices>
+
   fetchStates(): Promise<HassState[]>
+
   eventsObservable(): Observable<HassEventBase>
-  fetchHAUserInformation(): Promise<Record<string, HAPersonInformation>>
+
   sendNotification(
     target: string,
     message: string,
@@ -118,39 +120,6 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
       return disp
     })
-  }
-
-  async fetchHAUserInformation(opts: { mockStates?: HassState[] } = {}) {
-    const states = opts.mockStates ?? (await this.fetchStates())
-
-    const people = states.filter((state) =>
-      state.entity_id.startsWith('person.')
-    )
-    d('people: %o', people)
-
-    const ret = people.reduce(
-      (acc, x) => {
-        const name =
-          (x.attributes.friendly_name as string) ??
-          x.entity_id.replace('person.', '')
-
-        const notifiers = (
-          (x.attributes.device_trackers as string[]) ?? []
-        ).map((t: string) => deviceTrackerNameToNotifyName(t))
-
-        acc[x.entity_id.replace('person.', '')] = {
-          name,
-          notifiers,
-          state: x.state,
-        }
-
-        return acc
-      },
-      {} as Record<string, HAPersonInformation>
-    )
-
-    d('ret: %o', ret)
-    return ret
   }
 
   async sendNotification(
@@ -265,6 +234,37 @@ const LOW_VALUE_REGEXES = [
   /hacs_/,
   /_connectivity/,
 ]
+
+export async function fetchHAUserInformation(api: HomeAssistantApi) {
+  const states = await api.fetchStates()
+
+  const people = states.filter((state) => state.entity_id.startsWith('person.'))
+  d('people: %o', people)
+
+  const ret = people.reduce(
+    (acc, x) => {
+      const name =
+        (x.attributes.friendly_name as string) ??
+        x.entity_id.replace('person.', '')
+
+      const notifiers = ((x.attributes.device_trackers as string[]) ?? []).map(
+        (t: string) => deviceTrackerNameToNotifyName(t)
+      )
+
+      acc[x.entity_id.replace('person.', '')] = {
+        name,
+        notifiers,
+        state: x.state,
+      }
+
+      return acc
+    },
+    {} as Record<string, HAPersonInformation>
+  )
+
+  d('ret: %o', ret)
+  return ret
+}
 
 export function filterUncommonEntities(
   entities: HassState[],

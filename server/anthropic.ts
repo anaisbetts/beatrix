@@ -42,7 +42,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
     model?: string,
     maxTokens?: number
   ) {
-    this.model = model ?? process.env.LLM_NAME ?? 'claude-3-7-sonnet-20250219'
+    this.model = model ?? 'claude-3-7-sonnet-20250219'
     this.maxTokens =
       maxTokens ??
       AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS[this.model] ??

@@ -32,7 +32,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   private ollama: Ollama
   private model: string
   constructor(endpoint: string, model?: string) {
-    this.model = model ?? process.env.LLM_NAME ?? 'qwen2.5:14b'
+    this.model = model ?? 'qwen2.5:14b'
     this.ollama = new Ollama({ host: endpoint })
   }
 

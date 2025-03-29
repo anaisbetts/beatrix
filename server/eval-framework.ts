@@ -18,6 +18,7 @@ import { fetchHAUserInformation } from './lib/ha-ws-api'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { GradeResult, ScenarioResult } from '../shared/types'
 import { OllamaLargeLanguageProvider } from './ollama'
+import { OpenAILargeLanguageProvider } from './openai'
 
 const d = debug('ha:eval')
 
@@ -47,9 +48,21 @@ export function createLLMDriver(model: string, driver: string) {
     }
 
     return new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST, model)
+  } else if (driver === 'openai') {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY is required for OpenAI driver')
+    }
+
+    return new OpenAILargeLanguageProvider(
+      process.env.OPENAI_API_KEY,
+      process.env.OPENAI_BASE_URL,
+      model
+    )
   }
 
-  throw new Error("Invalid driver specified. Use 'anthropic' or 'ollama'.")
+  throw new Error(
+    "Invalid driver specified. Use 'anthropic', 'ollama', or 'openai'."
+  )
 }
 
 export async function runScenario(

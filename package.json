@@ -65,6 +65,7 @@
     "lru-cache": "^11.0.2",
     "lucide-react": "^0.483.0",
     "ollama": "^0.5.14",
+    "openai": "^4.90.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-remark": "^2.1.0",

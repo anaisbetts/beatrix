@@ -6,7 +6,7 @@ export interface ServerWebsocketApi {
   handlePromptRequest(prompt: string): Observable<MessageParam>
   runAllEvals(
     model: string,
-    driver: 'ollama' | 'anthropic',
+    driver: 'ollama' | 'anthropic' | 'openai',
     count: number
   ): Observable<ScenarioResult>
 }

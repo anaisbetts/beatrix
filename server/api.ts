@@ -37,7 +37,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   runAllEvals(
     model: string,
-    driver: 'ollama' | 'anthropic',
+    driver: 'ollama' | 'anthropic' | 'openai',
     count: number
   ): Observable<ScenarioResult> {
     const llm = createLLMDriver(model, driver)

@@ -196,8 +196,8 @@ async function main() {
     .option('-m, --model <model>', 'The model to evaluate')
     .option(
       '-d, --driver <driver>',
-      'The service to evaluate, either "anthropic" or "ollama"',
-      'ollama'
+      'The service to evaluate: "anthropic", "ollama", or "openai"',
+      'anthropic'
     )
     .option('-n, --num <num>', 'Number of repetitions to run', '1')
     .option('-v, --verbose', 'Enable verbose output', false)

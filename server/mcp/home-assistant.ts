@@ -130,6 +130,10 @@ export function createHomeAssistantServer(
   server.tool(
     'get-all-entities',
     'Get a filtered list of all Home Assistant entities, excluding uncommon or utility entities',
+    {
+      // Empty object with an optional dummy parameter to satisfy OpenAI requirements
+      dummy: z.string().optional().describe('Unused parameter'),
+    },
     async () => {
       try {
         const allStates = await fetchStatesCall('get-all-entities', [])

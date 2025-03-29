@@ -1,21 +1,15 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Connection } from 'home-assistant-js-websocket'
-import {
-  connectToHAWebsocket,
-  callService,
-  fetchServices,
-  fetchStates,
-} from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
+import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
 
 const d = debug('ha:call-service')
 
 export function createCallServiceServer(
-  connection: Connection,
+  api: HomeAssistantApi,
   onCallService: (
     domain: string,
     service: string,
@@ -46,7 +40,7 @@ export function createCallServiceServer(
             true,
           ])
         )
-        const services = await fetchServices(connection)
+        const services = await api.fetchServices()
 
         const matchingServices = Object.keys(services).reduce(
           (acc, k) => {
@@ -111,8 +105,7 @@ export function createCallServiceServer(
             service_data
           )
 
-          await callService(
-            connection,
+          await api.callService(
             {
               domain,
               service,
@@ -125,7 +118,7 @@ export function createCallServiceServer(
           onCallService?.(domain, service, id, service_data)
         }
 
-        const states = await fetchStates(connection)
+        const states = await api.fetchStates()
         const needles = Object.fromEntries(entityIds.map((k) => [k, true]))
         const stateInfo = states.reduce(
           (acc, x) => {
@@ -167,8 +160,8 @@ const isMainModule =
   import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
 
 async function main() {
-  const connection = await connectToHAWebsocket()
-  const server = createCallServiceServer(connection, () => {})
+  const api = await LiveHomeAssistantApi.createViaEnv()
+  const server = createCallServiceServer(api, () => {})
 
   await server.connect(new StdioServerTransport())
 }

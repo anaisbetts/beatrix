@@ -4,7 +4,7 @@ import {
   ANTHROPIC_EVAL_MODEL,
   AnthropicLargeLanguageProvider,
 } from './anthropic'
-import { firstValueFrom, lastValueFrom, toArray } from 'rxjs'
+import { firstValueFrom, lastValueFrom, NEVER, Observable, toArray } from 'rxjs'
 import { LargeLanguageProvider } from './llm'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { asyncMap } from '@anaisbetts/commands'
@@ -13,8 +13,13 @@ import debug from 'debug'
 
 import mockServices from '../mocks/services.json'
 import mockStates from '../mocks/states.json'
-import { HassServices } from 'home-assistant-js-websocket'
-import { fetchHAUserInformation } from './lib/ha-ws-api'
+import { HassEventBase, HassServices } from 'home-assistant-js-websocket'
+import {
+  CallServiceOptions,
+  extractNotifiers,
+  HassState,
+  HomeAssistantApi,
+} from './lib/ha-ws-api'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { GradeResult, ScenarioResult } from '../shared/types'
 import { OllamaLargeLanguageProvider } from './ollama'
@@ -130,17 +135,67 @@ export async function runScenario(
  * Tools
  */
 
+class EvalHomeAssistantApi implements HomeAssistantApi {
+  fetchServices(): Promise<HassServices> {
+    return Promise.resolve(mockServices as unknown as HassServices)
+  }
+
+  fetchStates(): Promise<HassState[]> {
+    return Promise.resolve(mockStates as unknown as HassState[])
+  }
+
+  eventsObservable(): Observable<HassEventBase> {
+    return NEVER
+  }
+
+  async sendNotification(
+    target: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    message: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    title: string | undefined
+  ): Promise<void> {
+    const svcs = await this.fetchServices()
+    const notifiers = await extractNotifiers(svcs)
+
+    if (!notifiers.find((n) => n.name === target)) {
+      throw new Error('Target not found')
+    }
+  }
+
+  async callService<T = any>(
+    options: CallServiceOptions,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    testModeOverride?: boolean
+  ): Promise<T | null> {
+    // In test mode, validate that entity_id starts with domain
+    const entityId = options.target?.entity_id
+
+    if (entityId) {
+      // Handle both string and array cases
+      const entities = Array.isArray(entityId) ? entityId : [entityId]
+
+      for (const entity of entities) {
+        if (!entity.startsWith(`${options.domain}.`)) {
+          throw new Error(
+            `Entity ID ${entity} doesn't match domain ${options.domain}`
+          )
+        }
+      }
+    }
+
+    return null
+  }
+}
+
 export function createDefaultMockedTools(llm: LargeLanguageProvider) {
   d('Creating default mocked tools')
+  const api = new EvalHomeAssistantApi()
+
   return [
-    createNotifyServer(null, {
-      mockFetchServices: async () => mockServices as unknown as HassServices,
-      mockFetchUsers: async () => fetchHAUserInformation(null, { mockStates }),
-      mockSendNotification: async () => {},
-    }),
-    createHomeAssistantServer(null, llm, {
+    createNotifyServer(api),
+    createHomeAssistantServer(api, llm, {
       testMode: true,
-      mockFetchStates: async () => mockStates,
     }),
   ]
 }

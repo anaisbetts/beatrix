@@ -1,14 +1,11 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { Connection, HassServices } from 'home-assistant-js-websocket'
 import {
-  connectToHAWebsocket,
   extractNotifiers,
   fetchHAUserInformation,
-  fetchServices,
-  HAPersonInformation,
-  sendNotification,
+  HomeAssistantApi,
+  LiveHomeAssistantApi,
 } from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
@@ -16,38 +13,7 @@ import debug from 'debug'
 
 const d = debug('ha:notify')
 
-export function createNotifyServer(
-  connection: Connection | null,
-  opts: {
-    testMode?: boolean
-    mockFetchServices?: (
-      tool: string,
-      context: string[]
-    ) => Promise<HassServices>
-    mockFetchUsers?: (
-      tool: string,
-      context: string[]
-    ) => Promise<Record<string, HAPersonInformation>>
-    mockSendNotification?: (
-      tool: string,
-      context: string[],
-      target: string,
-      message: string,
-      title: string | undefined
-    ) => Promise<void>
-  } = {}
-) {
-  const testMode = opts?.testMode ?? false
-
-  const fetchServicesCall =
-    opts?.mockFetchServices ?? (() => fetchServices(connection!))
-  const fetchUsersCall =
-    opts?.mockFetchUsers ?? (() => fetchHAUserInformation(connection))
-  const sendNotificationCall =
-    opts?.mockSendNotification ??
-    ((_tool, _ctx, target, message, title) =>
-      sendNotification(testMode, connection!, target, message, title))
-
+export function createNotifyServer(api: HomeAssistantApi) {
   const server = new McpServer({
     name: 'notify',
     version: pkg.version,
@@ -59,7 +25,7 @@ export function createNotifyServer(
     {},
     async () => {
       try {
-        const svcs = await fetchServicesCall('list-notify-targets', [])
+        const svcs = await api.fetchServices()
         const resp = await extractNotifiers(svcs)
 
         d('list-notify-targets: %o', resp)
@@ -81,7 +47,7 @@ export function createNotifyServer(
     {},
     async () => {
       try {
-        const info = await fetchUsersCall('list-people', [])
+        const info = await fetchHAUserInformation(api)
         d('list-people: %o', info)
 
         return {
@@ -112,11 +78,7 @@ export function createNotifyServer(
     async ({ target, message, title }) => {
       try {
         d('send-notification: %s %s', target, message)
-        const info = await fetchUsersCall('send-notification-to-person', [
-          target,
-          message,
-          title ?? '',
-        ])
+        const info = await fetchHAUserInformation(api)
 
         if (!info[target]) {
           throw new Error(
@@ -134,13 +96,7 @@ export function createNotifyServer(
           let errCount = 0
 
           try {
-            await sendNotificationCall(
-              'send-notification',
-              [],
-              notifier,
-              message,
-              title
-            )
+            await api.sendNotification(notifier, message, title)
           } catch (e) {
             lastErr = e
             errCount++
@@ -172,13 +128,7 @@ export function createNotifyServer(
     async ({ target, message, title }) => {
       try {
         d('send-notification: %s %s', target, message)
-        await sendNotificationCall(
-          'send-notification',
-          [],
-          target,
-          message,
-          title
-        )
+        await api.sendNotification(target, message, title)
 
         return {
           content: [{ type: 'text', text: 'Notification sent' }],
@@ -200,8 +150,8 @@ const isMainModule =
   import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
 
 async function main() {
-  const connection = await connectToHAWebsocket()
-  const server = createNotifyServer(connection)
+  const api = await LiveHomeAssistantApi.createViaEnv()
+  const server = createNotifyServer(api)
 
   await server.connect(new StdioServerTransport())
 }

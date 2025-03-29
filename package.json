@@ -4,7 +4,7 @@
   "module": "./src/index.ts",
   "type": "module",
   "scripts": {
-    "lint": "eslint && tsc && prettier --check .",
+    "lint": "tsc && eslint && prettier --check .",
     "fix": "eslint --fix && prettier --write .",
     "build:all": "bun run build:vite && bun run build:server",
     "build:server": "bun build --target bun --compile --outfile ./dist/server ./server/index.ts",

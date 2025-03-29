@@ -16,10 +16,15 @@ import { useWebSocket } from './ws-provider'
 import { firstValueFrom, share, toArray } from 'rxjs'
 import { ScenarioResult, GradeResult } from '../../shared/types'
 
-type DriverType = 'anthropic' | 'ollama'
+type DriverType = 'anthropic' | 'ollama' | 'openai'
 
 export default function Evals() {
   const [model, setModel] = useState('claude-3-haiku-20240307')
+  const [defaultModels] = useState({
+    anthropic: 'claude-3-haiku-20240307',
+    ollama: 'qwen2.5:14b',
+    openai: 'gpt-4-turbo',
+  })
   const [driver, setDriver] = useState<DriverType>('anthropic')
   const [count, setCount] = useState(1)
   const [results, setResults] = useState<ScenarioResult[]>([])
@@ -114,7 +119,12 @@ export default function Evals() {
           <label className="mb-1 text-sm">Driver</label>
           <Select
             value={driver}
-            onValueChange={(value) => setDriver(value as DriverType)}
+            onValueChange={(value) => {
+              const newDriver = value as DriverType
+              setDriver(newDriver)
+              // Update model to the default for this driver
+              setModel(defaultModels[newDriver])
+            }}
             disabled={evalCommand.isPending()}
           >
             <SelectTrigger className="w-32">
@@ -123,6 +133,7 @@ export default function Evals() {
             <SelectContent>
               <SelectItem value="anthropic">Anthropic</SelectItem>
               <SelectItem value="ollama">Ollama</SelectItem>
+              <SelectItem value="openai">OpenAI</SelectItem>
             </SelectContent>
           </Select>
         </div>

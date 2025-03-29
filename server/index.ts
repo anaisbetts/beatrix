@@ -44,16 +44,24 @@ async function serveCommand(options: {
   evalMode: boolean
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
-
-  const conn = await LiveHomeAssistantApi.createViaEnv()
   const llm = createDefaultLLMProvider()
+
+  if (options.evalMode) {
+    console.log(
+      'Running the server in eval mode, this will run against a mocked Home Assistant service'
+    )
+  }
+
   const tools = options.evalMode
     ? createDefaultMockedTools(llm)
-    : createBuiltinServers(conn, llm, { testMode: options.testMode })
+    : createBuiltinServers(await LiveHomeAssistantApi.createViaEnv(), llm, {
+        testMode: options.testMode,
+      })
+
   const db = await createDatabase()
 
   console.log(
-    `Starting server on port ${port} (testMode: ${options.testMode}, evalMode: ${options.evalMode}})`
+    `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode}})`
   )
   const subj: Subject<ServerMessage> = new Subject()
 

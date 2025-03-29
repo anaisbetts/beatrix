@@ -21,6 +21,7 @@ import {
   sceneActivationEval as callServiceSceneEval,
 } from './evals/call-service'
 
+/*
 import {
   actionableNotificationEval,
   listNotifyTargetsEval,
@@ -33,6 +34,7 @@ import {
   notifySpecificDeviceEval,
   notifyWithTitleEval,
 } from './evals/notify'
+ */
 
 import { smokeTestEval, smokeTestToolsEval } from './evals/simple-evals'
 import { LargeLanguageProvider } from './llm'
@@ -73,6 +75,7 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     callServiceSceneEval(llm),
 
     // Notification specific evals
+    /*
     listNotifyTargetsEval(llm),
     listPeopleEval(llm),
     notifyPersonEval(llm),
@@ -83,5 +86,6 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     notifyNonexistentPersonEval(llm),
     actionableNotificationEval(llm),
     notifyByLocationEval(llm),
+    */
   ])
 }

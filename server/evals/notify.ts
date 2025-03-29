@@ -50,7 +50,11 @@ export async function* notifyPersonEval(llm: LargeLanguageProvider) {
     'Notify specific person',
     [
       failureGrader(),
-      gradeViaSearchForContent('ani', 'list-people', 'send-notification-to-person'),
+      gradeViaSearchForContent(
+        'ani',
+        'list-people',
+        'send-notification-to-person'
+      ),
       gradeContentViaPrompt(
         'Did the assistant correctly send a notification specifically to Ani (not to other people) with the message "Dinner is ready!"? It should have used the send-notification-to-person tool with the correct target parameter.'
       ),
@@ -118,9 +122,14 @@ export async function* notifySpecificDeviceEval(llm: LargeLanguageProvider) {
     'Notify specific device',
     [
       failureGrader(),
-      gradeViaSearchForContent('list-notify-targets', 'send-notification', 'iPhone', 'charger'),
+      gradeViaSearchForContent(
+        'list-notify-targets',
+        'send-notification',
+        'iPhone',
+        'charger'
+      ),
       gradeContentViaPrompt(
-        'Did the assistant correctly send the notification specifically to Ani\'s iPhone device rather than to all of Ani\'s devices? It should have used list-notify-targets to identify the specific device and then used send-notification with that target.'
+        "Did the assistant correctly send the notification specifically to Ani's iPhone device rather than to all of Ani's devices? It should have used list-notify-targets to identify the specific device and then used send-notification with that target."
       ),
     ]
   )
@@ -169,7 +178,12 @@ export async function* notifyByLocationEval(llm: LargeLanguageProvider) {
     'Notify by location',
     [
       failureGrader(),
-      gradeViaSearchForContent('list-people', 'location', 'living room', 'snacks'),
+      gradeViaSearchForContent(
+        'list-people',
+        'location',
+        'living room',
+        'snacks'
+      ),
       gradeContentViaPrompt(
         'Did the assistant attempt to determine who is in the living room and only notify those people? It should have tried to check person locations and then send notifications only to those in the living room.'
       ),

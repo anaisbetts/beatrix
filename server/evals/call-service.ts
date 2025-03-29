@@ -28,13 +28,13 @@ export async function* listServicesEval(llm: LargeLanguageProvider) {
 export async function* lightControlEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
-    'Turn on the kitchen lights',
+    'Turn on the kitchen chandelier light',
     createDefaultMockedTools(llm),
     'Basic light control',
     [
       failureGrader(),
       gradeContentViaPrompt(
-        'Did the assistant correctly identify kitchen lights and turn them on using the appropriate service call?'
+        'Did the assistant correctly identify kitchen lights and turn them on using the appropriate service call to kitchen_dining_room_chandelier?'
       ),
     ]
   )

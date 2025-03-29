@@ -45,7 +45,24 @@ const cache = new LRUCache<string, any>({
   ttlAutopurge: false,
 })
 
-export class LiveHomeAssistantApi {
+export interface HomeAssistantApi {
+  fetchServices(): Promise<HassServices>
+  fetchStates(): Promise<HassState[]>
+  eventsObservable(): Observable<HassEventBase>
+  fetchHAUserInformation(): Promise<Record<string, HAPersonInformation>>
+  sendNotification(
+    target: string,
+    message: string,
+    title: string | undefined
+  ): Promise<void>
+
+  callService<T = any>(
+    options: CallServiceOptions,
+    testModeOverride?: boolean
+  ): Promise<T | null>
+}
+
+export class LiveHomeAssistantApi implements HomeAssistantApi {
   constructor(
     private connection: Connection,
     private testMode: boolean = false

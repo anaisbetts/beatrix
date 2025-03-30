@@ -58,11 +58,7 @@ export function createLLMDriver(model: string, driver: string) {
       throw new Error('OPENAI_API_KEY is required for OpenAI driver')
     }
 
-    return new OpenAILargeLanguageProvider(
-      process.env.OPENAI_API_KEY,
-      process.env.OPENAI_BASE_URL,
-      model
-    )
+    return new OpenAILargeLanguageProvider(model)
   }
 
   throw new Error(

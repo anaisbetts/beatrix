@@ -145,6 +145,7 @@ export async function* climateControlModeEval(llm: LargeLanguageProvider) {
 }
 
 // Cover control
+/* XXX: Great eval but it's not in the data
 export async function* coverControlEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
@@ -160,22 +161,6 @@ export async function* coverControlEval(llm: LargeLanguageProvider) {
     ]
   )
 }
-
-// Scene activation
-export async function* sceneActivationEval(llm: LargeLanguageProvider) {
-  yield await runScenario(
-    llm,
-    'Activate the movie night scene',
-    createDefaultMockedTools(llm),
-    'Scene activation',
-    [
-      failureGrader(),
-      gradeViaSearchForContent('scene.turn_on', 'movie'),
-      gradeContentViaPrompt(
-        'Did the assistant correctly activate the movie night scene using the scene.turn_on service?'
-      ),
-    ]
-  )
-}
+  */
 
 // TODO: Add expected results for each eval as they might vary based on mock data

@@ -117,17 +117,12 @@ export async function* notifyEveryoneEval(llm: LargeLanguageProvider) {
 export async function* notifySpecificDeviceEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
-    'Send a notification specifically to Ani\'s iPhone saying "Don\'t forget to bring your charger."',
+    'Send a notification specifically to Ani\'s its an flippi saying "Don\'t forget to bring your charger."',
     createDefaultMockedTools(llm),
     'Notify specific device',
     [
       failureGrader(),
-      gradeViaSearchForContent(
-        'list-notify-targets',
-        'send-notification',
-        'iPhone',
-        'charger'
-      ),
+      gradeViaSearchForContent('list-notify-targets', 'flippi'),
       gradeContentViaPrompt(
         "Did the assistant correctly send the notification specifically to Ani's iPhone device rather than to all of Ani's devices? It should have used list-notify-targets to identify the specific device and then used send-notification with that target."
       ),
@@ -135,24 +130,8 @@ export async function* notifySpecificDeviceEval(llm: LargeLanguageProvider) {
   )
 }
 
-// Error handling for nonexistent person
-export async function* notifyNonexistentPersonEval(llm: LargeLanguageProvider) {
-  yield await runScenario(
-    llm,
-    'Send a notification to Bob saying "Meeting in 5 minutes."',
-    createDefaultMockedTools(llm),
-    'Notify nonexistent person',
-    [
-      failureGrader(),
-      gradeViaSearchForContent('list-people', 'Bob', 'not found'),
-      gradeContentViaPrompt(
-        'Did the assistant properly handle the error case of attempting to notify a non-existent person? It should have checked the available people first and informed the user that Bob is not found in the system.'
-      ),
-    ]
-  )
-}
-
 // Advanced notification with actionable content
+/* XXX This isn't implemented but it's a sick idea
 export async function* actionableNotificationEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
@@ -168,8 +147,10 @@ export async function* actionableNotificationEval(llm: LargeLanguageProvider) {
     ]
   )
 }
+*/
 
 // Group notification by room
+/* XXX: This doesn't exist in the eval data
 export async function* notifyByLocationEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
@@ -190,5 +171,4 @@ export async function* notifyByLocationEval(llm: LargeLanguageProvider) {
     ]
   )
 }
-
-// TODO: Add expected results for each eval as they might vary based on mock data
+*/

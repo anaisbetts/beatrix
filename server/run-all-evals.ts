@@ -9,7 +9,6 @@ import {
 } from './evals/home-assistant'
 
 import {
-  coverControlEval,
   climateControlModeEval,
   climateControlTemperatureEval,
   lightBrightnessEval,
@@ -18,26 +17,19 @@ import {
   listServicesEval,
   mediaPlayerControlEval,
   multipleEntityControlEval,
-  sceneActivationEval as callServiceSceneEval,
 } from './evals/call-service'
-
-/*
-import {
-  actionableNotificationEval,
-  listNotifyTargetsEval,
-  listPeopleEval,
-  notifyByLocationEval,
-  notifyEveryoneEval,
-  notifyMultiplePeopleEval,
-  notifyNonexistentPersonEval,
-  notifyPersonEval,
-  notifySpecificDeviceEval,
-  notifyWithTitleEval,
-} from './evals/notify'
- */
 
 import { smokeTestEval, smokeTestToolsEval } from './evals/simple-evals'
 import { LargeLanguageProvider } from './llm'
+import {
+  listNotifyTargetsEval,
+  listPeopleEval,
+  notifyPersonEval,
+  notifyWithTitleEval,
+  notifyMultiplePeopleEval,
+  notifyEveryoneEval,
+  notifySpecificDeviceEval,
+} from './evals/notify'
 
 async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
   for (const generator of generators) {
@@ -71,11 +63,8 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     mediaPlayerControlEval(llm),
     climateControlTemperatureEval(llm),
     climateControlModeEval(llm),
-    coverControlEval(llm),
-    callServiceSceneEval(llm),
 
     // Notification specific evals
-    /*
     listNotifyTargetsEval(llm),
     listPeopleEval(llm),
     notifyPersonEval(llm),
@@ -83,9 +72,5 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     notifyMultiplePeopleEval(llm),
     notifyEveryoneEval(llm),
     notifySpecificDeviceEval(llm),
-    notifyNonexistentPersonEval(llm),
-    actionableNotificationEval(llm),
-    notifyByLocationEval(llm),
-    */
   ])
 }

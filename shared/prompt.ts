@@ -3,12 +3,18 @@ import { Observable } from 'rxjs'
 import { ModelDriverType, ScenarioResult } from './types'
 
 export interface ServerWebsocketApi {
-  handlePromptRequest(prompt: string): Observable<MessageParam>
+  handlePromptRequest(
+    prompt: string,
+    model: string,
+    driver: ModelDriverType
+  ): Observable<MessageParam>
+
   runAllEvals(
     model: string,
     driver: ModelDriverType,
     count: number
   ): Observable<ScenarioResult>
+
   getModelListForDriver(driver: ModelDriverType): Observable<string[]>
 }
 

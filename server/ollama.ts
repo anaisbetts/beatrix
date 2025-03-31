@@ -1,4 +1,3 @@
-import { createNotifyServer } from './mcp/notify'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import pkg from '../package.json'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
@@ -12,10 +11,8 @@ import debug from 'debug'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Ollama, Message, Tool } from 'ollama'
-import { createHomeAssistantServer } from './mcp/home-assistant'
 import { LargeLanguageProvider } from './llm'
 import { from, map, Observable } from 'rxjs'
-import { HomeAssistantApi } from './lib/ha-ws-api'
 
 const d = debug('ha:llm')
 
@@ -164,19 +161,6 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
       }
     }
   }
-}
-
-export function createBuiltinServers(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
-  opts?: { testMode?: boolean }
-) {
-  const { testMode } = opts ?? {}
-
-  return [
-    createNotifyServer(api),
-    createHomeAssistantServer(api, llm, { testMode: testMode ?? false }),
-  ]
 }
 
 export function connectServersToClient(client: Client, servers: Server[]) {

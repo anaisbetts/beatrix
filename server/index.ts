@@ -7,7 +7,7 @@ import { createHomeAssistantServer } from './mcp/home-assistant'
 import { ServerWebsocketApiImpl } from './api'
 import { createDatabase } from './db'
 import { ServerWebSocket } from 'bun'
-import { Subject } from 'rxjs'
+import { filter, Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
 import { handleWebsocketRpc } from './ws-rpc'
 import { messagesToString, ServerWebsocketApi } from '../shared/prompt'
@@ -168,10 +168,18 @@ async function evalCommand(options: {
 async function dumpEventsCommand() {
   const conn = await LiveHomeAssistantApi.createViaEnv()
 
-  console.error('Dumping events...')
-  conn.eventsObservable().subscribe((event) => {
-    console.log(JSON.stringify(event))
-  })
+  console.error('Dumping non-noisy events...')
+  conn
+    .eventsObservable()
+    .pipe(
+      filter(
+        (x) =>
+          x.event_type !== 'state_changed' && x.event_type !== 'call_service'
+      )
+    )
+    .subscribe((event) => {
+      console.log(JSON.stringify(event))
+    })
 }
 
 async function main() {

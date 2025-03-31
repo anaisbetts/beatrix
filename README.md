@@ -1,11 +1,11 @@
-# ha-agentic-automation
+# Beatrix
 
 ## To Install (Docker Compose)
 
 ```yaml
 services:
-  ha-agentic-automation:
-    image: ghcr.io/anaisbetts/ha-agentic-automation:latest
+  beatrix:
+    image: ghcr.io/anaisbetts/beatrix:latest
     restart: unless-stopped
     environment:
       # Required for Home Assistant connection
@@ -28,10 +28,10 @@ services:
       # - DATA_DIR=/path/to/custom/data
     volumes:
       # Mount a persistent volume for the database
-      - ha_agentic_data:/data
+      - beatrix_data:/data
 
 volumes:
-  ha_agentic_data:
+  beatrix_data:
 ```
 
 ## Environment Variables

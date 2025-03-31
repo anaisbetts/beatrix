@@ -1,5 +1,5 @@
 {
-  "name": "ha-agentic-automation",
+  "name": "beatrix",
   "version": "0.1.0",
   "module": "./src/index.ts",
   "type": "module",

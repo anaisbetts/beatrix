@@ -53,6 +53,13 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
     })
   }
 
+  async getModelList(): Promise<string[]> {
+    const response = await this.client.models.list()
+    return response.data
+      .filter((model) => model.id.startsWith('gpt-'))
+      .map((model) => model.id)
+  }
+
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[]

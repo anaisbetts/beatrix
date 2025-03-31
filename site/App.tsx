@@ -91,7 +91,7 @@ export default function Home() {
   }, [page])
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="bg-background min-h-screen max-w-screen">
       <SidebarProvider defaultOpen={defaultOpen}>
         <Sidebar variant="floating" collapsible="icon">
           <AppSidebar onPageClicked={setPage} />

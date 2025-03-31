@@ -43,7 +43,6 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
       OpenAILargeLanguageProvider.MODEL_TOKEN_LIMITS.default
 
     d('Using OpenAI with %s', process.env.OPENAI_BASE_URL)
-    d(process.env.OPENAI_API_KEY)
     this.client = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
       baseURL: process.env.OPENAI_BASE_URL,

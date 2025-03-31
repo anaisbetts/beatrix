@@ -14,14 +14,15 @@ import {
 } from 'rxjs'
 import { ModelDriverType, ScenarioResult } from '../shared/types'
 import { runAllEvals } from './run-all-evals'
-import { createLLMDriver } from './eval-framework'
+import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
 import { HomeAssistantApi } from './lib/ha-ws-api'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
     private db: Kysely<Schema>,
     private api: HomeAssistantApi,
-    private testMode: boolean
+    private testMode: boolean,
+    private evalMode: boolean
   ) {}
 
   getDriverList(): Observable<string[]> {
@@ -51,9 +52,11 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     driver: string
   ): Observable<MessageParam> {
     const llm = createLLMDriver(model, driver)
-    const tools = createBuiltinServers(this.api, llm, {
-      testMode: this.testMode,
-    })
+    const tools = this.evalMode
+      ? createDefaultMockedTools(llm)
+      : createBuiltinServers(this.api, llm, {
+          testMode: this.testMode,
+        })
 
     const resp = llm.executePromptWithTools(prompt, tools)
 

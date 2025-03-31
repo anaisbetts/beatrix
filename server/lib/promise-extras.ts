@@ -1,5 +1,5 @@
-import { defer, firstValueFrom, from } from 'rxjs'
-import { map, mergeAll, reduce, retry } from 'rxjs/operators'
+import { defer, firstValueFrom, from, throwError } from 'rxjs'
+import { map, mergeAll, reduce, retry, timeout } from 'rxjs/operators'
 
 export function asyncMap<T, TRet>(
   array: T[],
@@ -59,19 +59,22 @@ export class TimeoutError extends Error {
 export function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
-  errorMessage?: string
+  message?: string
 ): Promise<T> {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    const timeoutId = setTimeout(() => {
-      const msg = errorMessage || `Operation timed out after ${timeoutMs}ms`
-      reject(new TimeoutError(msg))
-    }, timeoutMs)
-
-    // Ensure the timeout is cleared if the promise resolves before timeout
-    void promise.finally(() => clearTimeout(timeoutId))
-  })
-
-  return Promise.race([promise, timeoutPromise])
+  return firstValueFrom(
+    from(promise).pipe(
+      timeout({
+        first: timeoutMs,
+        with: () =>
+          throwError(
+            () =>
+              new TimeoutError(
+                message ?? `Promise timed out after ${timeoutMs}ms`
+              )
+          ),
+      })
+    )
+  )
 }
 
 export function retryPromise<T>(

@@ -37,17 +37,23 @@ function repoRootDir() {
   }
 }
 
-async function serveCommand(options: { port: string; testMode: boolean }) {
+async function serveCommand(options: {
+  port: string
+  testMode: boolean
+  evalMode: boolean
+}) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
   const conn = await LiveHomeAssistantApi.createViaEnv()
   const db = await createDatabase()
 
-  console.log(`Starting server on port ${port} (testMode: ${options.testMode})`)
+  console.log(
+    `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode}})`
+  )
   const subj: Subject<ServerMessage> = new Subject()
 
   handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(db, conn, options.testMode),
+    new ServerWebsocketApiImpl(db, conn, options.testMode, options.evalMode),
     subj
   )
 
@@ -173,6 +179,11 @@ async function main() {
     .option(
       '-t, --test-mode',
       'enable read-only mode that simulates write operations',
+      false
+    )
+    .option(
+      '-e, --eval-mode',
+      'Runs the server in eval mode which makes the debug chat target the evals data. Implies -t',
       false
     )
     .action(serveCommand)

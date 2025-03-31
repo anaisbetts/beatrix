@@ -168,13 +168,13 @@ export default function Evals() {
                   ))
                 ),
                 err: () => (
-                  <SelectItem value="">Failed to load models</SelectItem>
+                  <SelectItem value="error-fallback">Failed to load models</SelectItem>
                 ),
                 pending: () => (
-                  <SelectItem value="">Loading models...</SelectItem>
+                  <SelectItem value="loading-fallback">Loading models...</SelectItem>
                 ),
                 null: () => (
-                  <SelectItem value="">Select a driver first</SelectItem>
+                  <SelectItem value="no-driver-fallback">Select a driver first</SelectItem>
                 ),
               })}
             </SelectContent>

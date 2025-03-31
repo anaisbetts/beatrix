@@ -16,6 +16,7 @@ export interface LargeLanguageProvider {
     prompt: string,
     toolServers: McpServer[]
   ): Observable<MessageParam>
+  getModelList(): Promise<string[]>
 }
 
 export function createDefaultLLMProvider() {

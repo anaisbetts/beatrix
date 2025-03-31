@@ -1,5 +1,7 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
+export type ModelDriverType = 'anthropic' | 'ollama' | 'openai'
+
 export type ScenarioResult = {
   prompt: string
   toolsDescription: string

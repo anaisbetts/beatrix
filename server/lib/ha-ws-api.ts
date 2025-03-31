@@ -5,6 +5,7 @@ import {
   Connection,
   HassEventBase,
   HassServices,
+  HassEvent,
 } from 'home-assistant-js-websocket'
 import { LRUCache } from 'lru-cache'
 
@@ -107,12 +108,12 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     return ret
   }
 
-  eventsObservable(): Observable<HassEventBase> {
+  eventsObservable(): Observable<HassEvent> {
     return new Observable((subj) => {
       const disp = new Subscription()
 
       this.connection
-        .subscribeEvents<HassEventBase>((ev) => subj.next(ev))
+        .subscribeEvents<HassEvent>((ev) => subj.next(ev))
         .then(
           (unsub) => disp.add(() => void unsub()),
           (err) => subj.error(err)

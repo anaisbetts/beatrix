@@ -1,7 +1,6 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -18,7 +17,7 @@ import path from 'path'
 import { exists } from 'fs/promises'
 import { runAllEvals } from './run-all-evals'
 import { ScenarioResult } from '../shared/types'
-import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
+import { createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 
 configDotenv()
@@ -44,20 +43,8 @@ async function serveCommand(options: {
   evalMode: boolean
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
-  const llm = createDefaultLLMProvider()
 
-  if (options.evalMode) {
-    console.log(
-      'Running the server in eval mode, this will run against a mocked Home Assistant service'
-    )
-  }
-
-  const tools = options.evalMode
-    ? createDefaultMockedTools(llm)
-    : createBuiltinServers(await LiveHomeAssistantApi.createViaEnv(), llm, {
-        testMode: options.testMode,
-      })
-
+  const conn = await LiveHomeAssistantApi.createViaEnv()
   const db = await createDatabase()
 
   console.log(
@@ -66,7 +53,7 @@ async function serveCommand(options: {
   const subj: Subject<ServerMessage> = new Subject()
 
   handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(db, llm, tools),
+    new ServerWebsocketApiImpl(db, conn, options.testMode, options.evalMode),
     subj
   )
 

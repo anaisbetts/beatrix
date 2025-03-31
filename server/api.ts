@@ -5,7 +5,7 @@ import { Schema } from './db-schema'
 import { ServerWebsocketApi } from '../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { concatMap, from, generate, mergeMap, Observable, toArray } from 'rxjs'
-import { ScenarioResult } from '../shared/types'
+import { ModelDriverType, ScenarioResult } from '../shared/types'
 import { runAllEvals } from './run-all-evals'
 import { createLLMDriver } from './eval-framework'
 
@@ -15,6 +15,12 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     private llm: LargeLanguageProvider,
     private tools: McpServer[]
   ) {}
+
+  getModelListForDriver(driver: ModelDriverType): Observable<string[]> {
+    const llm = createLLMDriver('', driver)
+
+    return from(llm.getModelList())
+  }
 
   handlePromptRequest(prompt: string): Observable<MessageParam> {
     const resp = this.llm.executePromptWithTools(prompt, this.tools)

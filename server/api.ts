@@ -3,7 +3,15 @@ import { Kysely } from 'kysely'
 import { Schema } from './db-schema'
 import { ServerWebsocketApi } from '../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import { concatMap, from, generate, mergeMap, Observable, toArray } from 'rxjs'
+import {
+  concatMap,
+  from,
+  generate,
+  mergeMap,
+  Observable,
+  of,
+  toArray,
+} from 'rxjs'
 import { ModelDriverType, ScenarioResult } from '../shared/types'
 import { runAllEvals } from './run-all-evals'
 import { createLLMDriver } from './eval-framework'
@@ -15,6 +23,21 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     private api: HomeAssistantApi,
     private testMode: boolean
   ) {}
+
+  getDriverList(): Observable<string[]> {
+    const list = []
+    if (process.env.ANTHROPIC_API_KEY) {
+      list.push('anthropic')
+    }
+    if (process.env.OLLAMA_HOST) {
+      list.push('ollama')
+    }
+    if (process.env.OPENAI_API_KEY) {
+      list.push('openai')
+    }
+
+    return of(list)
+  }
 
   getModelListForDriver(driver: ModelDriverType): Observable<string[]> {
     const llm = createLLMDriver('', driver)

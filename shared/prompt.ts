@@ -16,6 +16,7 @@ export interface ServerWebsocketApi {
   ): Observable<ScenarioResult>
 
   getModelListForDriver(driver: ModelDriverType): Observable<string[]>
+  getDriverList(): Observable<string[]>
 }
 
 export function messagesToString(

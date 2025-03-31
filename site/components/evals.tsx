@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useCommand } from '@anaisbetts/commands'
+import { useCommand, usePromise } from '@anaisbetts/commands'
 import {
   Select,
   SelectContent,
@@ -14,21 +14,34 @@ import {
 import { Beaker, Play } from 'lucide-react'
 import { useWebSocket } from './ws-provider'
 import { firstValueFrom, share, toArray } from 'rxjs'
-import { ScenarioResult, GradeResult } from '../../shared/types'
+import {
+  ScenarioResult,
+  GradeResult,
+  ModelDriverType,
+} from '../../shared/types'
 
 type DriverType = 'anthropic' | 'ollama' | 'openai'
 
 export default function Evals() {
-  const [model, setModel] = useState('claude-3-haiku-20240307')
-  const [defaultModels] = useState({
-    anthropic: 'claude-3-haiku-20240307',
-    ollama: 'qwen2.5:14b',
-    openai: 'gpt-4-turbo',
-  })
+  const [model, setModel] = useState('')
   const [driver, setDriver] = useState<DriverType>('anthropic')
   const [count, setCount] = useState(1)
   const [results, setResults] = useState<ScenarioResult[]>([])
   const { api } = useWebSocket()
+
+  const driverList = usePromise(async () => {
+    if (!api) return []
+    return await firstValueFrom(api.getDriverList())
+  }, [api])
+
+  const modelList = usePromise(async () => {
+    if (!api) return []
+    const models = await firstValueFrom(api.getModelListForDriver(driver))
+    if (models.length > 0 && !model) {
+      setModel(models[0])
+    }
+    return models
+  }, [api, driver])
 
   const [runEvals, evalCommand, reset] = useCommand(async () => {
     if (!api) throw new Error('Not connected!')
@@ -94,6 +107,61 @@ export default function Evals() {
     null: () => null,
   })
 
+  const driverSelector = driverList.mapOrElse({
+    ok: (drivers) => (
+      <Select
+        value={driver}
+        onValueChange={(value) => setDriver(value as ModelDriverType)}
+      >
+        <SelectTrigger className="w-[140px]">
+          <SelectValue placeholder="Select driver" />
+        </SelectTrigger>
+        <SelectContent>
+          {drivers.map((d) => (
+            <SelectItem key={d} value={d}>
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    err: () => (
+      <div className="text-sm text-red-500">Failed to load drivers</div>
+    ),
+    pending: () => (
+      <div className="flex h-10 w-[180px] items-center justify-center">
+        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+      </div>
+    ),
+    null: () => <div className="text-sm italic">Select a driver</div>,
+  })
+
+  const modelSelector = modelList.mapOrElse({
+    ok: (models) => (
+      <Select value={model} onValueChange={setModel}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Select model" />
+        </SelectTrigger>
+        <SelectContent>
+          {models.map((m) => (
+            <SelectItem key={m} value={m}>
+              {m}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    err: () => (
+      <div className="text-sm text-red-500">Failed to load models</div>
+    ),
+    pending: () => (
+      <div className="flex h-10 w-[180px] items-center justify-center">
+        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+      </div>
+    ),
+    null: () => <div className="text-sm italic">Select a driver</div>,
+  })
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
@@ -105,37 +173,13 @@ export default function Evals() {
 
       <div className="border-border flex flex-wrap gap-4 border-b p-4">
         <div className="flex flex-col">
-          <label className="mb-1 text-sm">Model</label>
-          <Input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="Model name"
-            className="w-64"
-            disabled={evalCommand.isPending()}
-          />
+          <label className="mb-1 text-sm">Driver</label>
+          {driverSelector}
         </div>
 
         <div className="flex flex-col">
-          <label className="mb-1 text-sm">Driver</label>
-          <Select
-            value={driver}
-            onValueChange={(value) => {
-              const newDriver = value as DriverType
-              setDriver(newDriver)
-              // Update model to the default for this driver
-              setModel(defaultModels[newDriver])
-            }}
-            disabled={evalCommand.isPending()}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Select driver" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-              <SelectItem value="ollama">Ollama</SelectItem>
-              <SelectItem value="openai">OpenAI</SelectItem>
-            </SelectContent>
-          </Select>
+          <label className="mb-1 text-sm">Model</label>
+          {modelSelector}
         </div>
 
         <div className="flex flex-col">

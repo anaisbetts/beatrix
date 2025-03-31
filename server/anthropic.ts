@@ -49,6 +49,12 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       AnthropicLargeLanguageProvider.MODEL_TOKEN_LIMITS.default
   }
 
+  async getModelList(): Promise<string[]> {
+    const anthropic = new Anthropic({ apiKey: this.apiKey })
+    const response = await anthropic.models.list()
+    return response.data.map((model) => model.id)
+  }
+
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[]

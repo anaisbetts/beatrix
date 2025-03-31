@@ -1,7 +1,6 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import { createBuiltinServers } from './llm'
 import { createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -42,15 +41,13 @@ async function serveCommand(options: { port: string; testMode: boolean }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
   const conn = await LiveHomeAssistantApi.createViaEnv()
-  const llm = createDefaultLLMProvider()
-  const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
   const db = await createDatabase()
 
   console.log(`Starting server on port ${port} (testMode: ${options.testMode})`)
   const subj: Subject<ServerMessage> = new Subject()
 
   handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(db, llm, tools),
+    new ServerWebsocketApiImpl(db, conn, options.testMode),
     subj
   )
 

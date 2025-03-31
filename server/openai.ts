@@ -35,22 +35,24 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
   private model: string
   private client: OpenAI
 
-  public constructor(
-    apiKey?: string,
-    baseURL?: string,
-    model?: string,
-    maxTokens?: number
-  ) {
+  public constructor(model?: string, maxTokens?: number) {
     this.model = model ?? 'gpt-4-turbo'
     this.maxTokens =
       maxTokens ??
       OpenAILargeLanguageProvider.MODEL_TOKEN_LIMITS[this.model] ??
       OpenAILargeLanguageProvider.MODEL_TOKEN_LIMITS.default
 
+    d('Using OpenAI with %s', process.env.OPENAI_BASE_URL)
+    d(process.env.OPENAI_API_KEY)
     this.client = new OpenAI({
-      apiKey: apiKey ?? process.env.OPENAI_API_KEY,
-      baseURL: baseURL ?? process.env.OPENAI_BASE_URL,
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_BASE_URL,
     })
+  }
+
+  async getModelList(): Promise<string[]> {
+    const models = await this.client.models.list()
+    return models.data.map((model) => model.id)
   }
 
   executePromptWithTools(
@@ -138,6 +140,7 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
       // Apply timeout to the OpenAI API call
       let response
       try {
+        d('Calling OpenAI model %s', this.model)
         response = await withTimeout(
           this.client.chat.completions.create({
             model: this.model,

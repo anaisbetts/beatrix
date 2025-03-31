@@ -36,15 +36,9 @@ type LlmEvalResponse = {
 }
 
 export function createLLMDriver(model: string, driver: string) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error(
-      'ANTHROPIC_API_KEY is required, it is used for eval grading'
-    )
-  }
-
   if (driver === 'anthropic') {
     return new AnthropicLargeLanguageProvider(
-      process.env.ANTHROPIC_API_KEY,
+      process.env.ANTHROPIC_API_KEY!,
       model
     )
   } else if (driver === 'ollama') {
@@ -58,11 +52,7 @@ export function createLLMDriver(model: string, driver: string) {
       throw new Error('OPENAI_API_KEY is required for OpenAI driver')
     }
 
-    return new OpenAILargeLanguageProvider(
-      process.env.OPENAI_API_KEY,
-      process.env.OPENAI_BASE_URL,
-      model
-    )
+    return new OpenAILargeLanguageProvider(model)
   }
 
   throw new Error(

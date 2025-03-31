@@ -1,14 +1,22 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
-import { ScenarioResult } from './types'
+import { ModelDriverType, ScenarioResult } from './types'
 
 export interface ServerWebsocketApi {
-  handlePromptRequest(prompt: string): Observable<MessageParam>
+  handlePromptRequest(
+    prompt: string,
+    model: string,
+    driver: ModelDriverType
+  ): Observable<MessageParam>
+
   runAllEvals(
     model: string,
-    driver: 'ollama' | 'anthropic' | 'openai',
+    driver: ModelDriverType,
     count: number
   ): Observable<ScenarioResult>
+
+  getModelListForDriver(driver: ModelDriverType): Observable<string[]>
+  getDriverList(): Observable<string[]>
 }
 
 export function messagesToString(

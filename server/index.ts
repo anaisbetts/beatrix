@@ -19,6 +19,7 @@ import { runAllEvals } from './run-all-evals'
 import { ScenarioResult } from '../shared/types'
 import { createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
+import packageJson from '../package.json'
 
 configDotenv()
 
@@ -164,13 +165,23 @@ async function evalCommand(options: {
   )
 }
 
+async function dumpEventsCommand() {
+  const conn = await LiveHomeAssistantApi.createViaEnv()
+
+  console.error('Dumping events...')
+  conn.eventsObservable().subscribe((event) => {
+    console.log(JSON.stringify(event))
+  })
+}
+
 async function main() {
   const program = new Command()
+  const debugMode = process.execPath.endsWith('bun')
 
   program
     .name('ha-agentic-automation')
     .description('Home Assistant Agentic Automation')
-    .version('0.1.0')
+    .version(packageJson.version)
 
   program
     .command('serve')
@@ -209,8 +220,14 @@ async function main() {
     )
     .option('-n, --num <num>', 'Number of repetitions to run', '1')
     .option('-v, --verbose', 'Enable verbose output', false)
-
     .action(evalCommand)
+
+  if (debugMode) {
+    program
+      .command('dump-events')
+      .description('Dump events to stdout')
+      .action(dumpEventsCommand)
+  }
 
   // Default command is 'serve' if no command is specified
   if (process.argv.length <= 2) {

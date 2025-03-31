@@ -187,7 +187,7 @@ async function main() {
   const debugMode = process.execPath.endsWith('bun')
 
   program
-    .name('ha-agentic-automation')
+    .name('beatrix')
     .description('Home Assistant Agentic Automation')
     .version(packageJson.version)
 

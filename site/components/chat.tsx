@@ -35,6 +35,11 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { api } = useWebSocket()
 
+  const driverList = usePromise(async () => {
+    if (!api) return []
+    return await firstValueFrom(api.getDriverList())
+  }, [api])
+
   const modelList = usePromise(async () => {
     if (!api) return []
     const models = await firstValueFrom(api.getModelListForDriver(driver))
@@ -139,9 +144,24 @@ export default function Chat() {
                 <SelectValue placeholder="Select driver" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="anthropic">Anthropic</SelectItem>
-                <SelectItem value="ollama">Ollama</SelectItem>
-                <SelectItem value="openai">OpenAI</SelectItem>
+                {driverList.mapOrElse({
+                  ok: (drivers) => (
+                    drivers.map(d => (
+                      <SelectItem key={d} value={d}>
+                        {d.charAt(0).toUpperCase() + d.slice(1)}
+                      </SelectItem>
+                    ))
+                  ),
+                  err: () => (
+                    <SelectItem value="anthropic">Anthropic</SelectItem>
+                  ),
+                  pending: () => (
+                    <SelectItem value="anthropic">Loading...</SelectItem>
+                  ),
+                  null: () => (
+                    <SelectItem value="anthropic">Anthropic</SelectItem>
+                  ),
+                })}
               </SelectContent>
             </Select>
 

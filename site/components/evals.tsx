@@ -14,7 +14,11 @@ import {
 import { Beaker, Play } from 'lucide-react'
 import { useWebSocket } from './ws-provider'
 import { firstValueFrom, share, toArray } from 'rxjs'
-import { ScenarioResult, GradeResult } from '../../shared/types'
+import {
+  ScenarioResult,
+  GradeResult,
+  ModelDriverType,
+} from '../../shared/types'
 
 type DriverType = 'anthropic' | 'ollama' | 'openai'
 
@@ -103,6 +107,61 @@ export default function Evals() {
     null: () => null,
   })
 
+  const driverSelector = driverList.mapOrElse({
+    ok: (drivers) => (
+      <Select
+        value={driver}
+        onValueChange={(value) => setDriver(value as ModelDriverType)}
+      >
+        <SelectTrigger className="w-[140px]">
+          <SelectValue placeholder="Select driver" />
+        </SelectTrigger>
+        <SelectContent>
+          {drivers.map((d) => (
+            <SelectItem key={d} value={d}>
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    err: () => (
+      <div className="text-sm text-red-500">Failed to load drivers</div>
+    ),
+    pending: () => (
+      <div className="flex h-10 w-[180px] items-center justify-center">
+        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+      </div>
+    ),
+    null: () => <div className="text-sm italic">Select a driver</div>,
+  })
+
+  const modelSelector = modelList.mapOrElse({
+    ok: (models) => (
+      <Select value={model} onValueChange={setModel}>
+        <SelectTrigger className="w-[180px]">
+          <SelectValue placeholder="Select model" />
+        </SelectTrigger>
+        <SelectContent>
+          {models.map((m) => (
+            <SelectItem key={m} value={m}>
+              {m}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    err: () => (
+      <div className="text-sm text-red-500">Failed to load models</div>
+    ),
+    pending: () => (
+      <div className="flex h-10 w-[180px] items-center justify-center">
+        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+      </div>
+    ),
+    null: () => <div className="text-sm italic">Select a driver</div>,
+  })
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
@@ -115,70 +174,12 @@ export default function Evals() {
       <div className="border-border flex flex-wrap gap-4 border-b p-4">
         <div className="flex flex-col">
           <label className="mb-1 text-sm">Driver</label>
-          <Select
-            value={driver}
-            onValueChange={(value) => {
-              setDriver(value as DriverType)
-            }}
-            disabled={evalCommand.isPending()}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Select driver" />
-            </SelectTrigger>
-            <SelectContent>
-              {driverList.mapOrElse({
-                ok: (drivers) => (
-                  drivers.map(d => (
-                    <SelectItem key={d} value={d}>
-                      {d.charAt(0).toUpperCase() + d.slice(1)}
-                    </SelectItem>
-                  ))
-                ),
-                err: () => (
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                ),
-                pending: () => (
-                  <SelectItem value="anthropic">Loading...</SelectItem>
-                ),
-                null: () => (
-                  <SelectItem value="anthropic">Anthropic</SelectItem>
-                ),
-              })}
-            </SelectContent>
-          </Select>
+          {driverSelector}
         </div>
 
         <div className="flex flex-col">
           <label className="mb-1 text-sm">Model</label>
-          <Select
-            value={model}
-            onValueChange={setModel}
-            disabled={evalCommand.isPending()}
-          >
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Select model" />
-            </SelectTrigger>
-            <SelectContent>
-              {modelList.mapOrElse({
-                ok: (models) => (
-                  models.map(m => (
-                    <SelectItem key={m} value={m}>
-                      {m}
-                    </SelectItem>
-                  ))
-                ),
-                err: () => (
-                  <SelectItem value="error-fallback">Failed to load models</SelectItem>
-                ),
-                pending: () => (
-                  <SelectItem value="loading-fallback">Loading models...</SelectItem>
-                ),
-                null: () => (
-                  <SelectItem value="no-driver-fallback">Select a driver first</SelectItem>
-                ),
-              })}
-            </SelectContent>
-          </Select>
+          {modelSelector}
         </div>
 
         <div className="flex flex-col">

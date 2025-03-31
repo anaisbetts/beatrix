@@ -104,6 +104,35 @@ export default function Chat() {
     null: () => null,
   })
 
+  const driverSelector = driverList.mapOrElse({
+    ok: (drivers) => (
+      <Select
+        value={driver}
+        onValueChange={(value) => setDriver(value as ModelDriverType)}
+      >
+        <SelectTrigger className="w-[140px]">
+          <SelectValue placeholder="Select driver" />
+        </SelectTrigger>
+        <SelectContent>
+          {drivers.map((d) => (
+            <SelectItem key={d} value={d}>
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    ),
+    err: () => (
+      <div className="text-sm text-red-500">Failed to load drivers</div>
+    ),
+    pending: () => (
+      <div className="flex h-10 w-[180px] items-center justify-center">
+        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+      </div>
+    ),
+    null: () => <div className="text-sm italic">Select a driver</div>,
+  })
+
   const modelSelector = modelList.mapOrElse({
     ok: (models) => (
       <Select value={model} onValueChange={setModel}>
@@ -136,34 +165,7 @@ export default function Chat() {
         <h2 className="text-lg font-semibold">Chat Session</h2>
         <div className="flex gap-2">
           <div className="flex items-center gap-2">
-            <Select
-              value={driver}
-              onValueChange={(value) => setDriver(value as ModelDriverType)}
-            >
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Select driver" />
-              </SelectTrigger>
-              <SelectContent>
-                {driverList.mapOrElse({
-                  ok: (drivers) => (
-                    drivers.map(d => (
-                      <SelectItem key={d} value={d}>
-                        {d.charAt(0).toUpperCase() + d.slice(1)}
-                      </SelectItem>
-                    ))
-                  ),
-                  err: () => (
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                  ),
-                  pending: () => (
-                    <SelectItem value="anthropic">Loading...</SelectItem>
-                  ),
-                  null: () => (
-                    <SelectItem value="anthropic">Anthropic</SelectItem>
-                  ),
-                })}
-              </SelectContent>
-            </Select>
+            {driverSelector}
 
             {modelSelector}
           </div>

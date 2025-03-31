@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useCommand } from '@anaisbetts/commands'
+import { useCommand, usePromise } from '@anaisbetts/commands'
 import {
   Select,
   SelectContent,
@@ -19,16 +19,25 @@ import { ScenarioResult, GradeResult } from '../../shared/types'
 type DriverType = 'anthropic' | 'ollama' | 'openai'
 
 export default function Evals() {
-  const [model, setModel] = useState('claude-3-haiku-20240307')
-  const [defaultModels] = useState({
-    anthropic: 'claude-3-haiku-20240307',
-    ollama: 'qwen2.5:14b',
-    openai: 'gpt-4-turbo',
-  })
+  const [model, setModel] = useState('')
   const [driver, setDriver] = useState<DriverType>('anthropic')
   const [count, setCount] = useState(1)
   const [results, setResults] = useState<ScenarioResult[]>([])
   const { api } = useWebSocket()
+
+  const driverList = usePromise(async () => {
+    if (!api) return []
+    return await firstValueFrom(api.getDriverList())
+  }, [api])
+
+  const modelList = usePromise(async () => {
+    if (!api) return []
+    const models = await firstValueFrom(api.getModelListForDriver(driver))
+    if (models.length > 0 && !model) {
+      setModel(models[0])
+    }
+    return models
+  }, [api, driver])
 
   const [runEvals, evalCommand, reset] = useCommand(async () => {
     if (!api) throw new Error('Not connected!')
@@ -105,25 +114,11 @@ export default function Evals() {
 
       <div className="border-border flex flex-wrap gap-4 border-b p-4">
         <div className="flex flex-col">
-          <label className="mb-1 text-sm">Model</label>
-          <Input
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            placeholder="Model name"
-            className="w-64"
-            disabled={evalCommand.isPending()}
-          />
-        </div>
-
-        <div className="flex flex-col">
           <label className="mb-1 text-sm">Driver</label>
           <Select
             value={driver}
             onValueChange={(value) => {
-              const newDriver = value as DriverType
-              setDriver(newDriver)
-              // Update model to the default for this driver
-              setModel(defaultModels[newDriver])
+              setDriver(value as DriverType)
             }}
             disabled={evalCommand.isPending()}
           >
@@ -131,9 +126,57 @@ export default function Evals() {
               <SelectValue placeholder="Select driver" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="anthropic">Anthropic</SelectItem>
-              <SelectItem value="ollama">Ollama</SelectItem>
-              <SelectItem value="openai">OpenAI</SelectItem>
+              {driverList.mapOrElse({
+                ok: (drivers) => (
+                  drivers.map(d => (
+                    <SelectItem key={d} value={d}>
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                    </SelectItem>
+                  ))
+                ),
+                err: () => (
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                ),
+                pending: () => (
+                  <SelectItem value="anthropic">Loading...</SelectItem>
+                ),
+                null: () => (
+                  <SelectItem value="anthropic">Anthropic</SelectItem>
+                ),
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col">
+          <label className="mb-1 text-sm">Model</label>
+          <Select
+            value={model}
+            onValueChange={setModel}
+            disabled={evalCommand.isPending()}
+          >
+            <SelectTrigger className="w-64">
+              <SelectValue placeholder="Select model" />
+            </SelectTrigger>
+            <SelectContent>
+              {modelList.mapOrElse({
+                ok: (models) => (
+                  models.map(m => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))
+                ),
+                err: () => (
+                  <SelectItem value="">Failed to load models</SelectItem>
+                ),
+                pending: () => (
+                  <SelectItem value="">Loading models...</SelectItem>
+                ),
+                null: () => (
+                  <SelectItem value="">Select a driver first</SelectItem>
+                ),
+              })}
             </SelectContent>
           </Select>
         </div>

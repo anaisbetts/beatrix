@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test'
-import { Automation, parseAutomations } from './workflow-loop'
+import { Automation, parseAutomations } from './parser'
 import * as path from 'path'
 
 describe('Workflow loop functions', () => {
@@ -7,6 +7,7 @@ describe('Workflow loop functions', () => {
     test('should parse markdown files into automation objects', async () => {
       const mockDir = path.join(
         import.meta.dir,
+        '..',
         '..',
         'mocks',
         'automation-parsing'
@@ -164,10 +165,11 @@ describe('Workflow loop functions', () => {
       const mockDir = path.join(
         import.meta.dir,
         '..',
+        '..',
         'mocks',
         'automation-parsing'
       )
-      const { parseAllAutomations } = await import('./workflow-loop')
+      const { parseAllAutomations } = await import('./parser')
 
       // Get all automations
       const automations = await parseAllAutomations(mockDir)

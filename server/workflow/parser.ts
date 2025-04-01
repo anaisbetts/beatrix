@@ -4,7 +4,7 @@ import * as path from 'path'
 import debug from 'debug'
 import { firstValueFrom, from, toArray } from 'rxjs'
 
-const d = debug('beatrix:workflow-loop')
+const d = debug('ha:parser')
 
 export interface Automation {
   hash: string

@@ -1,8 +1,8 @@
 import { firstValueFrom, Observable, of, throwError, timer } from 'rxjs'
 import { handleWebsocketRpc } from './ws-rpc'
-import { IpcResponse } from '../shared/ws-rpc'
-import { IpcRequest } from '../shared/ws-rpc'
-import { ServerMessage } from '../shared/ws-rpc'
+import { IpcResponse } from '../../shared/ws-rpc'
+import { IpcRequest } from '../../shared/ws-rpc'
+import { ServerMessage } from '../../shared/ws-rpc'
 import { describe, expect, it } from 'bun:test'
 
 class TestHandler {

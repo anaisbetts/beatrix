@@ -8,9 +8,9 @@ import {
   Observable,
   throwError,
 } from 'rxjs'
-import { getAllProperties } from '../shared/utility'
+import { getAllProperties } from '../../shared/utility'
 import debug from 'debug'
-import { ServerMessage, IpcRequest, IpcResponse } from '../shared/ws-rpc'
+import { ServerMessage, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
 
 const d = debug('ha:ws-rpc')
 

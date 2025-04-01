@@ -9,7 +9,7 @@ import { createDatabase } from './db'
 import { ServerWebSocket } from 'bun'
 import { filter, Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
-import { handleWebsocketRpc } from './ws-rpc'
+import { handleWebsocketRpc } from './lib/ws-rpc'
 import { messagesToString, ServerWebsocketApi } from '../shared/prompt'
 import serveStatic from './serve-static-bun'
 

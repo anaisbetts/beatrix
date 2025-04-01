@@ -15,7 +15,7 @@ import {
 import { IpcResponse, ServerMessage } from '../../shared/ws-rpc'
 import { createRemoteClient, RecursiveProxyHandler } from './ws-rpc'
 import { describe, expect, it } from 'bun:test'
-import { handleWebsocketRpc } from '../../server/ws-rpc'
+import { handleWebsocketRpc } from '../../server/lib/ws-rpc'
 import debug from 'debug'
 
 interface TestInterface {

@@ -80,7 +80,7 @@ bun dev:debug
 
 ### What do you mean, "agentic?"
 
-When automations run in Beatrix, rather than e.g. Voice Assistant which only allows the AI to make a single action, without knowing if it was successful or not, automations in Beatrix are provided a set of tools, and can take multiple turns in order to accomplish its goal.
+When automations run in Beatrix, rather than e.g. Voice Assistant which only allows the AI to make a single action, without knowing if it was successful or not, automations in Beatrix are provided a set of tools via [Model Context Protocol](https://modelcontextprotocol.io), and can take multiple turns in order to accomplish its goal.
 
 When an automation in Beatrix tries something (e.g. calls a service), it sees the new Home Assistant state after it completes and can evaluate whether it worked correctly! This means that while Beatrix automations often take more time to run, they are _significantly_ more reliable, and can orchestrate complicated actions that could not be done in a single service call.
 

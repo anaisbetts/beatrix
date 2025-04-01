@@ -125,7 +125,7 @@ export async function runScenario(
  * Tools
  */
 
-class EvalHomeAssistantApi implements HomeAssistantApi {
+export class EvalHomeAssistantApi implements HomeAssistantApi {
   fetchServices(): Promise<HassServices> {
     return Promise.resolve(mockServices as unknown as HassServices)
   }

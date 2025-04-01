@@ -30,6 +30,7 @@ import {
   notifyEveryoneEval,
   notifySpecificDeviceEval,
 } from './evals/notify'
+import { simplestSchedulerEval } from './evals/scheduling'
 
 async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
   for (const generator of generators) {
@@ -72,5 +73,8 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     notifyMultiplePeopleEval(llm),
     notifyEveryoneEval(llm),
     notifySpecificDeviceEval(llm),
+
+    // Scheduler evals
+    simplestSchedulerEval(llm),
   ])
 }

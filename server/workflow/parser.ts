@@ -40,36 +40,26 @@ export async function* parseAutomations(
     if (automations.length === 0) {
       const trimmedContent = content.trim()
       if (trimmedContent) {
-        const hash = crypto
-          .createHash('sha256')
-          .update(trimmedContent)
-          .digest('hex')
-
-        yield {
-          hash,
-          contents: trimmedContent,
-          fileName: file,
-        }
+        yield automationFromString(trimmedContent, filePath)
       }
     } else {
       // Create automation objects for each separated content
       for (const automationContent of automations) {
         // Skip empty automations
         if (!automationContent.trim()) continue
-
-        // Create hash of the content for identification
-        const hash = crypto
-          .createHash('sha256')
-          .update(automationContent)
-          .digest('hex')
-
-        yield {
-          hash,
-          contents: automationContent,
-          fileName: file,
-        }
+        yield automationFromString(automationContent, filePath)
       }
     }
+  }
+}
+
+export function automationFromString(trimmedContent: string, filePath: string) {
+  const hash = crypto.createHash('sha256').update(trimmedContent).digest('hex')
+
+  return {
+    hash,
+    contents: trimmedContent,
+    fileName: filePath,
   }
 }
 

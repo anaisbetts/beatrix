@@ -11,7 +11,11 @@ export interface SignalTable {
   id: Generated<number>
   createdAt: Generated<Timestamp>
   automationHash: string
+  type: string
+  data: string
 }
+
+export type SignalType = 'cron' | 'state' | 'event'
 
 export type AutomationType = 'manual' | 'determine-signal' | 'execute-signal'
 

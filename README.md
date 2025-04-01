@@ -6,6 +6,10 @@ Beatrix is an Agentic AI application that allows you to write [Home Assistant](h
 
 Beatrix runs in the background and just....does what you asked!
 
+## Does this work yet? (no)
+
+Nope it's not finished. Right now there is only a demo chat that can let you test out the MCP tools.
+
 ## To Install (Docker Compose)
 
 ```yaml

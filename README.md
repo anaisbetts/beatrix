@@ -1,4 +1,10 @@
-# Beatrix
+# Beatrix - write Home Assistant automations in Markdown, in plain language
+
+Beatrix is an Agentic AI application that allows you to write [Home Assistant](https://www.home-assistant.io) automations in straightforward, plain English. So, instead of building automations via complicated if-then statements, or via Node Red flows, open up a text file and write something like:
+
+> If the garage door has been open for more than 15 minutes after sunset, send me a notification
+
+Beatrix runs in the background and just....does what you asked!
 
 ## To Install (Docker Compose)
 
@@ -71,3 +77,19 @@ bun dev
 ### Shit ain't workin' good?
 bun dev:debug
 ```
+
+### What do you mean, "agentic?"
+
+When automations run in Beatrix, rather than e.g. Voice Assistant which only allows the AI to make a single action, without knowing if it was successful or not, automations in Beatrix are provided a set of tools, and can take multiple turns in order to accomplish its goal.
+
+When an automation in Beatrix tries something (e.g. calls a service), it sees the new Home Assistant state after it completes and can evaluate whether it worked correctly! This means that while Beatrix automations often take more time to run, they are _significantly_ more reliable, and can orchestrate complicated actions that could not be done in a single service call.
+
+### Workflow Overflow
+
+Automations are processed in several steps with different goals
+
+1. For each automation, have the LLM evaluate the contents with the goal, "Decide when this automation should be triggered and call the Scheduler tool". This is evaluated with a set of tools that only allow scheduling and read-only introspection to Home Assistant
+
+1. Set up watches for all triggers (e.g. state changes, time triggers, etc.)
+
+1. When a trigger fires, have the LLM evaluate the contents with the goal, "Decide what to do now that this automation has been triggered". This is evaluated with a set of tools that allow calling services and reading Home Assistant state

@@ -6,4 +6,5 @@ export default {
   singleQuote: true,
   arrowParens: 'always',
   plugins: ['prettier-plugin-tailwindcss'],
+  ignore: ['mocks/**/*'],
 }

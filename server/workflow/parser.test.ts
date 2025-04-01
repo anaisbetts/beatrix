@@ -29,9 +29,9 @@ describe('Workflow loop functions', () => {
       const automationsByFile = automations.reduce<
         Record<string, Automation[]>
       >((acc, automation) => {
-        const list = acc[automation.fileName] || []
+        const list = acc[path.basename(automation.fileName)] || []
         list.push(automation)
-        acc[automation.fileName] = list
+        acc[path.basename(automation.fileName)] = list
         return acc
       }, {})
 

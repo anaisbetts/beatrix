@@ -16,7 +16,7 @@ export async function createDatabase(dbPath?: string) {
       : './app.db')
 
   const db = new Kysely<Schema>({
-    dialect: new BunSqliteDialect({ url: dbFile }),
+    dialect: new BunSqliteDialect(dbPath ? { url: dbFile } : {}),
     log(ev) {
       d('db: %o', ev)
     },

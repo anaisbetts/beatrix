@@ -2,9 +2,13 @@
 
 Beatrix is an Agentic AI application that allows you to write [Home Assistant](https://www.home-assistant.io) automations in straightforward, plain English. So, instead of building automations via complicated if-then statements, or via Node Red flows, open up a text file and write something like:
 
-> If the garage door has been open for more than 15 minutes after sunset, send me a notification
+<img src="https://github.com/user-attachments/assets/69c8fa9e-ffe1-4db4-a7d8-b2d3bdd855fd" width="50%" />
 
-Beatrix runs in the background and just....does what you asked!
+Beatrix runs in the background and just....does what you asked! That's it.
+
+## Wait so then where's the part where I spend hours fighting with Home Assistant trying to get it to do what I actually want?
+
+Sorry, it's not there!
 
 ## Does this work yet? (no)
 

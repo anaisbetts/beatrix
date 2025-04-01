@@ -10,9 +10,9 @@ Beatrix runs in the background and just....does what you asked! That's it.
 
 Sorry, it's not there!
 
-## Does this work yet? (no)
+## This software is Pre-Alpha in-progress
 
-Nope it's not finished. Right now there is only a demo chat that can let you test out the MCP tools.
+Right now there is only a demo chat that can let you test out the MCP tools, but the core functionality is still being worked on. Any feedback for ideas / code improvements are definitely welcome!
 
 ## To Install (Docker Compose)
 

@@ -20,9 +20,10 @@ const d = debug('ha:home-assistant')
 export function createHomeAssistantServer(
   api: HomeAssistantApi,
   llm: LargeLanguageProvider,
-  opts: { testMode?: boolean } = {}
+  opts: { testMode?: boolean; schedulerMode?: boolean } = {}
 ) {
   const testMode = opts?.testMode ?? false
+  const schedulerMode = opts?.schedulerMode ?? false
 
   const server = new McpServer({
     name: 'home-assistant',
@@ -138,77 +139,81 @@ export function createHomeAssistantServer(
     }
   )
 
-  server.tool(
-    'call-service',
-    'Asks an entity or multiple entities to do a specific task in plain English. The returned value will be the new entity states',
-    {
-      prompt: z
-        .string()
-        .describe(
-          'An english description of what operation the entity should perform'
-        ),
-      entity_ids: z
-        .union([z.string(), z.array(z.string())])
-        .describe(
-          'The entity ID or array of entity IDs to perform the action on (e.g. "light.living_room", ["light.living_room", "light.kitchen"])'
-        ),
-    },
-    async ({ prompt, entity_ids }) => {
-      let msgs: MessageParam[] | undefined = undefined
-      const ids = Object.fromEntries(
-        (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((k) => [
-          k,
-          true,
-        ])
-      )
-
-      try {
-        let serviceCalledCount = 0
-        const tools = [
-          createCallServiceServer(api, () => serviceCalledCount++, {
-            testMode,
-          }),
-        ]
-
-        msgs = await firstValueFrom(
-          llm
-            .executePromptWithTools(
-              callServicePrompt(prompt, entity_ids),
-              tools
-            )
-            .pipe(toArray())
+  // In scheduler mode, we cannot call services, only do read-only operations
+  // on Home Assistant
+  if (!schedulerMode) {
+    server.tool(
+      'call-service',
+      'Asks an entity or multiple entities to do a specific task in plain English. The returned value will be the new entity states',
+      {
+        prompt: z
+          .string()
+          .describe(
+            'An english description of what operation the entity should perform'
+          ),
+        entity_ids: z
+          .union([z.string(), z.array(z.string())])
+          .describe(
+            'The entity ID or array of entity IDs to perform the action on (e.g. "light.living_room", ["light.living_room", "light.kitchen"])'
+          ),
+      },
+      async ({ prompt, entity_ids }) => {
+        let msgs: MessageParam[] | undefined = undefined
+        const ids = Object.fromEntries(
+          (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((k) => [
+            k,
+            true,
+          ])
         )
 
-        if (serviceCalledCount < 1) {
-          throw new Error('callService not called!')
-        }
+        try {
+          let serviceCalledCount = 0
+          const tools = [
+            createCallServiceServer(api, () => serviceCalledCount++, {
+              testMode,
+            }),
+          ]
 
-        const newState = await api.fetchStates()
-        const entityStates = newState.filter((state) => ids[state.entity_id])
+          msgs = await firstValueFrom(
+            llm
+              .executePromptWithTools(
+                callServicePrompt(prompt, entity_ids),
+                tools
+              )
+              .pipe(toArray())
+          )
 
-        return {
-          content: [{ type: 'text', text: JSON.stringify(entityStates) }],
-        }
-      } catch (err: any) {
-        d('call-service Error: %s', err)
-        d('msgs: %s', messagesToString(msgs ?? []))
+          if (serviceCalledCount < 1) {
+            throw new Error('callService not called!')
+          }
 
-        const lastMsg = msgs
-          ? messagesToString([msgs[msgs.length - 1]])
-          : '(no messages)'
+          const newState = await api.fetchStates()
+          const entityStates = newState.filter((state) => ids[state.entity_id])
 
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `${err.toString()}\n${lastMsg}`,
-            },
-          ],
-          isError: true,
+          return {
+            content: [{ type: 'text', text: JSON.stringify(entityStates) }],
+          }
+        } catch (err: any) {
+          d('call-service Error: %s', err)
+          d('msgs: %s', messagesToString(msgs ?? []))
+
+          const lastMsg = msgs
+            ? messagesToString([msgs[msgs.length - 1]])
+            : '(no messages)'
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: `${err.toString()}\n${lastMsg}`,
+              },
+            ],
+            isError: true,
+          }
         }
       }
-    }
-  )
+    )
+  }
 
   return server
 }

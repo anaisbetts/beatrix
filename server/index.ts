@@ -15,7 +15,7 @@ import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
-import { runAllEvals } from './run-all-evals'
+import { runAllEvals } from './run-evals'
 import { ScenarioResult } from '../shared/types'
 import { createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'

@@ -14,9 +14,10 @@ export interface ServerWebsocketApi {
     previousConversationId?: number
   ): Observable<MessageParamWithExtras>
 
-  runAllEvals(
+  runEvals(
     model: string,
     driver: ModelDriverType,
+    type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult>
 

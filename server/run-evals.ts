@@ -78,3 +78,14 @@ export function runAllEvals(llm: LargeLanguageProvider) {
     simplestSchedulerEval(llm),
   ])
 }
+
+export function runQuickEvals(llm: LargeLanguageProvider) {
+  return combine([
+    smokeTestToolsEval(llm),
+    simplestSchedulerEval(llm),
+    bulkLightOperationsEval(llm),
+    lightBrightnessEval(llm),
+    mediaPlayerControlEval(llm),
+    notifyMultiplePeopleEval(llm),
+  ])
+}

@@ -14,7 +14,7 @@ import {
   toArray,
 } from 'rxjs'
 import { ModelDriverType, ScenarioResult } from '../shared/types'
-import { runAllEvals } from './run-all-evals'
+import { runAllEvals, runQuickEvals } from './run-evals'
 import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
 import { HomeAssistantApi } from './lib/ha-ws-api'
 import { pick } from '../shared/utility'
@@ -132,9 +132,10 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     return resp
   }
 
-  runAllEvals(
+  runEvals(
     model: string,
     driver: 'ollama' | 'anthropic' | 'openai',
+    type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult> {
     const llm = createLLMDriver(model, driver)
@@ -145,6 +146,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       condition: (x) => x < count,
     })
 
-    return from(counter.pipe(concatMap(() => runAllEvals(llm))))
+    const runEvals = type === 'all' ? runAllEvals : runQuickEvals
+
+    return from(counter.pipe(concatMap(() => runEvals(llm))))
   }
 }

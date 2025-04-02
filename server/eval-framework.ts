@@ -17,6 +17,7 @@ import { HassEventBase, HassServices } from 'home-assistant-js-websocket'
 import {
   CallServiceOptions,
   extractNotifiers,
+  filterUncommonEntitiesFromTime,
   HassState,
   HomeAssistantApi,
 } from './lib/ha-ws-api'
@@ -127,10 +128,12 @@ export async function runScenario(
 
 export class EvalHomeAssistantApi implements HomeAssistantApi {
   fetchServices(): Promise<HassServices> {
+    d('Fetching services in eval mode')
     return Promise.resolve(mockServices as unknown as HassServices)
   }
 
   fetchStates(): Promise<HassState[]> {
+    d('Fetching states in eval mode')
     return Promise.resolve(mockStates as unknown as HassState[])
   }
 
@@ -175,6 +178,16 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     }
 
     return null
+  }
+
+  filterUncommonEntities(
+    entities: HassState[],
+    options?: { includeUnavailable?: boolean }
+  ): HassState[] {
+    // NB: Because we filter entities that haven't changed since a date, we need to
+    // fake out the current time
+    const d = new Date('2025-03-29T18:09:00.000Z')
+    return filterUncommonEntitiesFromTime(entities, d.getTime(), options)
   }
 }
 

@@ -26,6 +26,7 @@ export default function Evals() {
   const [model, setModel] = useState('')
   const [driver, setDriver] = useState<DriverType>('anthropic')
   const [count, setCount] = useState(1)
+  const [evalType, setEvalType] = useState<'all' | 'quick'>('all')
   const [results, setResults] = useState<ScenarioResult[]>([])
   const { api } = useWebSocket()
 
@@ -49,7 +50,7 @@ export default function Evals() {
     setResults([])
     const before = performance.now()
 
-    const evalCall = api.runAllEvals(model, driver, count).pipe(share())
+    const evalCall = api.runEvals(model, driver, evalType, count).pipe(share())
     const evalResults: ScenarioResult[] = []
 
     evalCall.subscribe({
@@ -70,7 +71,7 @@ export default function Evals() {
       results: evalResults,
       duration: performance.now() - before,
     }
-  }, [model, driver, count])
+  }, [model, driver, evalType, count])
 
   const resetEvals = useCallback(() => {
     reset()
@@ -180,6 +181,22 @@ export default function Evals() {
         <div className="flex flex-col">
           <label className="mb-1 text-sm">Model</label>
           {modelSelector}
+        </div>
+
+        <div className="flex flex-col">
+          <label className="mb-1 text-sm">Eval Type</label>
+          <Select
+            value={evalType}
+            onValueChange={(value) => setEvalType(value as 'all' | 'quick')}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Full</SelectItem>
+              <SelectItem value="quick">Quick</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex flex-col">

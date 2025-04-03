@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, JSX, useMemo } from 'react'
+import { useState, useRef, useCallback, JSX, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send, ChevronDown } from 'lucide-react'
@@ -32,7 +32,11 @@ export default function Chat() {
   const [messages, setMessages] = useState<MessageParam[]>([])
   const [driver, setDriver] = useState<ModelDriverType>('anthropic')
   const [model, setModel] = useState<string>('')
+  const [currentConversationId, setCurrentConversationId] = useState<
+    number | undefined
+  >(undefined)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const { api } = useWebSocket()
 
   const driverList = usePromise(async () => {
@@ -54,31 +58,65 @@ export default function Chat() {
     if (!api) throw new Error('Not connected!')
     if (!model) throw new Error('No model selected!')
 
-    setMessages([])
+    // Keep messages if continuing a conversation, otherwise clear them
+    if (!currentConversationId) {
+      setMessages([])
+    }
 
-    const msgCall = api.handlePromptRequest(input, model, driver).pipe(share())
+    const msgCall = api
+      .handlePromptRequest(input, model, driver, currentConversationId)
+      .pipe(share())
     const msgs: MessageParam[] = []
 
     msgCall.subscribe({
       next: (x) => {
         msgs.push(x)
-        setMessages([...msgs])
+
+        // Track the conversation ID from the first message with serverId
+        const msgWithServerId = x as any
+        if (msgWithServerId.serverId && !currentConversationId) {
+          // Convert BigInt to number to avoid JSON serialization issues
+          setCurrentConversationId(Number(msgWithServerId.serverId))
+        }
+
+        // If continuing a conversation, append to existing messages
+        if (currentConversationId) {
+          setMessages((prev) => [...prev, x])
+        } else {
+          setMessages([...msgs])
+        }
       },
       error: () => {},
     })
 
     const result = await firstValueFrom(msgCall.pipe(toArray()))
 
+    // Clear the input after message is sent and processed
+    setInput('')
+
     return {
       messages: result as MessageParam[],
       duration: performance.now() - before,
     }
-  }, [input, model, driver, api])
+  }, [input, model, driver, api, currentConversationId])
+
+  // Focus the input field when the command completes
+  useEffect(() => {
+    if (result.isOk() && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [result])
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   const resetChat = useCallback(() => {
     reset()
     setMessages([])
     setInput('')
+    setCurrentConversationId(undefined)
   }, [reset])
 
   const msgContent = useMemo(() => {
@@ -108,7 +146,11 @@ export default function Chat() {
     ok: (drivers) => (
       <Select
         value={driver}
-        onValueChange={(value) => setDriver(value as ModelDriverType)}
+        onValueChange={(value) => {
+          setDriver(value as ModelDriverType)
+          // Reset conversation when changing drivers
+          resetChat()
+        }}
       >
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Select driver" />
@@ -135,7 +177,14 @@ export default function Chat() {
 
   const modelSelector = modelList.mapOrElse({
     ok: (models) => (
-      <Select value={model} onValueChange={setModel}>
+      <Select
+        value={model}
+        onValueChange={(value) => {
+          setModel(value)
+          // Reset conversation when changing models
+          resetChat()
+        }}
+      >
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Select model" />
         </SelectTrigger>
@@ -163,13 +212,11 @@ export default function Chat() {
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
         <h2 className="text-lg font-semibold">Chat Session</h2>
-        <div className="flex gap-2">
-          <div className="flex items-center gap-2">
-            {driverSelector}
+        <div className="flex items-center gap-2">
+          {driverSelector}
 
-            {modelSelector}
-          </div>
-          <Button variant="outline" size="sm" onClick={resetChat}>
+          {modelSelector}
+          <Button variant="outline" size="lg" onClick={resetChat}>
             New Chat
           </Button>
         </div>
@@ -184,6 +231,7 @@ export default function Chat() {
       <div className="border-border border-t p-4">
         <form onSubmit={sendPrompt} className="flex gap-2">
           <Input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Type your message..."

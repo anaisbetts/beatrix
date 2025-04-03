@@ -22,7 +22,7 @@ function repoRootDir() {
   }
 }
 
-export async function main(args: string[]) {
+export async function main(_args: string[]) {
   await asyncMap(Object.entries(archNames), async ([arch, bunTarget]) => {
     const outDir = path.join(repoRootDir(), 'dist')
     const suffix = arch.includes('win32') ? '.exe' : ''

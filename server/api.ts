@@ -10,6 +10,7 @@ import {
   mergeMap,
   Observable,
   of,
+  share,
   toArray,
 } from 'rxjs'
 import { ModelDriverType, ScenarioResult } from '../shared/types'
@@ -58,20 +59,22 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
           testMode: this.testMode,
         })
 
-    const resp = llm.executePromptWithTools(prompt, tools)
+    const resp = llm.executePromptWithTools(prompt, tools).pipe(share())
 
-    resp.pipe(
-      toArray(),
-      mergeMap(async (msgs) => {
-        await this.db
-          .insertInto('automationLogs')
-          .values({
-            type: 'manual',
-            messageLog: JSON.stringify(msgs),
-          })
-          .execute()
-      })
-    )
+    resp
+      .pipe(
+        toArray(),
+        mergeMap(async (msgs) => {
+          await this.db
+            .insertInto('automationLogs')
+            .values({
+              type: 'manual',
+              messageLog: JSON.stringify(msgs),
+            })
+            .execute()
+        })
+      )
+      .subscribe()
 
     return resp
   }

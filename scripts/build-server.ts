@@ -29,7 +29,14 @@ export async function main(_args: string[]) {
     const outFile = path.join(outDir, `beatrix-server-${arch}${suffix}`)
 
     console.log(`Building ${arch} server...`)
-    await spawnPromise('bun', ['build',  '--compile', `--target=${bunTarget}`, '--outfile', outFile, path.join(repoRootDir(), 'server', 'index.ts')])
+    await spawnPromise('bun', [
+      'build',
+      '--compile',
+      `--target=${bunTarget}`,
+      '--outfile',
+      outFile,
+      path.join(repoRootDir(), 'server', 'index.ts'),
+    ])
   })
 
   return 0

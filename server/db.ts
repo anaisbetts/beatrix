@@ -1,6 +1,6 @@
 import * as path from 'path'
 
-import { Kysely,  Migrator,  sql } from 'kysely'
+import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import debug from 'debug'
 import { Schema } from './db-schema'

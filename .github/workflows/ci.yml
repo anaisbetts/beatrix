@@ -90,6 +90,7 @@ jobs:
         with:
           context: .
           push: true
+          platforms: ${{ matrix.arch == 'x64' && 'linux/amd64' || 'linux/arm64' }}
           build-args: |
             ARCH=${{ matrix.arch }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -126,6 +127,7 @@ jobs:
           inputs: ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}
           images: ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}-x64,ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}-arm64
           push: true
+          amend: true
 
       - name: Create and push sha manifest
         if: github.ref == 'refs/heads/main'
@@ -134,3 +136,4 @@ jobs:
           inputs: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
           images: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-x64,ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
           push: true
+          amend: true

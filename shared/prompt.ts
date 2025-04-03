@@ -11,7 +11,7 @@ export interface ServerWebsocketApi {
     prompt: string,
     model: string,
     driver: ModelDriverType,
-    previousConversationId?: number,
+    previousConversationId?: number
   ): Observable<MessageParam>
 
   runAllEvals(

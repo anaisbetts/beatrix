@@ -243,9 +243,9 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
                 arguments:
                   typeof toolCall.function.arguments === 'string'
                     ? (JSON.parse(toolCall.function.arguments) as Record<
-                      string,
-                      any
-                    >)
+                        string,
+                        any
+                      >)
                     : (toolCall.function.arguments as Record<string, any>),
               }),
               TOOL_EXECUTION_TIMEOUT,

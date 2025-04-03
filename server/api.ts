@@ -61,22 +61,25 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         })
 
     const convo = previousConversationId
-      ? from(this.db
-          .selectFrom('automationLogs')
-          .select('messageLog')
-          .where('id', '=', previousConversationId)
-          .executeTakeFirst()
-          .then(x => JSON.parse(x?.messageLog ?? "[]") as MessageParam[])
+      ? from(
+          this.db
+            .selectFrom('automationLogs')
+            .select('messageLog')
+            .where('id', '=', previousConversationId)
+            .executeTakeFirst()
+            .then((x) => JSON.parse(x?.messageLog ?? '[]') as MessageParam[])
         )
       : of([])
 
-    let automationId: bigint | undefined
+    let serverId: bigint | undefined
     const resp = convo.pipe(
-      mergeMap((prevMsgs) => llm.executePromptWithTools(prompt, tools, prevMsgs)),
+      mergeMap((prevMsgs) =>
+        llm.executePromptWithTools(prompt, tools, prevMsgs)
+      ),
       mergeMap((msg) => {
         // NB: We insert into the database twice so that the caller can get
         // the ID faster even though it's a little hamfisted
-        if (!automationId) {
+        if (!serverId) {
           const insert = this.db
             .insertInto('automationLogs')
             .values({
@@ -85,17 +88,17 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
             })
             .execute()
             .then((x) => {
-              automationId = x[0].insertId
+              serverId = x[0].insertId
               return x
             })
 
           return from(
             insert.then((x) =>
-              Object.assign({}, msg, { serverId: x[0].insertId })
+              Object.assign({}, msg, { serverId: Number(x[0].insertId) })
             )
           )
         } else {
-          return of(Object.assign({}, msg, { serverId: automationId }))
+          return of(Object.assign({}, msg, { serverId: Number(serverId) }))
         }
       }),
       share()
@@ -111,7 +114,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
               type: 'manual',
               messageLog: JSON.stringify(msgs),
             })
-            .where('id', '=', Number(automationId!))
+            .where('id', '=', Number(serverId!))
             .execute()
         })
       )

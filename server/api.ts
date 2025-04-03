@@ -24,7 +24,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     private api: HomeAssistantApi,
     private testMode: boolean,
     private evalMode: boolean
-  ) {}
+  ) { }
 
   getDriverList(): Observable<string[]> {
     const list = []
@@ -56,21 +56,44 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     const tools = this.evalMode
       ? createDefaultMockedTools(llm)
       : createBuiltinServers(this.api, llm, {
-          testMode: this.testMode,
-        })
+        testMode: this.testMode,
+      })
 
-    const resp = llm.executePromptWithTools(prompt, tools).pipe(share())
+    let automationId: bigint | undefined
+    const resp = llm.executePromptWithTools(prompt, tools).pipe(
+      mergeMap((msg) => {
+        // NB: We insert into the database twice so that the caller can get
+        // the ID faster even though it's a little hamfisted
+        if (!automationId) {
+          const insert = this.db
+            .insertInto('automationLogs')
+            .values({
+              type: 'manual',
+              messageLog: JSON.stringify([msg]),
+            })
+            .execute()
+            .then(x => { automationId = x[0].insertId; return x })
+
+          return from(insert.then(x => Object.assign({}, msg, { serverId: x[0].insertId })))
+        } else {
+          return of(Object.assign({}, msg, { serverId: automationId }))
+        }
+
+      }),
+      share()
+    )
 
     resp
       .pipe(
         toArray(),
         mergeMap(async (msgs) => {
           await this.db
-            .insertInto('automationLogs')
-            .values({
+            .updateTable('automationLogs')
+            .set({
               type: 'manual',
               messageLog: JSON.stringify(msgs),
             })
+            .where('id', '=', Number(automationId!))
             .execute()
         })
       )

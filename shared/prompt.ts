@@ -2,6 +2,10 @@ import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
 import { ModelDriverType, ScenarioResult } from './types'
 
+export type MessageParamWithExtras = MessageParam & {
+  serverId: number
+}
+
 export interface ServerWebsocketApi {
   handlePromptRequest(
     prompt: string,

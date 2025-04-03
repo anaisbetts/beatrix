@@ -1,10 +1,10 @@
 import * as path from 'path'
-import { promises as fs } from 'fs'
 
-import { Kysely, Migrator, FileMigrationProvider, sql } from 'kysely'
+import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import debug from 'debug'
 import { Schema } from './db-schema'
+import { migrator } from './migrations/this-sucks'
 
 const d = debug('ha:db')
 
@@ -27,15 +27,11 @@ export async function createDatabase(dbPath?: string) {
   await sql`PRAGMA foreign_keys = ON`.execute(db)
   await sql`PRAGMA temp_store = MEMORY`.execute(db)
 
-  const migrator = new Migrator({
+  const doit = new Migrator({
     db,
-    provider: new FileMigrationProvider({
-      fs,
-      path,
-      migrationFolder: path.join(__dirname, 'migrations'),
-    }),
+    provider: migrator,
   })
 
-  await migrator.migrateToLatest()
+  await doit.migrateToLatest()
   return db
 }

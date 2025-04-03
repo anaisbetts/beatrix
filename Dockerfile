@@ -21,6 +21,8 @@ WORKDIR /dist
 
 # Copy only the dist folder from the builder stage
 COPY --from=builder /app/dist /dist
+RUN rm /dist/beatrix-server-win32-x64.exe
+RUN rm /dist/beatrix-server-linux-arm64
 
 # Create and set up data volume
 ENV DATA_DIR=/data
@@ -32,4 +34,4 @@ ENV NODE_ENV=production
 EXPOSE ${PORT}
 
 # Run the application
-CMD ["/dist/server"]
+CMD ["/dist/beatrix-server-linux-x64"]

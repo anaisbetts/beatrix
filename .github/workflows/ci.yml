@@ -123,12 +123,14 @@ jobs:
       - name: Create and push manifest
         uses: Noelware/docker-manifest-action@0.4.0
         with:
-          inputs: ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }},ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}-x64,ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}-arm64
+          inputs: ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}
+          images: ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}-x64,ghcr.io/${{ github.repository }}:${{ github.ref_name == 'main' && 'main' || github.ref_name }}-arm64
           push: true
 
       - name: Create and push sha manifest
         if: github.ref == 'refs/heads/main'
         uses: Noelware/docker-manifest-action@0.4.0
         with:
-          inputs: ghcr.io/${{ github.repository }}:sha-${{ github.sha }},ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-x64,ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
+          inputs: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}
+          images: ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-x64,ghcr.io/${{ github.repository }}:sha-${{ github.sha }}-arm64
           push: true

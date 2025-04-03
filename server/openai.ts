@@ -56,12 +56,19 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
 
   executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[]
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
   ): Observable<MessageParam> {
-    return from(this._executePromptWithTools(prompt, toolServers))
+    return from(
+      this._executePromptWithTools(prompt, toolServers, previousMessages)
+    )
   }
 
-  async *_executePromptWithTools(prompt: string, toolServers: McpServer[]) {
+  async *_executePromptWithTools(
+    prompt: string,
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
+  ) {
     const client = new Client({
       name: pkg.name,
       version: pkg.version,
@@ -88,19 +95,29 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
       })
     }
 
-    const msgs: Array<OpenAI.ChatCompletionMessageParam> = [
-      {
+    // Convert previous Anthropic messages to OpenAI format
+    const msgs: Array<OpenAI.ChatCompletionMessageParam> = []
+
+    if (previousMessages) {
+      for (const msg of previousMessages) {
+        msgs.push(convertAnthropicMessageToOpenAI(msg))
+      }
+    }
+
+    // Add the current prompt as a user message if it's not empty
+    if (prompt.trim()) {
+      msgs.push({
         role: 'user',
         content: prompt,
-      },
-    ]
+      })
 
-    // Convert OpenAI message to Anthropic format to match interface
-    const userMessage: MessageParam = {
-      role: 'user',
-      content: prompt,
+      // Convert to Anthropic format for the interface
+      const userMessage: MessageParam = {
+        role: 'user',
+        content: prompt,
+      }
+      yield userMessage
     }
-    yield userMessage
 
     // Calculate available token budget for the model
     let tokenBudget = this.maxTokens
@@ -360,5 +377,88 @@ function convertOpenAIMessageToAnthropic(
         },
       ],
     }
+  }
+}
+
+// Add this function at the end of the file, near the existing convertOpenAIMessageToAnthropic function
+function convertAnthropicMessageToOpenAI(
+  message: MessageParam
+): OpenAI.ChatCompletionMessageParam {
+  if (message.role === 'user' || message.role === 'assistant') {
+    // For simple text messages
+    if (typeof message.content === 'string') {
+      return {
+        role: message.role === 'user' ? 'user' : 'assistant',
+        content: message.content,
+      }
+    }
+
+    // For content blocks
+    if (Array.isArray(message.content)) {
+      // Check for tool results
+      const toolResults = message.content.filter(
+        (block) => block.type === 'tool_result'
+      )
+      if (toolResults.length > 0) {
+        return {
+          role: 'tool' as const,
+          tool_call_id: toolResults[0].tool_use_id,
+          content:
+            typeof toolResults[0].content === 'string'
+              ? toolResults[0].content
+              : JSON.stringify(toolResults[0].content),
+        }
+      }
+
+      // Check for tool uses
+      const toolUses = message.content.filter(
+        (block) => block.type === 'tool_use'
+      )
+      if (toolUses.length > 0 && message.role === 'assistant') {
+        const textBlocks = message.content.filter(
+          (block) => block.type === 'text'
+        )
+        const textContent =
+          textBlocks.length > 0
+            ? textBlocks.map((block) => block.text).join('\n')
+            : ''
+
+        return {
+          role: 'assistant',
+          content: textContent,
+          tool_calls: toolUses.map((block) => ({
+            id: block.id,
+            type: 'function',
+            function: {
+              name: block.name,
+              arguments:
+                typeof block.input === 'string'
+                  ? block.input
+                  : JSON.stringify(block.input),
+            },
+          })),
+        }
+      }
+
+      // For normal text content blocks
+      const textBlocks = message.content.filter(
+        (block) => block.type === 'text'
+      )
+      if (textBlocks.length > 0) {
+        return {
+          role: message.role === 'user' ? 'user' : 'assistant',
+          content: textBlocks.map((block) => block.text).join('\n'),
+        }
+      }
+    }
+  }
+
+  // Fallback for any other message type
+  return {
+    role: message.role === 'assistant' ? 'assistant' : 'user',
+    content:
+      typeof message.content === 'string'
+        ? message.content
+        : JSON.stringify(message.content),
   }
 }

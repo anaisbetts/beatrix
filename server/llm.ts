@@ -14,8 +14,10 @@ import { HomeAssistantApi } from './lib/ha-ws-api'
 export interface LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[]
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
   ): Observable<MessageParam>
+
   getModelList(): Promise<string[]>
 }
 

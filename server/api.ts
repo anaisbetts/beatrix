@@ -24,7 +24,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     private api: HomeAssistantApi,
     private testMode: boolean,
     private evalMode: boolean
-  ) { }
+  ) {}
 
   getDriverList(): Observable<string[]> {
     const list = []
@@ -56,8 +56,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     const tools = this.evalMode
       ? createDefaultMockedTools(llm)
       : createBuiltinServers(this.api, llm, {
-        testMode: this.testMode,
-      })
+          testMode: this.testMode,
+        })
 
     let automationId: bigint | undefined
     const resp = llm.executePromptWithTools(prompt, tools).pipe(
@@ -72,13 +72,19 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
               messageLog: JSON.stringify([msg]),
             })
             .execute()
-            .then(x => { automationId = x[0].insertId; return x })
+            .then((x) => {
+              automationId = x[0].insertId
+              return x
+            })
 
-          return from(insert.then(x => Object.assign({}, msg, { serverId: x[0].insertId })))
+          return from(
+            insert.then((x) =>
+              Object.assign({}, msg, { serverId: x[0].insertId })
+            )
+          )
         } else {
           return of(Object.assign({}, msg, { serverId: automationId }))
         }
-
       }),
       share()
     )

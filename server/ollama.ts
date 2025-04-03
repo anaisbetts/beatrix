@@ -40,14 +40,19 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
 
   executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[]
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
   ): Observable<MessageParam> {
-    return from(this._executePromptWithTools(prompt, toolServers)).pipe(
-      map((m) => convertOllamaMessageToAnthropic(m))
-    )
+    return from(
+      this._executePromptWithTools(prompt, toolServers, previousMessages)
+    ).pipe(map((m) => convertOllamaMessageToAnthropic(m)))
   }
 
-  async *_executePromptWithTools(prompt: string, toolServers: McpServer[]) {
+  async *_executePromptWithTools(
+    prompt: string,
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
+  ) {
     const modelName = this.model
 
     const client = new Client({
@@ -80,13 +85,23 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
     // Track conversation and tool use to avoid infinite loops
     let iterationCount = 0
 
-    const msgs: Message[] = [
-      {
+    // Convert previous Anthropic messages to Ollama format
+    const msgs: Message[] = []
+
+    if (previousMessages) {
+      for (const msg of previousMessages) {
+        msgs.push(convertAnthropicMessageToOllama(msg))
+      }
+    }
+
+    // Add the current prompt as a user message if it's not empty
+    if (prompt.trim()) {
+      msgs.push({
         role: 'user',
         content: prompt,
-      },
-    ]
-    yield msgs[msgs.length - 1]
+      })
+      yield msgs[msgs.length - 1]
+    }
 
     // We're gonna keep looping until there are no more tool calls to satisfy
     while (iterationCount < MAX_ITERATIONS) {
@@ -229,5 +244,78 @@ function convertOllamaMessageToAnthropic(
           ]
         : [],
     }
+  }
+}
+
+function convertAnthropicMessageToOllama(msg: MessageParam): Message {
+  if (msg.role === 'user' || msg.role === 'assistant') {
+    // For simple text messages
+    if (typeof msg.content === 'string') {
+      return {
+        role: msg.role,
+        content: msg.content,
+      }
+    }
+
+    // For content blocks
+    if (Array.isArray(msg.content)) {
+      // Check for tool results
+      const toolResults = msg.content.filter(
+        (block) => block.type === 'tool_result'
+      )
+      if (toolResults.length > 0) {
+        return {
+          role: 'tool',
+          content:
+            typeof toolResults[0].content === 'string'
+              ? toolResults[0].content
+              : JSON.stringify(toolResults[0].content),
+        }
+      }
+
+      // Check for tool uses
+      const toolUses = msg.content.filter((block) => block.type === 'tool_use')
+      if (toolUses.length > 0 && msg.role === 'assistant') {
+        const textBlocks = msg.content.filter((block) => block.type === 'text')
+        const textContent =
+          textBlocks.length > 0
+            ? textBlocks.map((block) => block.text).join('\n')
+            : ''
+
+        return {
+          role: 'assistant',
+          content: textContent,
+          tool_calls: toolUses.map((block) => ({
+            id: block.id || `tool_${Date.now()}`,
+            type: 'function',
+            function: {
+              name: block.name,
+              arguments:
+                typeof block.input === 'string'
+                  ? JSON.parse(block.input)
+                  : block.input,
+            },
+          })),
+        }
+      }
+
+      // For normal text content blocks
+      const textBlocks = msg.content.filter((block) => block.type === 'text')
+      if (textBlocks.length > 0) {
+        return {
+          role: msg.role,
+          content: textBlocks.map((block) => block.text).join('\n'),
+        }
+      }
+    }
+  }
+
+  // Fallback for any other message type
+  return {
+    role: msg.role === 'assistant' ? 'assistant' : 'user',
+    content:
+      typeof msg.content === 'string'
+        ? msg.content
+        : JSON.stringify(msg.content),
   }
 }

@@ -43,6 +43,7 @@ jobs:
         with:
           name: dist-files
           path: dist/
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/') && 0 || 7 }}
 
   docker:
     needs: build

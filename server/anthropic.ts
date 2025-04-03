@@ -57,12 +57,19 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
   executePromptWithTools(
     prompt: string,
-    toolServers: McpServer[]
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
   ): Observable<MessageParam> {
-    return from(this._executePromptWithTools(prompt, toolServers))
+    return from(
+      this._executePromptWithTools(prompt, toolServers, previousMessages)
+    )
   }
 
-  async *_executePromptWithTools(prompt: string, toolServers: McpServer[]) {
+  async *_executePromptWithTools(
+    prompt: string,
+    toolServers: McpServer[],
+    previousMessages?: MessageParam[]
+  ) {
     const anthropic = new Anthropic({ apiKey: this.apiKey })
 
     const client = new Client({
@@ -88,13 +95,16 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
       })
     }
 
-    const msgs: MessageParam[] = [
-      {
+    const msgs: MessageParam[] = previousMessages ? [...previousMessages] : []
+
+    // Add the current prompt as a user message if it's not empty
+    if (prompt.trim()) {
+      msgs.push({
         role: 'user',
         content: prompt,
-      },
-    ]
-    yield msgs[msgs.length - 1]
+      })
+      yield msgs[msgs.length - 1]
+    }
 
     // Calculate available token budget for the model
     let tokenBudget = this.maxTokens

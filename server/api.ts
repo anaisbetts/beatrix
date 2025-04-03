@@ -10,6 +10,7 @@ import {
   mergeMap,
   Observable,
   of,
+  share,
   toArray,
 } from 'rxjs'
 import { ModelDriverType, ScenarioResult } from '../shared/types'
@@ -49,7 +50,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   handlePromptRequest(
     prompt: string,
     model: string,
-    driver: string
+    driver: string,
+    previousConversationId?: number
   ): Observable<MessageParam> {
     const llm = createLLMDriver(model, driver)
     const tools = this.evalMode
@@ -58,20 +60,65 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
           testMode: this.testMode,
         })
 
-    const resp = llm.executePromptWithTools(prompt, tools)
+    const convo = previousConversationId
+      ? from(
+          this.db
+            .selectFrom('automationLogs')
+            .select('messageLog')
+            .where('id', '=', previousConversationId)
+            .executeTakeFirst()
+            .then((x) => JSON.parse(x?.messageLog ?? '[]') as MessageParam[])
+        )
+      : of([])
 
-    resp.pipe(
-      toArray(),
-      mergeMap(async (msgs) => {
-        await this.db
-          .insertInto('automationLogs')
-          .values({
-            type: 'manual',
-            messageLog: JSON.stringify(msgs),
-          })
-          .execute()
-      })
+    let serverId: bigint | undefined
+    const resp = convo.pipe(
+      mergeMap((prevMsgs) =>
+        llm.executePromptWithTools(prompt, tools, prevMsgs)
+      ),
+      mergeMap((msg) => {
+        // NB: We insert into the database twice so that the caller can get
+        // the ID faster even though it's a little hamfisted
+        if (!serverId) {
+          const insert = this.db
+            .insertInto('automationLogs')
+            .values({
+              type: 'manual',
+              messageLog: JSON.stringify([msg]),
+            })
+            .execute()
+            .then((x) => {
+              serverId = x[0].insertId
+              return x
+            })
+
+          return from(
+            insert.then((x) =>
+              Object.assign({}, msg, { serverId: Number(x[0].insertId) })
+            )
+          )
+        } else {
+          return of(Object.assign({}, msg, { serverId: Number(serverId) }))
+        }
+      }),
+      share()
     )
+
+    resp
+      .pipe(
+        toArray(),
+        mergeMap(async (msgs) => {
+          await this.db
+            .updateTable('automationLogs')
+            .set({
+              type: 'manual',
+              messageLog: JSON.stringify(msgs),
+            })
+            .where('id', '=', Number(serverId!))
+            .execute()
+        })
+      )
+      .subscribe()
 
     return resp
   }

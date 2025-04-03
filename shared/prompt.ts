@@ -10,7 +10,8 @@ export interface ServerWebsocketApi {
   handlePromptRequest(
     prompt: string,
     model: string,
-    driver: ModelDriverType
+    driver: ModelDriverType,
+    previousConversationId?: number,
   ): Observable<MessageParam>
 
   runAllEvals(

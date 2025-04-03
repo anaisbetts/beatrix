@@ -243,9 +243,9 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
                 arguments:
                   typeof toolCall.function.arguments === 'string'
                     ? (JSON.parse(toolCall.function.arguments) as Record<
-                        string,
-                        any
-                      >)
+                      string,
+                      any
+                    >)
                     : (toolCall.function.arguments as Record<string, any>),
               }),
               TOOL_EXECUTION_TIMEOUT,
@@ -399,6 +399,7 @@ function convertAnthropicMessageToOpenAI(
       const toolResults = message.content.filter(
         (block) => block.type === 'tool_result'
       )
+
       if (toolResults.length > 0) {
         return {
           role: 'tool' as const,

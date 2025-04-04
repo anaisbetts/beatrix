@@ -6,7 +6,7 @@ import { Automation } from './parser'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
-import { lastValueFrom } from 'rxjs'
+import { lastValueFrom, toArray } from 'rxjs'
 import debug from 'debug'
 
 const d = debug('ha:scheduler-step')
@@ -46,9 +46,18 @@ export async function runSchedulerForAutomation(
   automation: Automation
 ) {
   const tools = createDefaultSchedulerTools(api, llm, db, automation)
-  await lastValueFrom(
-    llm.executePromptWithTools(schedulerPrompt(automation.contents), tools)
+
+  const msgs = await lastValueFrom(
+    llm
+      .executePromptWithTools(schedulerPrompt(automation.contents), tools)
+      .pipe(toArray())
   )
+
+  await db.insertInto('automationLogs').values({
+    type: 'determine-signal',
+    automationHash: automation.hash,
+    messageLog: JSON.stringify(msgs),
+  })
 }
 
 export function createDefaultSchedulerTools(

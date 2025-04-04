@@ -63,6 +63,13 @@ export interface HomeAssistantApi {
     options: CallServiceOptions,
     testModeOverride?: boolean
   ): Promise<T | null>
+
+  filterUncommonEntities(
+    entities: HassState[],
+    options?: {
+      includeUnavailable?: boolean
+    }
+  ): HassState[]
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
@@ -179,6 +186,15 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
     return this.connection.sendMessagePromise<T>(message)
   }
+
+  filterUncommonEntities(
+    entities: HassState[],
+    options?: {
+      includeUnavailable?: boolean
+    }
+  ): HassState[] {
+    return filterUncommonEntitiesFromTime(entities, Date.now(), options)
+  }
 }
 
 export async function extractNotifiers(svcs: HassServices) {
@@ -267,8 +283,9 @@ export async function fetchHAUserInformation(api: HomeAssistantApi) {
   return ret
 }
 
-export function filterUncommonEntities(
+export function filterUncommonEntitiesFromTime(
   entities: HassState[],
+  currentTime: number,
   options: {
     includeUnavailable?: boolean
   } = {}
@@ -284,7 +301,7 @@ export function filterUncommonEntities(
         (e) =>
           e.state !== 'unavailable' &&
           e.state !== 'unknown' &&
-          changedRecently(new Date(e.last_changed), 10 * 24)
+          changedRecently(new Date(e.last_changed), 10 * 24, currentTime)
       )
 
   return filtered.filter(
@@ -292,8 +309,7 @@ export function filterUncommonEntities(
   )
 }
 
-function changedRecently(date: Date, hours: number): boolean {
-  const now = new Date().getTime()
+function changedRecently(date: Date, hours: number, now: number): boolean {
   const dateTime = date.getTime()
 
   const timeDifference = now - dateTime

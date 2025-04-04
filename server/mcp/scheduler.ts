@@ -18,6 +18,17 @@ export type CronTrigger = {
   cron: string
 }
 
+export type RelativeTimeTrigger = {
+  type: 'offset'
+  offsetInSeconds: number
+  repeatForever: boolean
+}
+
+export type AbsoluteTimeTrigger = {
+  type: 'time'
+  iso8601Time: string // ISO 8601 date and time format
+}
+
 export function createSchedulerServer(
   db: Kysely<Schema>,
   automationHash: string
@@ -185,6 +196,106 @@ export function createSchedulerServer(
         }
       } catch (e: any) {
         d('error cancelling scheduled triggers: %o', e)
+        return {
+          content: [{ type: 'text', text: e.toString() }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'create-relative-time-trigger',
+    'Create a new trigger for an automation that fires after a specified time offset.',
+    {
+      offset_in_seconds: z
+        .number()
+        .describe(
+          'The time offset in seconds after which the trigger will fire'
+        ),
+      repeat_forever: z
+        .boolean()
+        .describe(
+          'If true, the trigger will repeat indefinitely at the specified interval'
+        )
+        .default(false),
+    },
+    async ({ offset_in_seconds, repeat_forever }) => {
+      d(
+        'creating relative time trigger for automation hash: %s, offset: %d seconds, repeat: %s',
+        automationHash,
+        offset_in_seconds,
+        repeat_forever
+      )
+      try {
+        const data: RelativeTimeTrigger = {
+          type: 'offset',
+          offsetInSeconds: offset_in_seconds,
+          repeatForever: repeat_forever,
+        }
+
+        await db
+          .insertInto('signals')
+          .values({
+            automationHash,
+            type: 'offset',
+            data: JSON.stringify(data),
+          })
+          .execute()
+
+        return {
+          content: [{ type: 'text', text: 'Trigger created' }],
+        }
+      } catch (e: any) {
+        d('error creating relative time trigger: %o', e)
+        return {
+          content: [{ type: 'text', text: e.toString() }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'create-absolute-time-trigger',
+    'Create a new trigger for an automation that fires at specified ISO 8601 date and time(s).',
+    {
+      time: z
+        .union([z.string(), z.array(z.string())])
+        .describe(
+          'The ISO 8601 date and time(s) when the trigger should fire (e.g. "2025-04-01T18:30:00Z" or ["2025-04-02T08:00:00Z", "2025-04-03T17:30:00Z"])'
+        ),
+    },
+    async ({ time }) => {
+      d(
+        'creating absolute time trigger for automation hash: %s, times: %o',
+        automationHash,
+        time
+      )
+      try {
+        const times = Array.isArray(time) ? time : [time]
+
+        const values = times.map((iso8601Time) => ({
+          automationHash,
+          type: 'time',
+          data: JSON.stringify({
+            type: 'time',
+            iso8601Time,
+          } as AbsoluteTimeTrigger),
+        }))
+
+        await db.insertInto('signals').values(values).execute()
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Trigger${times.length > 1 ? 's' : ''} created`,
+            },
+          ],
+        }
+      } catch (e: any) {
+        d('error creating absolute time trigger: %o', e)
         return {
           content: [{ type: 'text', text: e.toString() }],
           isError: true,

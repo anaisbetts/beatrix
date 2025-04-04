@@ -1,11 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import {
-  filterUncommonEntities,
-  HomeAssistantApi,
-  LiveHomeAssistantApi,
-} from '../lib/ha-ws-api'
+import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
 import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
@@ -49,7 +45,7 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = filterUncommonEntities(await api.fetchStates())
+        const states = api.filterUncommonEntities(await api.fetchStates())
 
         const matchingStates = states
           .filter((state) => prefixMap[state.entity_id.replace(/\..*$/, '')])
@@ -123,7 +119,9 @@ export function createHomeAssistantServer(
     async () => {
       try {
         const allStates = await api.fetchStates()
-        const states = filterUncommonEntities(allStates).map((x) => x.entity_id)
+        const states = api
+          .filterUncommonEntities(allStates)
+          .map((x) => x.entity_id)
 
         d('get-all-entities: %d entities', states.length)
         return {

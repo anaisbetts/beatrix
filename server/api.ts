@@ -1,6 +1,4 @@
 import { createBuiltinServers } from './llm'
-import { Kysely } from 'kysely'
-import { Schema } from './db-schema'
 import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
@@ -16,13 +14,12 @@ import {
 import { ModelDriverType, ScenarioResult } from '../shared/types'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
-import { HomeAssistantApi } from './lib/ha-ws-api'
 import { pick } from '../shared/utility'
+import { ServiceCore } from './workflow/service-core'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
-    private db: Kysely<Schema>,
-    private api: HomeAssistantApi,
+    private core: ServiceCore,
     private testMode: boolean,
     private evalMode: boolean
   ) {}
@@ -57,13 +54,13 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     const llm = createLLMDriver(model, driver)
     const tools = this.evalMode
       ? createDefaultMockedTools(llm)
-      : createBuiltinServers(this.api, llm, {
+      : createBuiltinServers(this.core.api, llm, {
           testMode: this.testMode,
         })
 
     const convo = previousConversationId
       ? from(
-          this.db
+          this.core.db
             .selectFrom('automationLogs')
             .select('messageLog')
             .where('id', '=', previousConversationId)
@@ -85,7 +82,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         // NB: We insert into the database twice so that the caller can get
         // the ID faster even though it's a little hamfisted
         if (!serverId) {
-          const insert = this.db
+          const insert = this.core.db
             .insertInto('automationLogs')
             .values({
               type: 'manual',
@@ -117,7 +114,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
             pick(msg, ['content', 'role'])
           )
 
-          await this.db
+          await this.core.db
             .updateTable('automationLogs')
             .set({
               type: 'manual',

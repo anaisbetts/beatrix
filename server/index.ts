@@ -15,7 +15,7 @@ import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
-import { runAllEvals } from './run-evals'
+import { runAllEvals, runQuickEvals } from './run-evals'
 import { ScenarioResult } from '../shared/types'
 import { createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
@@ -129,17 +129,19 @@ async function evalCommand(options: {
   driver: string
   verbose: boolean
   num: string
+  quick: boolean
 }) {
   const { model, driver } = options
 
   const llm = createLLMDriver(model, driver)
 
-  console.log('Running all evals...')
+  console.log(`Running ${options.quick ? 'quick' : 'all'} evals...`)
   const results = []
   for (let i = 0; i < parseInt(options.num); i++) {
     console.log(`Run ${i + 1} of ${options.num}`)
 
-    for await (const result of runAllEvals(llm)) {
+    const evalFunction = options.quick ? runQuickEvals : runAllEvals
+    for await (const result of evalFunction(llm)) {
       results.push(result)
       if (options.verbose) {
         console.log(JSON.stringify(result, null, 2))
@@ -228,6 +230,7 @@ async function main() {
     )
     .option('-n, --num <num>', 'Number of repetitions to run', '1')
     .option('-v, --verbose', 'Enable verbose output', false)
+    .option('-q, --quick', 'Run quick evals instead of full evaluations', false)
     .action(evalCommand)
 
   if (debugMode) {

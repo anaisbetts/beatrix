@@ -1,33 +1,33 @@
-Turn on the porch lights at sunset and turn them off at sunrise
+Turn on the foyer bird sconces at sunset and turn them off at sunrise
 
 ---
 
-When I arrive home, turn on the living room lights and set the thermostat to 72 degrees
+When ani arrives home, turn on the living room overhead light and set night mode to off
 
 ---
 
-If it's after 10pm and the TV is still on, remind me to go to bed
+If it's after 10pm and the sync box is still on, announce to go to bed
 
 ---
 
-Turn off all the lights 30 minutes after everyone has gone to sleep
+Turn off all the lights 30 minutes after night mode has been turned on
 
 ---
 
-Every morning at 8am and when it starts raining, remind me to take an umbrella
+Every morning at 8am and when red alert is turned on, announce to be careful
 
 ---
 
-Lock the doors at 11pm or when everyone leaves the house
+Turn off the foyer overhead light at 11pm or when everyone leaves the house
 
 ---
 
-If the garage door has been open for more than 15 minutes after sunset, send me a notification
+If the office overhead light has been on for more than 15 minutes after sunset, announce to check the office
 
 ---
 
-Every Monday at 9am and 30 minutes before any calendar appointment, remind me of my weekly schedule
+Every Monday at 9am and 30 minutes before water reminder, announce about the weekly schedule
 
 ---
 
-Set the kitchen lights to red at 10pm and if someone enters the kitchen between 10pm and 6am
+Set the kitchen dining room chandelier to on at 10pm and if someone enters the kitchen between 10pm and 6am

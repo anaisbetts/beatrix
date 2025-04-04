@@ -1,9 +1,9 @@
-Every Monday at 1:30pm tell Ulrike to go home from work
+Every Monday at 1:30pm announce to ulrike to go home from work
 
 ---
 
-Wake me up at 8:00am on weekdays
+Turn on the bathroom overhead light at 8:00am on weekdays
 
 ---
 
-At the end of the month, tell me to pay my rent
+At the end of the month, announce to drink water

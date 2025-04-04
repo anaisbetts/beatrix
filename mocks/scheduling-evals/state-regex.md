@@ -1,32 +1,33 @@
-Turn on the porch light when someone approaches the front door
+Turn on the foyer bird sconces when any person arrives home
 
 ---
 
-Notify me when my phone battery drops below 20%
+Announce when sync box light sync turns off
 
 ---
 
-Turn off the kitchen lights if no motion is detected for 15 minutes
+Turn off the kitchen dining room chandelier if no motion is detected for 15 minutes
 
 ---
 
-Set the living room lights to 50% when the TV turns on
+Set the living room bookshelf light to on when sync box power turns on
 
 ---
 
-Increase the thermostat by 2 degrees when the outdoor temperature drops below 40°F
----
-
-Start the robot vacuum when everyone leaves home
+Increase the brightness of the bedroom chandelier when night mode is turned on
 
 ---
 
-Notify me when the laundry is done (when the washer state changes from 'running' to 'idle')
+Start cleaning music when everyone leaves home
 
 ---
 
-Lock all doors when house mode changes to 'away'
+Announce when esphome update changes from off to on
 
 ---
 
-Turn off all heaters when any window is opened
+Turn on night mode when red alert is turned off
+
+---
+
+Turn off all lights when night mode changes to on

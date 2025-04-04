@@ -1,25 +1,25 @@
-Turn off the living room lights 30 minutes after I leave the house
+Turn off the living room overhead light 30 minutes after ani leaves the house
 
 ---
 
-Remind me to check on the lasagna in the oven in 45 minutes
+Announce to check on dinner in 45 minutes
 
 ---
 
-Set the thermostat to 72° after I've been away for 2 hours
+Set night mode to on after ulrike has been away for 2 hours
 
 ---
 
-Start the robot vacuum 10 minutes after everyone has left the house
+Announce on cleaning music 10 minutes after everyone has left the house
 
 ---
 
-Send me a message every 15 minutes reminding me to drink water while I'm working
+Announce every 15 minutes reminding to drink water while ani is home
 
 ---
 
-Turn on the porch lights 15 minutes before sunset
+Turn on the foyer floor lights 15 minutes before sunset
 
 ---
 
-Increase the brightness of my office lights by 10% every 30 minutes starting at 4pm
+Increase the brightness of the office overhead light by 10% every 30 minutes starting at 4pm

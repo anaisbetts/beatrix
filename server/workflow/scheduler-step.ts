@@ -53,11 +53,14 @@ export async function runSchedulerForAutomation(
       .pipe(toArray())
   )
 
-  await db.insertInto('automationLogs').values({
-    type: 'determine-signal',
-    automationHash: automation.hash,
-    messageLog: JSON.stringify(msgs),
-  })
+  await db
+    .insertInto('automationLogs')
+    .values({
+      type: 'determine-signal',
+      automationHash: automation.hash,
+      messageLog: JSON.stringify(msgs),
+    })
+    .execute()
 }
 
 export function createDefaultSchedulerTools(

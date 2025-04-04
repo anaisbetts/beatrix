@@ -32,11 +32,14 @@ export async function runExecutionForAutomation(
       .pipe(toArray())
   )
 
-  await db.insertInto('automationLogs').values({
-    type: 'execute-signal',
-    signalId: signalId,
-    messageLog: JSON.stringify(msgs),
-  })
+  await db
+    .insertInto('automationLogs')
+    .values({
+      type: 'execute-signal',
+      signalId: signalId,
+      messageLog: JSON.stringify(msgs),
+    })
+    .execute()
 }
 
 const prompt = (

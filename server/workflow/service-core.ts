@@ -120,6 +120,7 @@ export class ServiceCore {
         await this.db
           .deleteFrom('signals')
           .where('automationHash', '=', signal.automationHash)
+          .execute()
 
         continue
       }

@@ -1,5 +1,5 @@
 import { Kysely } from 'kysely'
-import { Schema } from '../db-schema'
+import { Schema, Signal } from '../db-schema'
 import { LargeLanguageProvider } from '../llm'
 import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { Automation, parseAllAutomations } from './parser'
@@ -10,15 +10,22 @@ import { CronTrigger } from '../mcp/scheduler'
 import { Cron, parseCronExpression } from 'cron-schedule'
 import { TimerBasedCronScheduler as scheduler } from 'cron-schedule/schedulers/timer-based.js'
 import debug from 'debug'
+import { runExecutionForAutomation } from './execution-step'
 
 const d = debug('ha:service')
+
+interface SignalledAutomation {
+  signal: Signal
+  automation: Automation
+}
 
 export class ServiceCore {
   private automationList: Automation[]
   private reparseAutomations: Observable<void>
   private scannedAutomationDir: Observable<Automation[]>
   private createdSignalsForForAutomations: Observable<void>
-  private signalFired: Observable<Automation>
+  private signalFired: Observable<SignalledAutomation>
+  private automationExecuted: Observable<void>
 
   constructor(
     private readonly api: HomeAssistantApi,
@@ -66,14 +73,35 @@ export class ServiceCore {
       switchMap(() => from(this.observableForDatabaseSignals())),
       switchMap((x) => x)
     )
+
+    this.automationExecuted = defer(() => this.signalFired).pipe(
+      switchMap(({ signal, automation }) => {
+        d(
+          'Executing automation %s (%s), because %s',
+          automation.hash,
+          automation.fileName,
+          signal.type
+        )
+
+        return from(
+          runExecutionForAutomation(
+            this.api,
+            this.llm,
+            this.db,
+            automation,
+            signal.id
+          )
+        )
+      })
+    )
   }
 
   start() {
-    return this.signalFired.subscribe()
+    return this.automationExecuted.subscribe()
   }
 
   private async observableForDatabaseSignals() {
-    const observableList: Observable<Automation>[] = []
+    const observableList: Observable<SignalledAutomation>[] = []
 
     d('Loading signals from database')
     const signals = await this.db.selectFrom('signals').selectAll().execute()
@@ -103,7 +131,7 @@ export class ServiceCore {
           const data: CronTrigger = JSON.parse(signal.data)
           const cron = parseCronExpression(data.cron)
           observableList.push(
-            cronToObservable(cron).pipe(map(() => automation))
+            cronToObservable(cron).pipe(map(() => ({ signal, automation })))
           )
           break
       }

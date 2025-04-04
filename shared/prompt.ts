@@ -12,7 +12,7 @@ export interface ServerWebsocketApi {
     model: string,
     driver: ModelDriverType,
     previousConversationId?: number
-  ): Observable<MessageParam>
+  ): Observable<MessageParamWithExtras>
 
   runAllEvals(
     model: string,

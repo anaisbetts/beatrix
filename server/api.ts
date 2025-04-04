@@ -1,7 +1,7 @@
 import { createBuiltinServers } from './llm'
 import { Kysely } from 'kysely'
 import { Schema } from './db-schema'
-import { ServerWebsocketApi } from '../shared/prompt'
+import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
   concatMap,
@@ -52,7 +52,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     model: string,
     driver: string,
     previousConversationId?: number
-  ): Observable<MessageParam> {
+  ): Observable<MessageParamWithExtras> {
     const llm = createLLMDriver(model, driver)
     const tools = this.evalMode
       ? createDefaultMockedTools(llm)
@@ -73,9 +73,15 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
     let serverId: bigint | undefined
     const resp = convo.pipe(
-      mergeMap((prevMsgs) =>
-        llm.executePromptWithTools(prompt, tools, prevMsgs)
-      ),
+      mergeMap((prevMsgs) => {
+        prevMsgs.forEach((msg: any) => {
+          if (msg.serverId) {
+            delete msg.serverId
+          }
+        })
+
+        return llm.executePromptWithTools(prompt, tools, prevMsgs)
+      }),
       mergeMap((msg) => {
         // NB: We insert into the database twice so that the caller can get
         // the ID faster even though it's a little hamfisted
@@ -108,6 +114,12 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       .pipe(
         toArray(),
         mergeMap(async (msgs) => {
+          msgs.forEach((msg: any) => {
+            if (msg.serverId) {
+              delete msg.serverId
+            }
+          })
+
           await this.db
             .updateTable('automationLogs')
             .set({

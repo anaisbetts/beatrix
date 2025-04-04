@@ -1,18 +1,14 @@
-import { Kysely } from 'kysely'
-import { HomeAssistantApi } from '../lib/ha-ws-api'
-import { createBuiltinServers, LargeLanguageProvider } from '../llm'
+import { createBuiltinServers } from '../llm'
 import { Automation } from './parser'
-import { Schema } from '../db-schema'
 import { lastValueFrom, toArray } from 'rxjs'
+import { ServiceCore } from './service-core'
 
 export async function runExecutionForAutomation(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
-  db: Kysely<Schema>,
+  service: ServiceCore,
   automation: Automation,
   signalId: number
 ) {
-  const signal = await db
+  const signal = await service.db
     .selectFrom('signals')
     .selectAll()
     .where('id', '==', signalId)
@@ -22,9 +18,9 @@ export async function runExecutionForAutomation(
     throw new Error('Signal not found')
   }
 
-  const tools = createBuiltinServers(api, llm)
+  const tools = createBuiltinServers(service.api, service.llm)
   const msgs = await lastValueFrom(
-    llm
+    service.llm
       .executePromptWithTools(
         prompt(signal.type, signal.data, automation.contents),
         tools
@@ -32,7 +28,7 @@ export async function runExecutionForAutomation(
       .pipe(toArray())
   )
 
-  await db
+  await service.db
     .insertInto('automationLogs')
     .values({
       type: 'execute-signal',

@@ -77,3 +77,16 @@ export function getAllProperties(
   // Convert the set to an array and return
   return Array.from(seenProperties)
 }
+
+export function pick<T extends object, K extends keyof T>(
+  obj: T,
+  allowedKeys: K[]
+): Pick<T, K> {
+  return allowedKeys.reduce(
+    (acc, key) => {
+      acc[key] = obj[key]
+      return acc
+    },
+    {} as Pick<T, K>
+  )
+}

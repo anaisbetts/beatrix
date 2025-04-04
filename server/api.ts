@@ -17,6 +17,7 @@ import { ModelDriverType, ScenarioResult } from '../shared/types'
 import { runAllEvals } from './run-all-evals'
 import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
 import { HomeAssistantApi } from './lib/ha-ws-api'
+import { pick } from '../shared/utility'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
@@ -74,13 +75,11 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     let serverId: bigint | undefined
     const resp = convo.pipe(
       mergeMap((prevMsgs) => {
-        prevMsgs.forEach((msg: any) => {
-          if (msg.serverId) {
-            delete msg.serverId
-          }
-        })
+        const msgs: MessageParam[] = prevMsgs.map((msg) =>
+          pick(msg, ['content', 'role'])
+        )
 
-        return llm.executePromptWithTools(prompt, tools, prevMsgs)
+        return llm.executePromptWithTools(prompt, tools, msgs)
       }),
       mergeMap((msg) => {
         // NB: We insert into the database twice so that the caller can get
@@ -114,17 +113,15 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       .pipe(
         toArray(),
         mergeMap(async (msgs) => {
-          msgs.forEach((msg: any) => {
-            if (msg.serverId) {
-              delete msg.serverId
-            }
-          })
+          const filteredMsgs: MessageParam[] = msgs.map((msg: any) =>
+            pick(msg, ['content', 'role'])
+          )
 
           await this.db
             .updateTable('automationLogs')
             .set({
               type: 'manual',
-              messageLog: JSON.stringify(msgs),
+              messageLog: JSON.stringify(filteredMsgs),
             })
             .where('id', '=', Number(serverId!))
             .execute()

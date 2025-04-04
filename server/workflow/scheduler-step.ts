@@ -7,6 +7,37 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { lastValueFrom } from 'rxjs'
+import debug from 'debug'
+
+const d = debug('ha:scheduler-step')
+
+export async function rescheduleAutomations(
+  api: HomeAssistantApi,
+  llm: LargeLanguageProvider,
+  db: Kysely<Schema>,
+  automations: Automation[]
+) {
+  for (const automation of automations) {
+    d('Examining automation %s (%s)', automation.hash, automation.fileName)
+    const automationRecord = await db
+      .selectFrom('signals')
+      .where('automationHash', '=', automation.hash)
+      .select('id')
+      .executeTakeFirst()
+
+    if (automationRecord) {
+      d(
+        'Automation %s (%s) already has a signal, skipping',
+        automation.hash,
+        automation.fileName
+      )
+      continue
+    }
+
+    d('Querying LLM for automation')
+    await runSchedulerForAutomation(api, llm, db, automation)
+  }
+}
 
 export async function runSchedulerForAutomation(
   api: HomeAssistantApi,

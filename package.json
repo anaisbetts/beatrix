@@ -12,7 +12,7 @@
     "build:ci": "bun run lint && bun run build:all",
     "dev": "concurrently \"bun dev:server\" \"bun dev:vite\"",
     "dev:eval-mode": "concurrently \"bun dev:server serve -e\" \"bun dev:vite\"",
-    "dev:debug": "DEBUG='*' concurrently \"bun dev:server\" \"bun dev:vite\"",
+    "dev:debug": "concurrently \"DEBUG='*' bun dev:server\" \"bun dev:vite\"",
     "dev:server": "bun run ./server/index.ts",
     "dev:vite": "vite",
     "start": "bun run ./server/index.ts",

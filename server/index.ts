@@ -27,6 +27,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../package.json'
 import { sql } from 'kysely'
 import { repoRootDir } from './utils'
+import { mkdir } from 'fs/promises'
 
 configDotenv()
 
@@ -34,7 +35,7 @@ const DEFAULT_PORT = '8080'
 
 async function serveCommand(options: {
   port: string
-  automations: string
+  notebook: string
   testMode: boolean
   evalMode: boolean
 }) {
@@ -45,11 +46,14 @@ async function serveCommand(options: {
     : await LiveHomeAssistantApi.createViaEnv()
 
   const db = await createDatabaseViaEnv()
+  await mkdir(path.join(options.notebook, 'automations'), {
+    recursive: true,
+  })
   const runtime = new LiveAutomationRuntime(
     conn,
     createDefaultLLMProvider(),
     db,
-    path.resolve(options.automations)
+    path.resolve(options.notebook, 'automations')
   )
 
   console.log(
@@ -198,7 +202,10 @@ async function main() {
     .command('serve')
     .description('Start the HTTP server')
     .option('-p, --port <port>', 'port to run server on')
-    .option('-a, --automations <dir>', 'the directory to load automations from')
+    .option(
+      '-n, --notebook <dir>',
+      'the directory to load automations and prompts from'
+    )
     .option(
       '-t, --test-mode',
       'enable read-only mode that simulates write operations',

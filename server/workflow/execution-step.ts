@@ -18,7 +18,7 @@ export async function runExecutionForAutomation(
     throw new Error('Signal not found')
   }
 
-  const tools = createBuiltinServers(runtime.api, runtime.llm)
+  const tools = createBuiltinServers(runtime)
   const msgs = await lastValueFrom(
     runtime.llm
       .executePromptWithTools(

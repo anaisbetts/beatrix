@@ -1,13 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
   extractNotifiers,
   fetchHAUserInformation,
   HomeAssistantApi,
-  LiveHomeAssistantApi,
 } from '../lib/ha-ws-api'
-import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
 
@@ -143,24 +140,4 @@ export function createNotifyServer(api: HomeAssistantApi) {
   )
 
   return server
-}
-
-const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
-const isMainModule =
-  import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
-
-async function main() {
-  const api = await LiveHomeAssistantApi.createViaEnv()
-  const server = createNotifyServer(api)
-
-  await server.connect(new StdioServerTransport())
-}
-
-if (isMainModule) {
-  configDotenv()
-
-  main().catch((err) => {
-    console.log('Error:', err)
-    process.exit(1)
-  })
 }

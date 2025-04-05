@@ -1,18 +1,19 @@
 import {
-  createDefaultMockedTools,
+  createEvalRuntime,
   failureGrader,
   gradeContentViaPrompt,
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { LargeLanguageProvider } from '../llm'
+import { createBuiltinServers, LargeLanguageProvider } from '../llm'
 
 // Basic notification target listing eval
 export async function* listNotifyTargetsEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'What are all the possible notification targets in my Home Assistant setup?',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'List notification targets',
     [
       failureGrader(),
@@ -26,10 +27,11 @@ export async function* listNotifyTargetsEval(llm: LargeLanguageProvider) {
 
 // List people with notification capabilities
 export async function* listPeopleEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Which people in my Home Assistant setup can receive notifications?',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'List people for notifications',
     [
       failureGrader(),
@@ -43,10 +45,11 @@ export async function* listPeopleEval(llm: LargeLanguageProvider) {
 
 // Send notification to specific person
 export async function* notifyPersonEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Send a notification to Ani saying "Dinner is ready!"',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Notify specific person',
     [
       failureGrader(),
@@ -64,10 +67,11 @@ export async function* notifyPersonEval(llm: LargeLanguageProvider) {
 
 // Send notification with title
 export async function* notifyWithTitleEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Send a notification to Ulrike with the title "Urgent" and the message "Please call me back."',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Notify with title',
     [
       failureGrader(),
@@ -81,10 +85,11 @@ export async function* notifyWithTitleEval(llm: LargeLanguageProvider) {
 
 // Send to multiple people
 export async function* notifyMultiplePeopleEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Let both Ani and Effie know that "The movie is starting in 5 minutes."',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Notify multiple people',
     [
       failureGrader(),
@@ -98,10 +103,11 @@ export async function* notifyMultiplePeopleEval(llm: LargeLanguageProvider) {
 
 // Notify everyone
 export async function* notifyEveryoneEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Send a notification to everyone in the house saying "Fire alarm test in 10 minutes."',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Notify everyone',
     [
       failureGrader(),
@@ -115,10 +121,11 @@ export async function* notifyEveryoneEval(llm: LargeLanguageProvider) {
 
 // Notify specific device
 export async function* notifySpecificDeviceEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Send a notification specifically to Ani\'s its an flippi saying "Don\'t forget to bring your charger."',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Notify specific device',
     [
       failureGrader(),

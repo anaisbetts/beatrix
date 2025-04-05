@@ -1,21 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
-import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
-import { createDefaultLLMProvider, LargeLanguageProvider } from '../llm'
 import { createCallServiceServer } from './call-service'
 import { messagesToString } from '../../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { firstValueFrom, toArray } from 'rxjs'
+import { AutomationRuntime } from '../workflow/automation-runtime'
 
 const d = debug('ha:home-assistant')
 
 export function createHomeAssistantServer(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
+  runtime: AutomationRuntime,
   opts: { testMode?: boolean; schedulerMode?: boolean } = {}
 ) {
   const testMode = opts?.testMode ?? false
@@ -45,7 +41,9 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = api.filterUncommonEntities(await api.fetchStates())
+        const states = runtime.api.filterUncommonEntities(
+          await runtime.api.fetchStates()
+        )
 
         const matchingStates = states
           .filter((state) => prefixMap[state.entity_id.replace(/\..*$/, '')])
@@ -85,7 +83,7 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = await api.fetchStates()
+        const states = await runtime.api.fetchStates()
 
         const entityState = states.filter((state) => ids[state.entity_id])
 
@@ -118,8 +116,8 @@ export function createHomeAssistantServer(
     },
     async () => {
       try {
-        const allStates = await api.fetchStates()
-        const states = api
+        const allStates = await runtime.api.fetchStates()
+        const states = runtime.api
           .filterUncommonEntities(allStates)
           .map((x) => x.entity_id)
 
@@ -167,13 +165,13 @@ export function createHomeAssistantServer(
         try {
           let serviceCalledCount = 0
           const tools = [
-            createCallServiceServer(api, () => serviceCalledCount++, {
+            createCallServiceServer(runtime, () => serviceCalledCount++, {
               testMode,
             }),
           ]
 
           msgs = await firstValueFrom(
-            llm
+            runtime.llm
               .executePromptWithTools(
                 callServicePrompt(prompt, entity_ids),
                 tools
@@ -185,7 +183,7 @@ export function createHomeAssistantServer(
             throw new Error('callService not called!')
           }
 
-          const newState = await api.fetchStates()
+          const newState = await runtime.api.fetchStates()
           const entityStates = newState.filter((state) => ids[state.entity_id])
 
           return {
@@ -276,24 +274,3 @@ For the task and entity/entities provided within the XML tags, follow these step
 ${prompt}
 </task>
 `
-
-const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
-const isMainModule =
-  import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
-
-async function main() {
-  const api = await LiveHomeAssistantApi.createViaEnv()
-  const llm = createDefaultLLMProvider()
-  const server = createHomeAssistantServer(api, llm)
-
-  await server.connect(new StdioServerTransport())
-}
-
-if (isMainModule) {
-  configDotenv()
-
-  main().catch((err) => {
-    console.log('Error:', err)
-    process.exit(1)
-  })
-}

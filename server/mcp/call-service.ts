@@ -1,15 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../../package.json'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { configDotenv } from 'dotenv'
 import { z } from 'zod'
 import debug from 'debug'
-import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
+import { AutomationRuntime } from '../workflow/automation-runtime'
 
 const d = debug('ha:call-service')
 
 export function createCallServiceServer(
-  api: HomeAssistantApi,
+  runtime: AutomationRuntime,
   onCallService: (
     domain: string,
     service: string,
@@ -40,7 +38,7 @@ export function createCallServiceServer(
             true,
           ])
         )
-        const services = await api.fetchServices()
+        const services = await runtime.api.fetchServices()
 
         const matchingServices = Object.keys(services).reduce(
           (acc, k) => {
@@ -111,7 +109,7 @@ export function createCallServiceServer(
             service_data
           )
 
-          await api.callService(
+          await runtime.api.callService(
             {
               domain,
               service,
@@ -136,7 +134,7 @@ export function createCallServiceServer(
           }
         }
 
-        const states = await api.fetchStates()
+        const states = await runtime.api.fetchStates()
         const needles = Object.fromEntries(entityIds.map((k) => [k, true]))
         const stateInfo = states.reduce(
           (acc, x) => {
@@ -171,24 +169,4 @@ export function createCallServiceServer(
   )
 
   return server
-}
-
-const prefix = process.platform === 'win32' ? 'file:///' : 'file://'
-const isMainModule =
-  import.meta.url === `${prefix}${process.argv[1].replaceAll('\\', '/')}`
-
-async function main() {
-  const api = await LiveHomeAssistantApi.createViaEnv()
-  const server = createCallServiceServer(api, () => {})
-
-  await server.connect(new StdioServerTransport())
-}
-
-if (isMainModule) {
-  configDotenv()
-
-  main().catch((err) => {
-    console.log('Error:', err)
-    process.exit(1)
-  })
 }

@@ -2,8 +2,6 @@ import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
 import { createDefaultLLMProvider } from './llm'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { createHomeAssistantServer } from './mcp/home-assistant'
 import { ServerWebsocketApiImpl } from './api'
 import { createDatabase } from './db'
 import { ServerWebSocket } from 'bun'
@@ -17,7 +15,7 @@ import path from 'path'
 import { exists } from 'fs/promises'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import { ScenarioResult } from '../shared/types'
-import { createLLMDriver } from './eval-framework'
+import { createLLMDriver, EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import packageJson from '../package.json'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
@@ -47,9 +45,12 @@ async function serveCommand(options: {
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
-  const conn = await LiveHomeAssistantApi.createViaEnv()
+  const conn = options.evalMode
+    ? new EvalHomeAssistantApi()
+    : await LiveHomeAssistantApi.createViaEnv()
+
   const db = await createDatabase()
-  const service = new LiveAutomationRuntime(
+  const runtime = new LiveAutomationRuntime(
     conn,
     createDefaultLLMProvider(),
     db,
@@ -62,7 +63,7 @@ async function serveCommand(options: {
   const subj: Subject<ServerMessage> = new Subject()
 
   handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(service, options.testMode, options.evalMode),
+    new ServerWebsocketApiImpl(runtime, options.testMode, options.evalMode),
     subj
   )
 
@@ -98,7 +99,8 @@ async function serveCommand(options: {
   })
 }
 
-async function mcpCommand(options: { testMode: boolean }) {
+async function mcpCommand(_options: { testMode: boolean }) {
+  /*
   const api = await LiveHomeAssistantApi.createViaEnv()
   const llm = createDefaultLLMProvider()
 
@@ -109,7 +111,7 @@ async function mcpCommand(options: { testMode: boolean }) {
     testMode: options.testMode,
   })
   await ha.server.connect(new StdioServerTransport())
-
+  */
   /*
   for (const t of tools) {
     const transport = new StdioServerTransport()

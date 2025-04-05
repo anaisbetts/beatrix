@@ -1,18 +1,19 @@
 import {
-  createDefaultMockedTools,
+  createEvalRuntime,
   failureGrader,
   gradeContentViaPrompt,
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { LargeLanguageProvider } from '../llm'
+import { createBuiltinServers, LargeLanguageProvider } from '../llm'
 
 // Basic service listing evaluation
 export async function* listServicesEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'What services are available for my living room lights?',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'List services for entity',
     [
       failureGrader(),
@@ -26,10 +27,11 @@ export async function* listServicesEval(llm: LargeLanguageProvider) {
 
 // Basic light control evaluation
 export async function* lightControlEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Turn on the kitchen chandelier light',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Basic light control',
     [
       failureGrader(),
@@ -42,10 +44,11 @@ export async function* lightControlEval(llm: LargeLanguageProvider) {
 
 // Advanced light control with brightness
 export async function* lightBrightnessEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Set the brightness of the living room lights to 50%',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Light brightness control',
     [
       failureGrader(),
@@ -59,10 +62,11 @@ export async function* lightBrightnessEval(llm: LargeLanguageProvider) {
 
 // Light color control
 export async function* lightColorEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Make the bedroom lights blue',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Light color control',
     [
       failureGrader(),
@@ -76,10 +80,11 @@ export async function* lightColorEval(llm: LargeLanguageProvider) {
 
 // Multiple entity control
 export async function* multipleEntityControlEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Turn off all the lights in the living room and kitchen',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Multiple entity control',
     [
       failureGrader(),
@@ -93,10 +98,11 @@ export async function* multipleEntityControlEval(llm: LargeLanguageProvider) {
 
 // Media player control
 export async function* mediaPlayerControlEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Pause the TV in the living room',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Media player control',
     [
       failureGrader(),
@@ -112,10 +118,11 @@ export async function* mediaPlayerControlEval(llm: LargeLanguageProvider) {
 export async function* climateControlTemperatureEval(
   llm: LargeLanguageProvider
 ) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Set the thermostat in the bedroom to 72 degrees',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Climate temperature control',
     [
       failureGrader(),
@@ -129,10 +136,11 @@ export async function* climateControlTemperatureEval(
 
 // Climate control with mode
 export async function* climateControlModeEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Switch the living room thermostat to heat mode',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Climate mode control',
     [
       failureGrader(),

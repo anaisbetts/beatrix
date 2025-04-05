@@ -61,9 +61,7 @@ export function createDefaultSchedulerTools(
   automation: Automation
 ): McpServer[] {
   return [
-    createHomeAssistantServer(runtime.api, runtime.llm, {
-      schedulerMode: true,
-    }),
+    createHomeAssistantServer(runtime, { schedulerMode: true }),
     createSchedulerServer(runtime.db, automation.hash),
   ]
 }

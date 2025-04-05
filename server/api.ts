@@ -15,11 +15,11 @@ import { ModelDriverType, ScenarioResult } from '../shared/types'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import { createDefaultMockedTools, createLLMDriver } from './eval-framework'
 import { pick } from '../shared/utility'
-import { ServiceCore } from './workflow/service-core'
+import { AutomationRuntime } from './workflow/automation-runtime'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
-    private core: ServiceCore,
+    private core: AutomationRuntime,
     private testMode: boolean,
     private evalMode: boolean
   ) {}

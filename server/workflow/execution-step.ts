@@ -1,14 +1,14 @@
 import { createBuiltinServers } from '../llm'
 import { Automation } from './parser'
 import { lastValueFrom, toArray } from 'rxjs'
-import { ServiceCore } from './service-core'
+import { AutomationRuntime } from './automation-runtime'
 
 export async function runExecutionForAutomation(
-  service: ServiceCore,
+  runtime: AutomationRuntime,
   automation: Automation,
   signalId: number
 ) {
-  const signal = await service.db
+  const signal = await runtime.db
     .selectFrom('signals')
     .selectAll()
     .where('id', '==', signalId)
@@ -18,9 +18,9 @@ export async function runExecutionForAutomation(
     throw new Error('Signal not found')
   }
 
-  const tools = createBuiltinServers(service.api, service.llm)
+  const tools = createBuiltinServers(runtime.api, runtime.llm)
   const msgs = await lastValueFrom(
-    service.llm
+    runtime.llm
       .executePromptWithTools(
         prompt(signal.type, signal.data, automation.contents),
         tools
@@ -28,7 +28,7 @@ export async function runExecutionForAutomation(
       .pipe(toArray())
   )
 
-  await service.db
+  await runtime.db
     .insertInto('automationLogs')
     .values({
       type: 'execute-signal',

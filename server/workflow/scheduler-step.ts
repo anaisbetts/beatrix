@@ -4,17 +4,17 @@ import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { lastValueFrom, toArray } from 'rxjs'
 import debug from 'debug'
-import { ServiceCore } from './service-core'
+import { AutomationRuntime } from './automation-runtime'
 
 const d = debug('ha:scheduler-step')
 
 export async function rescheduleAutomations(
-  service: ServiceCore,
+  runtime: AutomationRuntime,
   automations: Automation[]
 ) {
   for (const automation of automations) {
     d('Examining automation %s (%s)', automation.hash, automation.fileName)
-    const automationRecord = await service.db
+    const automationRecord = await runtime.db
       .selectFrom('signals')
       .where('automationHash', '=', automation.hash)
       .select('id')
@@ -30,23 +30,23 @@ export async function rescheduleAutomations(
     }
 
     d('Querying LLM for automation')
-    await runSchedulerForAutomation(service, automation)
+    await runSchedulerForAutomation(runtime, automation)
   }
 }
 
 export async function runSchedulerForAutomation(
-  service: ServiceCore,
+  runtime: AutomationRuntime,
   automation: Automation
 ) {
-  const tools = createDefaultSchedulerTools(service, automation)
+  const tools = createDefaultSchedulerTools(runtime, automation)
 
   const msgs = await lastValueFrom(
-    service.llm
+    runtime.llm
       .executePromptWithTools(schedulerPrompt(automation.contents), tools)
       .pipe(toArray())
   )
 
-  await service.db
+  await runtime.db
     .insertInto('automationLogs')
     .values({
       type: 'determine-signal',
@@ -57,14 +57,14 @@ export async function runSchedulerForAutomation(
 }
 
 export function createDefaultSchedulerTools(
-  service: ServiceCore,
+  runtime: AutomationRuntime,
   automation: Automation
 ): McpServer[] {
   return [
-    createHomeAssistantServer(service.api, service.llm, {
+    createHomeAssistantServer(runtime.api, runtime.llm, {
       schedulerMode: true,
     }),
-    createSchedulerServer(service.db, automation.hash),
+    createSchedulerServer(runtime.db, automation.hash),
   ]
 }
 

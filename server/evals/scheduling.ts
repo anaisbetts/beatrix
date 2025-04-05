@@ -14,7 +14,7 @@ import { Kysely } from 'kysely'
 import { Schema } from '../db-schema'
 import { deepEquals } from 'bun'
 import { CronTrigger, StateRegexTrigger } from '../mcp/scheduler'
-import { LiveServiceCore } from '../workflow/service-core'
+import { LiveAutomationRuntime } from '../workflow/automation-runtime'
 
 export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const inputAutomation = automationFromString(
@@ -22,7 +22,7 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
     'test_automation.md'
   )
 
-  const service = new LiveServiceCore(
+  const service = new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
     llm,
     await createDatabase()

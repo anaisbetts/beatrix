@@ -20,7 +20,7 @@ import { ScenarioResult } from '../shared/types'
 import { createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import packageJson from '../package.json'
-import { LiveServiceCore } from './workflow/service-core'
+import { LiveAutomationRuntime } from './workflow/automation-runtime'
 
 configDotenv()
 
@@ -49,7 +49,7 @@ async function serveCommand(options: {
 
   const conn = await LiveHomeAssistantApi.createViaEnv()
   const db = await createDatabase()
-  const service = new LiveServiceCore(
+  const service = new LiveAutomationRuntime(
     conn,
     createDefaultLLMProvider(),
     db,

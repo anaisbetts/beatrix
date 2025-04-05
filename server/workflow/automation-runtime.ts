@@ -29,7 +29,7 @@ interface SignalledAutomation {
   automation: Automation
 }
 
-export interface ServiceCore {
+export interface AutomationRuntime {
   readonly api: HomeAssistantApi
   readonly llm: LargeLanguageProvider
   readonly db: Kysely<Schema>
@@ -43,7 +43,7 @@ export interface ServiceCore {
   automationExecuted: Observable<void>
 }
 
-export class LiveServiceCore implements ServiceCore {
+export class LiveAutomationRuntime implements AutomationRuntime {
   automationList: Automation[]
 
   reparseAutomations: Observable<void>

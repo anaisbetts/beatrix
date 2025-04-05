@@ -44,13 +44,16 @@ export function createDefaultLLMProvider() {
 
 export function createBuiltinServers(
   runtime: AutomationRuntime,
-  opts?: { testMode?: boolean }
+  opts?: { testMode?: boolean; megaServer?: McpServer }
 ) {
-  const { testMode } = opts ?? {}
+  const { testMode, megaServer } = opts ?? {}
 
   return [
-    createNotifyServer(runtime.api),
-    createHomeAssistantServer(runtime, { testMode: testMode ?? false }),
+    createNotifyServer(runtime.api, megaServer),
+    createHomeAssistantServer(runtime, {
+      testMode: testMode ?? false,
+      megaServer: megaServer,
+    }),
   ]
 }
 

@@ -10,11 +10,16 @@ import debug from 'debug'
 
 const d = debug('ha:notify')
 
-export function createNotifyServer(api: HomeAssistantApi) {
-  const server = new McpServer({
-    name: 'notify',
-    version: pkg.version,
-  })
+export function createNotifyServer(
+  api: HomeAssistantApi,
+  megaServer?: McpServer
+) {
+  const server =
+    megaServer ??
+    new McpServer({
+      name: 'notify',
+      version: pkg.version,
+    })
 
   server.tool(
     'list-notify-targets',

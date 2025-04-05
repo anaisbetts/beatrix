@@ -12,15 +12,21 @@ const d = debug('ha:home-assistant')
 
 export function createHomeAssistantServer(
   runtime: AutomationRuntime,
-  opts: { testMode?: boolean; schedulerMode?: boolean } = {}
+  opts: {
+    testMode?: boolean
+    schedulerMode?: boolean
+    megaServer?: McpServer
+  } = {}
 ) {
   const testMode = opts?.testMode ?? false
   const schedulerMode = opts?.schedulerMode ?? false
 
-  const server = new McpServer({
-    name: 'home-assistant',
-    version: pkg.version,
-  })
+  const server =
+    opts?.megaServer ??
+    new McpServer({
+      name: 'home-assistant',
+      version: pkg.version,
+    })
 
   server.tool(
     'get-entities-by-prefix',

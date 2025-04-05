@@ -1,7 +1,8 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import { createDefaultLLMProvider } from './llm'
+import { createBuiltinServers, createDefaultLLMProvider } from './llm'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ServerWebsocketApiImpl } from './api'
 import { createDatabase } from './db'
 import { ServerWebSocket } from 'bun'
@@ -19,6 +20,8 @@ import { createLLMDriver, EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import packageJson from '../package.json'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import pkg from '../package.json'
 
 configDotenv()
 
@@ -99,25 +102,16 @@ async function serveCommand(options: {
   })
 }
 
-async function mcpCommand(_options: { testMode: boolean }) {
-  /*
-  const api = await LiveHomeAssistantApi.createViaEnv()
-  const llm = createDefaultLLMProvider()
+async function mcpCommand(options: { testMode: boolean }) {
+  const runtime = new LiveAutomationRuntime(
+    await LiveHomeAssistantApi.createViaEnv(),
+    createDefaultLLMProvider(),
+    await createDatabase()
+  )
 
-  // XXX: Ugh, there's no way to expose multiple servers in one go. For now, just expose
-  // Home Assistant
-  //const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
-  const ha = createHomeAssistantServer(api, llm, {
-    testMode: options.testMode,
-  })
-  await ha.server.connect(new StdioServerTransport())
-  */
-  /*
-  for (const t of tools) {
-    const transport = new StdioServerTransport()
-    await t.server.connect(transport)
-  }
-  */
+  const megaServer = new McpServer({ name: 'beatrix', version: pkg.version })
+  createBuiltinServers(runtime, { testMode: options.testMode, megaServer })
+  await megaServer.server.connect(new StdioServerTransport())
 }
 
 function printResult(result: ScenarioResult) {

@@ -48,13 +48,12 @@ export interface CallServiceLogEntry {
 }
 
 export interface AutomationLogEntry {
-  type: AutomationType
   createdAt: Date
+  automation: Automation | null
+  type: AutomationType
   messages: MessageParam[]
 
   servicesCalled: CallServiceLogEntry[]
-
-  automation: Automation | null
 
   signaledBy:
     | CronTrigger

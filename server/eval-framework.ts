@@ -24,7 +24,7 @@ import { GradeResult, ScenarioResult } from '../shared/types'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
-import { createDatabase, createInMemoryDatabase } from './db'
+import { createInMemoryDatabase } from './db'
 
 const d = debug('ha:eval')
 

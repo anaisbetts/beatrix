@@ -2,10 +2,17 @@ import * as path from 'node:path'
 import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import debug from 'debug'
-import { Schema, Timestamp, CallServiceLog } from './db-schema'
+import { Schema, Timestamp } from './db-schema'
 import { migrator } from './migrations/this-sucks'
-import { Automation } from '../shared/types'
+import {
+  Automation,
+  AutomationLogEntry,
+  CallServiceLogEntry,
+  CronTrigger,
+  StateRegexTrigger,
+} from '../shared/types'
 import { repoRootDir } from './utils'
+import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 const d = debug('ha:db')
 
@@ -57,7 +64,7 @@ export async function fetchAutomationLogs(
   automations: Automation[],
   beforeTimestamp?: Timestamp,
   limit = 30
-) {
+): Promise<AutomationLogEntry[]> {
   let q = db
     .selectFrom('automationLogs as a')
     .leftJoin('signals as s', 's.id', 'a.signalId')
@@ -90,9 +97,90 @@ export async function fetchAutomationLogs(
       acc.set(x.automationLogId, [])
     }
 
-    acc.get(x.automationLogId)?.push(x)
+    acc.get(x.automationLogId)?.push({
+      createdAt: parseSqliteTimestamp(x.createdAt),
+      service: x.service,
+      target: x.target,
+      data: x.data, // Keep as string as per type definition
+    })
     return acc
-  }, new Map<number, CallServiceLog[]>())
+  }, new Map<number, CallServiceLogEntry[]>())
 
-  return rows
+  // Process each automation log row and convert to AutomationLogEntry
+  return rows.map((row) => {
+    // Parse JSON string fields
+    const messageLog = JSON.parse(row.messageLog) as MessageParam[]
+
+    // Find matching automation from the provided automations array
+    const matchingAutomation = row.automationHash
+      ? automations.find((a) => a.hash === row.automationHash)
+      : null
+
+    // Parse service logs
+    const callServiceLogs = serviceLogsByAutomationId.get(row.id) || []
+    const servicesCalled = callServiceLogs.map((serviceLog) => {
+      return {
+        createdAt: serviceLog.createdAt,
+        service: serviceLog.service,
+        target: serviceLog.target,
+        data: serviceLog.data, // Keep as string as per type definition
+      }
+    })
+
+    // Parse signal data if it exists
+    let signaledBy = null
+    if (row.signalType && row.signalData) {
+      try {
+        const signalData = JSON.parse(row.signalData)
+
+        switch (row.signalType) {
+          case 'cron':
+            signaledBy = {
+              type: 'cron',
+              cron: signalData.cron,
+            } as CronTrigger
+            break
+          case 'state':
+            signaledBy = {
+              type: 'state',
+              entityIds: signalData.entityIds,
+              regex: signalData.regex,
+            } as StateRegexTrigger
+            break
+          case 'event':
+            // Handle event case if needed in the future
+            break
+        }
+      } catch (e) {
+        console.warn(`Failed to parse signalData for log ${row.id}: ${e}`)
+      }
+    }
+
+    // Create and return the AutomationLogEntry
+    return {
+      type: row.type,
+      createdAt: parseSqliteTimestamp(row.createdAt),
+      messages: messageLog,
+      servicesCalled,
+      automation: matchingAutomation || null,
+      signaledBy,
+    }
+  })
+}
+
+export function parseSqliteTimestamp(timestampStr: string): Date {
+  const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+  if (!regex.test(timestampStr)) {
+    throw new Error(
+      `Invalid timestamp format: ${timestampStr}. Expected format: YYYY-MM-DD HH:MM:SS`
+    )
+  }
+
+  // Split the timestamp string into date and time parts
+  const [datePart, timePart] = timestampStr.split(' ')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hours, minutes, seconds] = timePart.split(':').map(Number)
+
+  // Create a new Date object (months are 0-indexed in JavaScript Date)
+  return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds))
 }

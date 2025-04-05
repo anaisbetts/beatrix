@@ -1,7 +1,7 @@
-import { Generated, Insertable, Selectable, ColumnType } from 'kysely'
+import { Generated, Insertable, Selectable } from 'kysely'
 import { AutomationType } from '../shared/types'
 
-export type Timestamp = ColumnType<Date, Date | string, Date | string>
+export type Timestamp = string
 
 export interface Schema {
   signals: SignalTable

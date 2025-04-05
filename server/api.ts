@@ -76,7 +76,10 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         )
       : of([])
 
-    let serverId: bigint | undefined
+    let serverId: bigint | undefined = previousConversationId
+      ? BigInt(previousConversationId)
+      : undefined
+
     const resp = convo.pipe(
       mergeMap((prevMsgs) => {
         const msgs: MessageParam[] = prevMsgs.map((msg) =>

@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useRef, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,11 +18,9 @@ import {
   ModelDriverType,
 } from '../../shared/types'
 
-type DriverType = 'anthropic' | 'ollama' | 'openai'
-
 export default function Evals() {
   const [model, setModel] = useState('')
-  const [driver, setDriver] = useState<DriverType>('anthropic')
+  const [driver, setDriver] = useState<ModelDriverType>('anthropic')
   const [count, setCount] = useState(1)
   const [evalType, setEvalType] = useState<'all' | 'quick'>('all')
   const [results, setResults] = useState<ScenarioResult[]>([])

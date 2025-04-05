@@ -1,20 +1,17 @@
-'use client'
-
 import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, ChevronDown, ChevronRight, RotateCw } from 'lucide-react'
-import { useCommand, usePromise } from '@anaisbetts/commands'
-import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import { cx } from '@/lib/utils'
+import { useCommand } from '@anaisbetts/commands'
 import { useWebSocket } from './ws-provider'
 import { firstValueFrom } from 'rxjs'
-import { Remark } from 'react-remark'
+
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+
 import {
   Select,
   SelectContent,
@@ -22,16 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AutomationLogEntry,
-  AutomationType,
-  CronTrigger,
-  StateRegexTrigger,
-  RelativeTimeTrigger,
-  AbsoluteTimeTrigger,
-} from '../../shared/types'
+
+import { AutomationLogEntry, Trigger } from '../../shared/types'
+
 import { Badge } from '../components/ui/badge'
-import { messagesToString } from '../../shared/prompt'
 import { ChatMessage } from './chat'
 
 export default function Logs() {
@@ -71,67 +62,6 @@ export default function Logs() {
 
   const refreshLogs = () => {
     fetchLogsCmd()
-  }
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString()
-  }
-
-  const getTypeBadge = (type: AutomationType) => {
-    switch (type) {
-      case 'manual':
-        return <Badge variant="default">manual</Badge>
-      case 'determine-signal':
-        return <Badge variant="secondary">determine-signal</Badge>
-      case 'execute-signal':
-        return <Badge variant="outline">execute-signal</Badge>
-      default:
-        return <Badge>{type}</Badge>
-    }
-  }
-
-  const renderSignalInfo = (
-    signal:
-      | CronTrigger
-      | StateRegexTrigger
-      | RelativeTimeTrigger
-      | AbsoluteTimeTrigger
-      | null
-  ) => {
-    if (!signal) return null
-
-    switch (signal.type) {
-      case 'cron':
-        return (
-          <div className="text-muted-foreground ml-8 text-sm">
-            <span className="font-semibold">Cron Schedule:</span> {signal.cron}
-          </div>
-        )
-      case 'state':
-        return (
-          <div className="text-muted-foreground ml-8 text-sm">
-            <span className="font-semibold">State Change:</span>{' '}
-            {signal.entityIds.join(', ')}
-            <span className="ml-2 text-xs">(regex: {signal.regex})</span>
-          </div>
-        )
-      case 'offset':
-        return (
-          <div className="text-muted-foreground ml-8 text-sm">
-            <span className="font-semibold">Time Offset:</span>{' '}
-            {signal.offsetInSeconds}s{signal.repeatForever ? ' (repeats)' : ''}
-          </div>
-        )
-      case 'time':
-        return (
-          <div className="text-muted-foreground ml-8 text-sm">
-            <span className="font-semibold">Scheduled Time:</span>{' '}
-            {signal.iso8601Time}
-          </div>
-        )
-      default:
-        return null
-    }
   }
 
   const filteredLogs = useMemo(() => {
@@ -214,86 +144,149 @@ export default function Logs() {
         ) : (
           <div className="space-y-2">
             {filteredLogs.map((log, index) => (
-              <Collapsible
+              <LogEntry
                 key={index}
-                open={expandedItems.has(index)}
-                onOpenChange={() => toggleExpanded(index)}
-                className="rounded-md border"
-              >
-                <CollapsibleTrigger className="flex w-full items-center justify-between p-4 text-left">
-                  <div className="flex items-center gap-2">
-                    {expandedItems.has(index) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    {getTypeBadge(log.type)}
-                  </div>
-                  <div className="text-sm font-medium">
-                    {formatDate(log.createdAt)}
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <div className="space-y-2 p-4 pt-0">
-                    {log.automation && (
-                      <div className="ml-6 text-sm">
-                        <span className="font-semibold">Automation:</span>{' '}
-                        {log.automation.fileName}
-                        <div className="text-muted-foreground mt-1 font-mono text-xs">
-                          # {log.automation.hash}
-                        </div>
-                      </div>
-                    )}
-
-                    {log.signaledBy && renderSignalInfo(log.signaledBy)}
-
-                    {log.messages && log.messages.length > 0 && (
-                      <div className="mt-4 ml-6">
-                        <div className="mb-2 font-semibold">Messages:</div>
-                        <div className="space-y-2">
-                          {log.messages.map((msg, i) => (
-                            <ChatMessage
-                              key={i}
-                              msg={msg}
-                              isLast={i === log.messages.length - 1}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {log.servicesCalled && log.servicesCalled.length > 0 && (
-                      <div className="mt-4 ml-6">
-                        <div className="mb-2 font-semibold">
-                          Services Called:
-                        </div>
-                        {log.servicesCalled.map((service, i) => (
-                          <div
-                            key={i}
-                            className="ml-2 border-l-2 py-1 pl-3 text-sm"
-                          >
-                            <div>
-                              <span className="font-medium">
-                                {service.service}
-                              </span>{' '}
-                              @ {formatDate(service.createdAt)}
-                            </div>
-                            <div className="mt-1 font-mono text-xs">
-                              {service.target}{' '}
-                              {service.data && `Data: ${service.data}`}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
+                log={log}
+                isExpanded={expandedItems.has(index)}
+                onToggleExpand={() => toggleExpanded(index)}
+                formattedDate={log.createdAt.toLocaleString()}
+              />
             ))}
           </div>
         )}
       </div>
     </div>
+  )
+}
+
+function SignalInfo({ signal }: { signal: Trigger | null }) {
+  if (!signal) return null
+
+  switch (signal.type) {
+    case 'cron':
+      return (
+        <div className="text-muted-foreground ml-8 text-sm">
+          <span className="font-semibold">Cron Schedule:</span> {signal.cron}
+        </div>
+      )
+    case 'state':
+      return (
+        <div className="text-muted-foreground ml-8 text-sm">
+          <span className="font-semibold">State Change:</span>{' '}
+          {signal.entityIds.join(', ')}
+          <span className="ml-2 text-xs">(regex: {signal.regex})</span>
+        </div>
+      )
+    case 'offset':
+      return (
+        <div className="text-muted-foreground ml-8 text-sm">
+          <span className="font-semibold">Time Offset:</span>{' '}
+          {signal.offsetInSeconds}s{signal.repeatForever ? ' (repeats)' : ''}
+        </div>
+      )
+    case 'time':
+      return (
+        <div className="text-muted-foreground ml-8 text-sm">
+          <span className="font-semibold">Scheduled Time:</span>{' '}
+          {signal.iso8601Time}
+        </div>
+      )
+    default:
+      return null
+  }
+}
+
+interface LogEntryProps {
+  log: AutomationLogEntry
+  isExpanded: boolean
+  onToggleExpand: () => void
+  formattedDate: string
+}
+
+function LogEntry({
+  log,
+  isExpanded,
+  onToggleExpand,
+  formattedDate,
+}: LogEntryProps) {
+  const typeBadge = useMemo(() => {
+    switch (log.type) {
+      case 'manual':
+        return <Badge variant="default">manual</Badge>
+      case 'determine-signal':
+        return <Badge variant="secondary">determine-signal</Badge>
+      case 'execute-signal':
+        return <Badge variant="outline">execute-signal</Badge>
+      default:
+        return <Badge>{log.type}</Badge>
+    }
+  }, [log])
+
+  return (
+    <Collapsible
+      open={isExpanded}
+      onOpenChange={onToggleExpand}
+      className="rounded-md border"
+    >
+      <CollapsibleTrigger className="flex w-full items-center justify-between p-4 text-left">
+        <div className="flex items-center gap-2">
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+          {typeBadge}
+        </div>
+        <div className="text-sm font-medium">{formattedDate}</div>
+      </CollapsibleTrigger>
+
+      <CollapsibleContent>
+        <div className="space-y-2 p-4 pt-0">
+          {log.automation && (
+            <div className="ml-6 text-sm">
+              <span className="font-semibold">Automation:</span>{' '}
+              {log.automation.fileName}
+              <div className="text-muted-foreground mt-1 font-mono text-xs">
+                # {log.automation.hash}
+              </div>
+            </div>
+          )}
+
+          {log.signaledBy && <SignalInfo signal={log.signaledBy} />}
+
+          {log.messages && log.messages.length > 0 && (
+            <div className="mt-4 ml-6">
+              <div className="mb-2 font-semibold">Messages:</div>
+              <div className="space-y-2">
+                {log.messages.map((msg, i) => (
+                  <ChatMessage
+                    key={i}
+                    msg={msg}
+                    isLast={i === log.messages.length - 1}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {log.servicesCalled && log.servicesCalled.length > 0 && (
+            <div className="mt-4 ml-6">
+              <div className="mb-2 font-semibold">Services Called:</div>
+              {log.servicesCalled.map((service, i) => (
+                <div key={i} className="ml-2 border-l-2 py-1 pl-3 text-sm">
+                  <div>
+                    <span className="font-medium">{service.service}</span> @{' '}
+                    {service.createdAt.toLocaleString()}
+                  </div>
+                  <div className="mt-1 font-mono text-xs">
+                    {service.target} {service.data && `Data: ${service.data}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

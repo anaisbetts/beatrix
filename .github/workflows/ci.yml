@@ -76,33 +76,14 @@ jobs:
             type=ref,event=tag
             type=sha,format=short
 
-      # Build and push AMD64 image
-      - name: Build and push AMD64
+      - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          platforms: linux/amd64
-          tags: ghcr.io/${{ github.repository }}:amd64-${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      # Create a multi-arch manifest
-      - name: Create and push multi-arch manifest
-        run: |
-          # Install Docker Manifest tool
-          DOCKER_CLI_EXPERIMENTAL=enabled
-
-          # For each tag from metadata
-          for tag in $(echo '${{ steps.meta.outputs.tags }}' | tr '\n' ' '); do
-            # Create manifest with only the AMD64 image
-            docker manifest create $tag ghcr.io/${{ github.repository }}:amd64-${{ github.sha }}
-            
-            # Add ARM64 platform support (points to same image)
-            docker manifest annotate $tag ghcr.io/${{ github.repository }}:amd64-${{ github.sha }} --arch arm64 --os linux
-            
-            # Push the manifest
-            docker manifest push $tag
-          done
 
       - name: Create GitHub Release for tags
         if: startsWith(github.ref, 'refs/tags/')

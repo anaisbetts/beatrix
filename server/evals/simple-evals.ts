@@ -1,11 +1,11 @@
 import {
-  createDefaultMockedTools,
+  createEvalRuntime,
   failureGrader,
   gradeContentViaPrompt,
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { LargeLanguageProvider } from '../llm'
+import { createBuiltinServers, LargeLanguageProvider } from '../llm'
 
 export async function* smokeTestEval(llm: LargeLanguageProvider) {
   yield await runScenario(
@@ -24,10 +24,11 @@ export async function* smokeTestEval(llm: LargeLanguageProvider) {
 }
 
 export async function* smokeTestToolsEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'What lights are in the foyer? Tell me the friendly names of each light.',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Default mocked tools',
     [
       failureGrader(),

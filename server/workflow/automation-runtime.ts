@@ -3,7 +3,17 @@ import { Schema, Signal } from '../db-schema'
 import { LargeLanguageProvider } from '../llm'
 import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { Automation, parseAllAutomations } from './parser'
-import { defer, from, map, merge, Observable, of, share, switchMap } from 'rxjs'
+import {
+  defer,
+  from,
+  map,
+  merge,
+  NEVER,
+  Observable,
+  of,
+  share,
+  switchMap,
+} from 'rxjs'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
 import { rescheduleAutomations } from './scheduler-step'
 import { CronTrigger } from '../mcp/scheduler'
@@ -19,43 +29,62 @@ interface SignalledAutomation {
   automation: Automation
 }
 
-export class ServiceCore {
-  private automationList: Automation[]
-  private reparseAutomations: Observable<void>
-  private scannedAutomationDir: Observable<Automation[]>
-  private createdSignalsForForAutomations: Observable<void>
-  private signalFired: Observable<SignalledAutomation>
-  private automationExecuted: Observable<void>
+export interface AutomationRuntime {
+  readonly api: HomeAssistantApi
+  readonly llm: LargeLanguageProvider
+  readonly db: Kysely<Schema>
+
+  automationList: Automation[]
+
+  reparseAutomations: Observable<void>
+  scannedAutomationDir: Observable<Automation[]>
+  createdSignalsForForAutomations: Observable<void>
+  signalFired: Observable<SignalledAutomation>
+  automationExecuted: Observable<void>
+}
+
+export class LiveAutomationRuntime implements AutomationRuntime {
+  automationList: Automation[]
+
+  reparseAutomations: Observable<void>
+  scannedAutomationDir: Observable<Automation[]>
+  createdSignalsForForAutomations: Observable<void>
+  signalFired: Observable<SignalledAutomation>
+  automationExecuted: Observable<void>
 
   constructor(
-    private readonly api: HomeAssistantApi,
-    private readonly llm: LargeLanguageProvider,
-    private readonly db: Kysely<Schema>,
-    private readonly automationDirectory: string
+    readonly api: HomeAssistantApi,
+    readonly llm: LargeLanguageProvider,
+    readonly db: Kysely<Schema>,
+    private readonly automationDirectory?: string
   ) {
     this.automationList = []
-    this.reparseAutomations = merge(
-      of(), // Start on initial subscribe
-      createBufferedDirectoryMonitor(
-        {
-          path: this.automationDirectory,
-          recursive: true,
-        },
-        2000
-      ).pipe(map(() => {}))
-    )
-
-    this.scannedAutomationDir = defer(() => this.reparseAutomations).pipe(
-      switchMap(() => {
-        d('Reparsing automations...')
-
-        return from(
-          parseAllAutomations(this.automationDirectory).then(
-            (x) => (this.automationList = x)
-          )
+    this.reparseAutomations = this.automationDirectory
+      ? merge(
+          of(), // Start on initial subscribe
+          createBufferedDirectoryMonitor(
+            {
+              path: this.automationDirectory,
+              recursive: true,
+            },
+            2000
+          ).pipe(map(() => {}))
         )
-      })
-    )
+      : NEVER
+
+    this.scannedAutomationDir = this.automationDirectory
+      ? defer(() => this.reparseAutomations).pipe(
+          switchMap(() => {
+            d('Reparsing automations...')
+
+            return from(
+              parseAllAutomations(this.automationDirectory!).then(
+                (x) => (this.automationList = x)
+              )
+            )
+          })
+        )
+      : NEVER
 
     this.createdSignalsForForAutomations = defer(
       () => this.scannedAutomationDir
@@ -63,9 +92,7 @@ export class ServiceCore {
       switchMap((automations) => {
         d('Rescheduling automations...')
 
-        return from(
-          rescheduleAutomations(this.api, this.llm, this.db, automations)
-        )
+        return from(rescheduleAutomations(this, automations))
       })
     )
 
@@ -83,15 +110,7 @@ export class ServiceCore {
           signal.type
         )
 
-        return from(
-          runExecutionForAutomation(
-            this.api,
-            this.llm,
-            this.db,
-            automation,
-            signal.id
-          )
-        )
+        return from(runExecutionForAutomation(this, automation, signal.id))
       })
     )
   }

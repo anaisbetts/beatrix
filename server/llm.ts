@@ -9,7 +9,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { Observable } from 'rxjs'
-import { HomeAssistantApi } from './lib/ha-ws-api'
+import { AutomationRuntime } from './workflow/automation-runtime'
 
 export interface LargeLanguageProvider {
   executePromptWithTools(
@@ -43,15 +43,17 @@ export function createDefaultLLMProvider() {
 }
 
 export function createBuiltinServers(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
-  opts?: { testMode?: boolean }
+  runtime: AutomationRuntime,
+  opts?: { testMode?: boolean; megaServer?: McpServer }
 ) {
-  const { testMode } = opts ?? {}
+  const { testMode, megaServer } = opts ?? {}
 
   return [
-    createNotifyServer(api),
-    createHomeAssistantServer(api, llm, { testMode: testMode ?? false }),
+    createNotifyServer(runtime.api, megaServer),
+    createHomeAssistantServer(runtime, {
+      testMode: testMode ?? false,
+      megaServer: megaServer,
+    }),
   ]
 }
 

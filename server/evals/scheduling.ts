@@ -14,6 +14,7 @@ import { Kysely } from 'kysely'
 import { Schema } from '../db-schema'
 import { deepEquals } from 'bun'
 import { CronTrigger, StateRegexTrigger } from '../mcp/scheduler'
+import { LiveAutomationRuntime } from '../workflow/automation-runtime'
 
 export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const inputAutomation = automationFromString(
@@ -21,9 +22,13 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
     'test_automation.md'
   )
 
-  const db = await createDatabase()
-  const api = new EvalHomeAssistantApi()
-  const tools = createDefaultSchedulerTools(api, llm, db, inputAutomation)
+  const service = new LiveAutomationRuntime(
+    new EvalHomeAssistantApi(),
+    llm,
+    await createDatabase()
+  )
+
+  const tools = createDefaultSchedulerTools(service, inputAutomation)
 
   yield runScenario(
     llm,
@@ -32,7 +37,7 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
     'Evaled scheduler tools',
     [
       failureGrader(),
-      findSingularScheduleGrader(db, 'cron', {
+      findSingularScheduleGrader(service.db, 'cron', {
         type: 'cron',
         cron: '0 8 * * 1',
       }),

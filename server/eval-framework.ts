@@ -8,7 +8,6 @@ import { firstValueFrom, lastValueFrom, NEVER, Observable, toArray } from 'rxjs'
 import { LargeLanguageProvider } from './llm'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { asyncMap } from '@anaisbetts/commands'
-import { createNotifyServer } from './mcp/notify'
 import debug from 'debug'
 
 import mockServices from '../mocks/services.json'
@@ -21,10 +20,11 @@ import {
   HassState,
   HomeAssistantApi,
 } from './lib/ha-ws-api'
-import { createHomeAssistantServer } from './mcp/home-assistant'
 import { GradeResult, ScenarioResult } from '../shared/types'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
+import { LiveAutomationRuntime } from './workflow/automation-runtime'
+import { createDatabase } from './db'
 
 const d = debug('ha:eval')
 
@@ -191,16 +191,12 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
   }
 }
 
-export function createDefaultMockedTools(llm: LargeLanguageProvider) {
-  d('Creating default mocked tools')
-  const api = new EvalHomeAssistantApi()
-
-  return [
-    createNotifyServer(api),
-    createHomeAssistantServer(api, llm, {
-      testMode: true,
-    }),
-  ]
+export async function createEvalRuntime(llm: LargeLanguageProvider) {
+  return new LiveAutomationRuntime(
+    new EvalHomeAssistantApi(),
+    llm,
+    await createDatabase()
+  )
 }
 
 /*

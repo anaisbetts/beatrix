@@ -1,25 +1,20 @@
-import { Kysely } from 'kysely'
-import { HomeAssistantApi } from '../lib/ha-ws-api'
-import { LargeLanguageProvider } from '../llm'
-import { Schema } from '../db-schema'
 import { Automation } from './parser'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { lastValueFrom, toArray } from 'rxjs'
 import debug from 'debug'
+import { AutomationRuntime } from './automation-runtime'
 
 const d = debug('ha:scheduler-step')
 
 export async function rescheduleAutomations(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
-  db: Kysely<Schema>,
+  runtime: AutomationRuntime,
   automations: Automation[]
 ) {
   for (const automation of automations) {
     d('Examining automation %s (%s)', automation.hash, automation.fileName)
-    const automationRecord = await db
+    const automationRecord = await runtime.db
       .selectFrom('signals')
       .where('automationHash', '=', automation.hash)
       .select('id')
@@ -35,25 +30,23 @@ export async function rescheduleAutomations(
     }
 
     d('Querying LLM for automation')
-    await runSchedulerForAutomation(api, llm, db, automation)
+    await runSchedulerForAutomation(runtime, automation)
   }
 }
 
 export async function runSchedulerForAutomation(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
-  db: Kysely<Schema>,
+  runtime: AutomationRuntime,
   automation: Automation
 ) {
-  const tools = createDefaultSchedulerTools(api, llm, db, automation)
+  const tools = createDefaultSchedulerTools(runtime, automation)
 
   const msgs = await lastValueFrom(
-    llm
+    runtime.llm
       .executePromptWithTools(schedulerPrompt(automation.contents), tools)
       .pipe(toArray())
   )
 
-  await db
+  await runtime.db
     .insertInto('automationLogs')
     .values({
       type: 'determine-signal',
@@ -64,14 +57,12 @@ export async function runSchedulerForAutomation(
 }
 
 export function createDefaultSchedulerTools(
-  api: HomeAssistantApi,
-  llm: LargeLanguageProvider,
-  db: Kysely<Schema>,
+  runtime: AutomationRuntime,
   automation: Automation
 ): McpServer[] {
   return [
-    createHomeAssistantServer(api, llm, { schedulerMode: true }),
-    createSchedulerServer(db, automation.hash),
+    createHomeAssistantServer(runtime, { schedulerMode: true }),
+    createSchedulerServer(runtime.db, automation.hash),
   ]
 }
 

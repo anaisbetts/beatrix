@@ -1,18 +1,19 @@
 import {
-  createDefaultMockedTools,
+  createEvalRuntime,
   failureGrader,
   gradeContentViaPrompt,
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { LargeLanguageProvider } from '../llm'
+import { createBuiltinServers, LargeLanguageProvider } from '../llm'
 
 // Basic Home Assistant entity listing eval
 export async function* listEntitiesEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'List all the light entities in the living room. Give me their friendly names only.',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Entity listing',
     [
       failureGrader(),
@@ -30,10 +31,11 @@ export async function* listEntitiesEval(llm: LargeLanguageProvider) {
 
 // Bulk operations on lights eval
 export async function* bulkLightOperationsEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Turn off all the lights in the kitchen.',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Bulk light operations',
     [
       failureGrader(),
@@ -50,10 +52,11 @@ export async function* bulkLightOperationsEval(llm: LargeLanguageProvider) {
 
 // Status checking across multiple entity types
 export async function* multiEntityStatusEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Tell me about all the lights and media players that are currently on.',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Multi-entity status checking',
     [
       failureGrader(),
@@ -72,10 +75,11 @@ export async function* multiEntityStatusEval(llm: LargeLanguageProvider) {
 
 // Climate control evaluation
 export async function* climateControlEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     "Set all thermostats to 72 degrees and make sure they're in heat mode.",
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Climate control operations',
     [
       failureGrader(),
@@ -93,10 +97,11 @@ export async function* climateControlEval(llm: LargeLanguageProvider) {
 
 // Scene activation evaluation
 export async function* sceneActivationEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'Activate the night mode opening scene.',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Scene activation',
     [
       failureGrader(),
@@ -110,10 +115,11 @@ export async function* sceneActivationEval(llm: LargeLanguageProvider) {
 
 // Entity attribute querying
 export async function* entityAttributeQueryEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     'What is the current temperature and humidity in each room?',
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Entity attribute querying',
     [
       failureGrader(),
@@ -127,10 +133,11 @@ export async function* entityAttributeQueryEval(llm: LargeLanguageProvider) {
 
 // Complex multi-step automation
 export async function* complexAutomationEval(llm: LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llm)
   yield await runScenario(
     llm,
     "I'm leaving the house. Turn off all lights and make sure all media players are off.",
-    createDefaultMockedTools(llm),
+    createBuiltinServers(runtime),
     'Complex multi-step automation',
     [
       failureGrader(),

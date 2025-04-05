@@ -1,9 +1,8 @@
 import { configDotenv } from 'dotenv'
 import { Command } from 'commander'
 
-import { createDefaultLLMProvider } from './llm'
+import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { createHomeAssistantServer } from './mcp/home-assistant'
 import { ServerWebsocketApiImpl } from './api'
 import { createDatabase } from './db'
 import { ServerWebSocket } from 'bun'
@@ -15,11 +14,14 @@ import serveStatic from './serve-static-bun'
 
 import path from 'path'
 import { exists } from 'fs/promises'
-import { runAllEvals } from './run-evals'
+import { runAllEvals, runQuickEvals } from './run-evals'
 import { ScenarioResult } from '../shared/types'
-import { createLLMDriver } from './eval-framework'
+import { createLLMDriver, EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import packageJson from '../package.json'
+import { LiveAutomationRuntime } from './workflow/automation-runtime'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import pkg from '../package.json'
 
 configDotenv()
 
@@ -40,13 +42,23 @@ function repoRootDir() {
 
 async function serveCommand(options: {
   port: string
+  automations: string
   testMode: boolean
   evalMode: boolean
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
-  const conn = await LiveHomeAssistantApi.createViaEnv()
+  const conn = options.evalMode
+    ? new EvalHomeAssistantApi()
+    : await LiveHomeAssistantApi.createViaEnv()
+
   const db = await createDatabase()
+  const runtime = new LiveAutomationRuntime(
+    conn,
+    createDefaultLLMProvider(),
+    db,
+    path.resolve(options.automations)
+  )
 
   console.log(
     `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode}})`
@@ -54,7 +66,7 @@ async function serveCommand(options: {
   const subj: Subject<ServerMessage> = new Subject()
 
   handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(db, conn, options.testMode, options.evalMode),
+    new ServerWebsocketApiImpl(runtime, options.testMode, options.evalMode),
     subj
   )
 
@@ -91,23 +103,15 @@ async function serveCommand(options: {
 }
 
 async function mcpCommand(options: { testMode: boolean }) {
-  const api = await LiveHomeAssistantApi.createViaEnv()
-  const llm = createDefaultLLMProvider()
+  const runtime = new LiveAutomationRuntime(
+    await LiveHomeAssistantApi.createViaEnv(),
+    createDefaultLLMProvider(),
+    await createDatabase()
+  )
 
-  // XXX: Ugh, there's no way to expose multiple servers in one go. For now, just expose
-  // Home Assistant
-  //const tools = createBuiltinServers(conn, llm, { testMode: options.testMode })
-  const ha = createHomeAssistantServer(api, llm, {
-    testMode: options.testMode,
-  })
-  await ha.server.connect(new StdioServerTransport())
-
-  /*
-  for (const t of tools) {
-    const transport = new StdioServerTransport()
-    await t.server.connect(transport)
-  }
-  */
+  const megaServer = new McpServer({ name: 'beatrix', version: pkg.version })
+  createBuiltinServers(runtime, { testMode: options.testMode, megaServer })
+  await megaServer.server.connect(new StdioServerTransport())
 }
 
 function printResult(result: ScenarioResult) {
@@ -129,17 +133,19 @@ async function evalCommand(options: {
   driver: string
   verbose: boolean
   num: string
+  quick: boolean
 }) {
   const { model, driver } = options
 
   const llm = createLLMDriver(model, driver)
 
-  console.log('Running all evals...')
+  console.log(`Running ${options.quick ? 'quick' : 'all'} evals...`)
   const results = []
   for (let i = 0; i < parseInt(options.num); i++) {
     console.log(`Run ${i + 1} of ${options.num}`)
 
-    for await (const result of runAllEvals(llm)) {
+    const evalFunction = options.quick ? runQuickEvals : runAllEvals
+    for await (const result of evalFunction(llm)) {
       results.push(result)
       if (options.verbose) {
         console.log(JSON.stringify(result, null, 2))
@@ -195,6 +201,7 @@ async function main() {
     .command('serve')
     .description('Start the HTTP server')
     .option('-p, --port <port>', 'port to run server on')
+    .option('-a, --automations <dir>', 'the directory to load automations from')
     .option(
       '-t, --test-mode',
       'enable read-only mode that simulates write operations',
@@ -228,6 +235,7 @@ async function main() {
     )
     .option('-n, --num <num>', 'Number of repetitions to run', '1')
     .option('-v, --verbose', 'Enable verbose output', false)
+    .option('-q, --quick', 'Run quick evals instead of full evaluations', false)
     .action(evalCommand)
 
   if (debugMode) {

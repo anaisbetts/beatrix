@@ -1,17 +1,13 @@
-import Chat from '@/components/chat'
-import Evals from '@/components/evals'
-import Logs from '@/components/logs'
+import Chat from '@/pages/chat'
+import Evals from '@/pages/evals'
+import Logs from '@/pages/logs'
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
-  SidebarInset,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,

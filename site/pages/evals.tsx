@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Beaker, Play } from 'lucide-react'
-import { useWebSocket } from './ws-provider'
+import { useWebSocket } from '../components/ws-provider'
 import { firstValueFrom, share, toArray } from 'rxjs'
 import {
   ScenarioResult,

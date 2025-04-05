@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Search, ChevronDown, ChevronRight, RotateCw } from 'lucide-react'
 import { useCommand } from '@anaisbetts/commands'
-import { useWebSocket } from './ws-provider'
+import { useWebSocket } from '../components/ws-provider'
 import { firstValueFrom } from 'rxjs'
 
 import {
@@ -23,7 +23,7 @@ import {
 import { AutomationLogEntry, Trigger } from '../../shared/types'
 
 import { Badge } from '../components/ui/badge'
-import { ChatMessage } from './chat'
+import { ChatMessage } from '../components/chat-message'
 
 export default function Logs() {
   const [searchText, setSearchText] = useState('')
@@ -147,7 +147,9 @@ export default function Logs() {
               <LogEntry
                 key={index}
                 log={log}
-                isExpanded={expandedItems.has(index) || filteredLogs.length === 1}
+                isExpanded={
+                  expandedItems.has(index) || filteredLogs.length === 1
+                }
                 onToggleExpand={() => toggleExpanded(index)}
                 formattedDate={log.createdAt.toLocaleString()}
               />

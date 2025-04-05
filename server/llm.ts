@@ -25,13 +25,13 @@ export function createDefaultLLMProvider() {
   let llm: LargeLanguageProvider
 
   if (process.env.ANTHROPIC_API_KEY) {
-    console.log('Found Anthropic API key, using Anthropic as provider')
+    console.error('Found Anthropic API key, using Anthropic as provider')
     llm = new AnthropicLargeLanguageProvider(process.env.ANTHROPIC_API_KEY)
   } else if (process.env.OPENAI_API_KEY) {
-    console.log('Found OpenAI API key, using OpenAI as provider')
+    console.error('Found OpenAI API key, using OpenAI as provider')
     llm = new OpenAILargeLanguageProvider()
   } else if (process.env.OLLAMA_HOST) {
-    console.log('Found Ollama host, using Ollama as provider')
+    console.error('Found Ollama host, using Ollama as provider')
     llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST)
   } else {
     throw new Error(

@@ -26,23 +26,11 @@ import {
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../package.json'
 import { sql } from 'kysely'
+import { repoRootDir } from './utils'
 
 configDotenv()
 
 const DEFAULT_PORT = '8080'
-
-function repoRootDir() {
-  // If we are running as a single-file executable all of the normal node methods
-  // to get __dirname get Weird. However, if we're running in dev mode, we can use
-  // our usual tricks
-  const haystack = ['bun.exe', 'bun-profile.exe', 'bun', 'node']
-  const needle = path.basename(process.execPath)
-  if (haystack.includes(needle)) {
-    return path.resolve(__dirname, '..')
-  } else {
-    return path.dirname(process.execPath)
-  }
-}
 
 async function serveCommand(options: {
   port: string

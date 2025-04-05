@@ -5,15 +5,12 @@ import debug from 'debug'
 import { Schema, Timestamp } from './db-schema'
 import { migrator } from './migrations/this-sucks'
 import { Automation } from '../shared/types'
+import { repoRootDir } from './utils'
 
 const d = debug('ha:db')
 
 export async function createDatabaseViaEnv() {
-  const dbPath = path.join(
-    process.env.DATA_DIR ?? path.resolve(path.dirname(process.execPath)),
-    'app.db'
-  )
-
+  const dbPath = path.join(process.env.DATA_DIR ?? repoRootDir(), 'app.db')
   return await _createDatabase(dbPath)
 }
 

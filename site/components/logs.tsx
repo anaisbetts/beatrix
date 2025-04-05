@@ -147,7 +147,7 @@ export default function Logs() {
               <LogEntry
                 key={index}
                 log={log}
-                isExpanded={expandedItems.has(index)}
+                isExpanded={expandedItems.has(index) || filteredLogs.length === 1}
                 onToggleExpand={() => toggleExpanded(index)}
                 formattedDate={log.createdAt.toLocaleString()}
               />

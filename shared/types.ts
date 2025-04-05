@@ -12,6 +12,8 @@ export interface Automation {
   fileName: string
 }
 
+export type TriggerType = 'cron' | 'state' | 'offset' | 'time'
+
 export type StateRegexTrigger = {
   type: 'state'
   entityIds: string[]
@@ -34,6 +36,12 @@ export type AbsoluteTimeTrigger = {
   iso8601Time: string // ISO 8601 date and time format
 }
 
+export type Trigger =
+  | CronTrigger
+  | StateRegexTrigger
+  | RelativeTimeTrigger
+  | AbsoluteTimeTrigger
+
 export interface SignalEntry {
   createdAt: Date
   type: SignalType
@@ -55,12 +63,7 @@ export interface AutomationLogEntry {
 
   servicesCalled: CallServiceLogEntry[]
 
-  signaledBy:
-    | CronTrigger
-    | StateRegexTrigger
-    | RelativeTimeTrigger
-    | AbsoluteTimeTrigger
-    | null
+  signaledBy: Trigger | null
 }
 
 export type ScenarioResult = {

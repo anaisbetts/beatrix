@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import debug from 'debug'
-import { Schema, Timestamp } from './db-schema'
+import { Schema } from './db-schema'
 import { migrator } from './migrations/this-sucks'
 import {
   Automation,
@@ -62,7 +62,7 @@ async function _createDatabase(dbPath?: string) {
 export async function fetchAutomationLogs(
   db: Kysely<Schema>,
   automations: Automation[],
-  beforeTimestamp?: Timestamp,
+  beforeTimestamp?: Date,
   limit = 30
 ): Promise<AutomationLogEntry[]> {
   let q = db
@@ -71,7 +71,11 @@ export async function fetchAutomationLogs(
     .limit(limit)
 
   if (beforeTimestamp) {
-    q = q.where('a.createdAt', '<', beforeTimestamp)
+    q = q.where(
+      'a.createdAt',
+      '<',
+      `datetime(${dateToSqliteTimestamp(beforeTimestamp)})`
+    )
   }
 
   const rows = await q
@@ -183,4 +187,24 @@ export function parseSqliteTimestamp(timestampStr: string): Date {
 
   // Create a new Date object (months are 0-indexed in JavaScript Date)
   return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds))
+}
+
+export function dateToSqliteTimestamp(date: Date): string {
+  // Ensure we have a valid Date object
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    throw new Error('Invalid Date object provided to formatTimestamp')
+  }
+
+  // Format the date components with padding
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0') // Months are 0-indexed
+  const day = String(date.getUTCDate()).padStart(2, '0')
+
+  // Format the time components with padding
+  const hours = String(date.getUTCHours()).padStart(2, '0')
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0')
+
+  // Combine into the final format
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }

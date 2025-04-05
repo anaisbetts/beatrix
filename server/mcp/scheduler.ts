@@ -4,6 +4,12 @@ import debug from 'debug'
 import { Kysely } from 'kysely'
 import { Schema } from '../db-schema'
 import { z } from 'zod'
+import {
+  StateRegexTrigger,
+  CronTrigger,
+  RelativeTimeTrigger,
+  AbsoluteTimeTrigger,
+} from '../../shared/types'
 
 const d = debug('ha:scheduler')
 

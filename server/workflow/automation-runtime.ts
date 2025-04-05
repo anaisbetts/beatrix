@@ -3,7 +3,7 @@ import { Schema, Signal } from '../db-schema'
 import { LargeLanguageProvider } from '../llm'
 import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { parseAllAutomations } from './parser'
-import { Automation } from '../../shared/types'
+import { Automation, CronTrigger } from '../../shared/types'
 import {
   defer,
   from,
@@ -17,7 +17,6 @@ import {
 } from 'rxjs'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
 import { rescheduleAutomations } from './scheduler-step'
-import { CronTrigger } from '../mcp/scheduler'
 import { Cron, parseCronExpression } from 'cron-schedule'
 import { TimerBasedCronScheduler as scheduler } from 'cron-schedule/schedulers/timer-based.js'
 import debug from 'debug'

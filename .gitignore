@@ -182,3 +182,5 @@ app.db
 
 .env
 tsconfig.tsbuildinfo
+
+automations/

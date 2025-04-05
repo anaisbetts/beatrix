@@ -1,6 +1,6 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
-import { ModelDriverType, ScenarioResult } from './types'
+import { AutomationLogEntry, ModelDriverType, ScenarioResult } from './types'
 
 export type MessageParamWithExtras = MessageParam & {
   serverId: number
@@ -23,6 +23,8 @@ export interface ServerWebsocketApi {
 
   getModelListForDriver(driver: ModelDriverType): Observable<string[]>
   getDriverList(): Observable<string[]>
+
+  getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]>
 }
 
 export function messagesToString(

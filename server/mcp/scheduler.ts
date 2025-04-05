@@ -4,30 +4,14 @@ import debug from 'debug'
 import { Kysely } from 'kysely'
 import { Schema } from '../db-schema'
 import { z } from 'zod'
+import {
+  StateRegexTrigger,
+  CronTrigger,
+  RelativeTimeTrigger,
+  AbsoluteTimeTrigger,
+} from '../../shared/types'
 
 const d = debug('ha:scheduler')
-
-export type StateRegexTrigger = {
-  type: 'state'
-  entityIds: string[]
-  regex: string
-}
-
-export type CronTrigger = {
-  type: 'cron'
-  cron: string
-}
-
-export type RelativeTimeTrigger = {
-  type: 'offset'
-  offsetInSeconds: number
-  repeatForever: boolean
-}
-
-export type AbsoluteTimeTrigger = {
-  type: 'time'
-  iso8601Time: string // ISO 8601 date and time format
-}
 
 export function createSchedulerServer(
   db: Kysely<Schema>,

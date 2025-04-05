@@ -24,7 +24,7 @@ import { GradeResult, ScenarioResult } from '../shared/types'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
-import { createDatabase } from './db'
+import { createInMemoryDatabase } from './db'
 
 const d = debug('ha:eval')
 
@@ -195,7 +195,7 @@ export async function createEvalRuntime(llm: LargeLanguageProvider) {
   return new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
     llm,
-    await createDatabase()
+    await createInMemoryDatabase()
   )
 }
 

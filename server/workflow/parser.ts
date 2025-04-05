@@ -3,14 +3,9 @@ import * as fs from 'fs/promises'
 import * as path from 'path'
 import debug from 'debug'
 import { firstValueFrom, from, toArray } from 'rxjs'
+import { Automation } from '../../shared/types'
 
 const d = debug('ha:parser')
-
-export interface Automation {
-  hash: string
-  contents: string
-  fileName: string
-}
 
 export async function* parseAutomations(
   directoryPath: string

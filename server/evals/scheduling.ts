@@ -1,4 +1,4 @@
-import { createDatabase } from '../db'
+import { createInMemoryDatabase } from '../db'
 import {
   EvalHomeAssistantApi,
   failureGrader,
@@ -13,8 +13,8 @@ import {
 import { Kysely } from 'kysely'
 import { Schema } from '../db-schema'
 import { deepEquals } from 'bun'
-import { CronTrigger, StateRegexTrigger } from '../mcp/scheduler'
 import { LiveAutomationRuntime } from '../workflow/automation-runtime'
+import { CronTrigger, StateRegexTrigger } from '../../shared/types'
 
 export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const inputAutomation = automationFromString(
@@ -25,7 +25,7 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const service = new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
     llm,
-    await createDatabase()
+    await createInMemoryDatabase()
   )
 
   const tools = createDefaultSchedulerTools(service, inputAutomation)

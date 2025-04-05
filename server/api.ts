@@ -11,7 +11,11 @@ import {
   share,
   toArray,
 } from 'rxjs'
-import { ModelDriverType, ScenarioResult } from '../shared/types'
+import {
+  AutomationLogEntry,
+  ModelDriverType,
+  ScenarioResult,
+} from '../shared/types'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import { createLLMDriver } from './eval-framework'
 import { pick } from '../shared/utility'
@@ -19,6 +23,7 @@ import {
   AutomationRuntime,
   LiveAutomationRuntime,
 } from './workflow/automation-runtime'
+import { fetchAutomationLogs } from './db'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
@@ -46,6 +51,16 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     const llm = createLLMDriver('', driver)
 
     return from(llm.getModelList())
+  }
+
+  getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]> {
+    return from(
+      fetchAutomationLogs(
+        this.runtime.db,
+        this.runtime.automationList,
+        beforeTimestamp
+      )
+    )
   }
 
   handlePromptRequest(
@@ -76,7 +91,10 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         )
       : of([])
 
-    let serverId: bigint | undefined
+    let serverId: bigint | undefined = previousConversationId
+      ? BigInt(previousConversationId)
+      : undefined
+
     const resp = convo.pipe(
       mergeMap((prevMsgs) => {
         const msgs: MessageParam[] = prevMsgs.map((msg) =>

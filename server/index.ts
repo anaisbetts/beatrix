@@ -4,7 +4,7 @@ import { Command } from 'commander'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ServerWebsocketApiImpl } from './api'
-import { createDatabase } from './db'
+import { createDatabaseViaEnv } from './db'
 import { ServerWebSocket } from 'bun'
 import { filter, Subject } from 'rxjs'
 import { ServerMessage } from '../shared/ws-rpc'
@@ -19,26 +19,18 @@ import { ScenarioResult } from '../shared/types'
 import { createLLMDriver, EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import packageJson from '../package.json'
-import { LiveAutomationRuntime } from './workflow/automation-runtime'
+import {
+  AutomationRuntime,
+  LiveAutomationRuntime,
+} from './workflow/automation-runtime'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import pkg from '../package.json'
+import { sql } from 'kysely'
+import { repoRootDir } from './utils'
 
 configDotenv()
 
 const DEFAULT_PORT = '8080'
-
-function repoRootDir() {
-  // If we are running as a single-file executable all of the normal node methods
-  // to get __dirname get Weird. However, if we're running in dev mode, we can use
-  // our usual tricks
-  const haystack = ['bun.exe', 'bun-profile.exe', 'bun', 'node']
-  const needle = path.basename(process.execPath)
-  if (haystack.includes(needle)) {
-    return path.resolve(__dirname, '..')
-  } else {
-    return path.dirname(process.execPath)
-  }
-}
 
 async function serveCommand(options: {
   port: string
@@ -52,7 +44,7 @@ async function serveCommand(options: {
     ? new EvalHomeAssistantApi()
     : await LiveHomeAssistantApi.createViaEnv()
 
-  const db = await createDatabase()
+  const db = await createDatabaseViaEnv()
   const runtime = new LiveAutomationRuntime(
     conn,
     createDefaultLLMProvider(),
@@ -77,13 +69,18 @@ async function serveCommand(options: {
     console.log('Running in development server-only mode')
   }
 
+  // Setup graceful shutdown handler
+  process.on('SIGINT', () => {
+    void flushAndExit(runtime)
+  })
+
   const assetsServer = serveStatic(path.join(repoRootDir(), 'public'))
 
   Bun.serve({
     port: port,
     async fetch(req, server) {
-      // XXX: This sucks, there's gotta be a better way
       const u = URL.parse(req.url)
+
       if (u?.pathname === '/api/ws' && server.upgrade(req)) {
         return new Response()
       }
@@ -106,7 +103,7 @@ async function mcpCommand(options: { testMode: boolean }) {
   const runtime = new LiveAutomationRuntime(
     await LiveHomeAssistantApi.createViaEnv(),
     createDefaultLLMProvider(),
-    await createDatabase()
+    await createDatabaseViaEnv()
   )
 
   const megaServer = new McpServer({ name: 'beatrix', version: pkg.version })
@@ -251,6 +248,22 @@ async function main() {
   }
 
   await program.parseAsync()
+}
+
+async function flushAndExit(runtime: AutomationRuntime) {
+  try {
+    console.log('Flushing database...')
+
+    // Run PRAGMA commands to ensure database integrity during shutdown
+    await sql`PRAGMA wal_checkpoint(FULL)`.execute(runtime.db)
+
+    // Close database connection
+    await runtime.db.destroy()
+  } catch (error) {
+    console.error('Error during shutdown:', error)
+  }
+
+  process.exit(0)
 }
 
 main().catch((err) => {

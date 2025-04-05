@@ -1,5 +1,5 @@
 import { createBuiltinServers } from '../llm'
-import { Automation } from './parser'
+import { Automation } from '../../shared/types'
 import { lastValueFrom, toArray } from 'rxjs'
 import { AutomationRuntime } from './automation-runtime'
 

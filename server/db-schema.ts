@@ -5,6 +5,7 @@ export type Timestamp = ColumnType<Date, Date | string, Date | string>
 export interface Schema {
   signals: SignalTable
   automationLogs: AutomationLogTable
+  callServiceLogs: CallServiceLogTable
 }
 
 export interface SignalTable {
@@ -13,6 +14,15 @@ export interface SignalTable {
   automationHash: string
   type: string
   data: string
+}
+
+export interface CallServiceLogTable {
+  id: Generated<number>
+  createdAt: Generated<Timestamp>
+  service: string
+  data: string
+  target: string
+  automationHash: string
 }
 
 export type SignalType = 'cron' | 'state' | 'event'
@@ -33,3 +43,5 @@ export type Signal = Selectable<SignalTable>
 export type NewSignal = Insertable<SignalTable>
 export type AutomationLog = Selectable<AutomationLogTable>
 export type NewAutomationLog = Insertable<AutomationLogTable>
+export type CallServiceLog = Selectable<CallServiceLogTable>
+export type NewCallServiceLog = Insertable<CallServiceLogTable>

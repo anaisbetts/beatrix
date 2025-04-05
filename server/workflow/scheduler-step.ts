@@ -1,4 +1,4 @@
-import { Automation } from './parser'
+import { Automation } from '../../shared/types'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'

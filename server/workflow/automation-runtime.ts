@@ -2,7 +2,8 @@ import { Kysely } from 'kysely'
 import { Schema, Signal } from '../db-schema'
 import { LargeLanguageProvider } from '../llm'
 import { HomeAssistantApi } from '../lib/ha-ws-api'
-import { Automation, parseAllAutomations } from './parser'
+import { parseAllAutomations } from './parser'
+import { Automation } from '../../shared/types'
 import {
   defer,
   from,

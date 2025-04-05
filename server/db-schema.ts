@@ -1,4 +1,5 @@
 import { Generated, Insertable, Selectable, ColumnType } from 'kysely'
+import { AutomationType } from '../shared/types'
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>
 
@@ -24,10 +25,6 @@ export interface CallServiceLogTable {
   target: string
   automationLogId: number
 }
-
-export type SignalType = 'cron' | 'state' | 'event'
-
-export type AutomationType = 'manual' | 'determine-signal' | 'execute-signal'
 
 export interface AutomationLogTable {
   id: Generated<number>

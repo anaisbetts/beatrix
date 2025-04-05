@@ -22,7 +22,7 @@ export interface CallServiceLogTable {
   service: string
   data: string
   target: string
-  automationHash: string
+  automationLogId: number
 }
 
 export type SignalType = 'cron' | 'state' | 'event'

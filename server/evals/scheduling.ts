@@ -1,4 +1,4 @@
-import { createDatabase } from '../db'
+import { createDatabase, createInMemoryDatabase } from '../db'
 import {
   EvalHomeAssistantApi,
   failureGrader,
@@ -25,7 +25,7 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const service = new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
     llm,
-    await createDatabase()
+    await createInMemoryDatabase()
   )
 
   const tools = createDefaultSchedulerTools(service, inputAutomation)

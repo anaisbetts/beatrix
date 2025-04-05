@@ -1,14 +1,33 @@
-import * as path from 'path'
-
+import * as path from 'node:path'
 import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import debug from 'debug'
-import { Schema } from './db-schema'
+import { Schema, Timestamp } from './db-schema'
 import { migrator } from './migrations/this-sucks'
+import { Automation } from '../shared/types'
 
 const d = debug('ha:db')
 
-export async function createDatabase(dbPath?: string) {
+export async function createDatabaseViaEnv() {
+  const dbPath = path.join(
+    process.env.DATA_DIR ?? path.resolve(path.dirname(process.execPath)),
+    'app.db'
+  )
+
+  return await _createDatabase(dbPath)
+}
+
+export async function createDatabase(dbPath: string) {
+  const db = await _createDatabase(dbPath)
+  return db
+}
+
+export async function createInMemoryDatabase() {
+  const db = await _createDatabase()
+  return db
+}
+
+async function _createDatabase(dbPath?: string) {
   const dbFile =
     dbPath ??
     (process.env.DATA_DIR

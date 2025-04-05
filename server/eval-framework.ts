@@ -195,7 +195,7 @@ export async function createEvalRuntime(llm: LargeLanguageProvider) {
   return new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
     llm,
-    await createDatabase()
+    await createInMemoryDatabase()
   )
 }
 

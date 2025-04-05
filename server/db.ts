@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import debug from 'debug'
-import { Schema, Timestamp } from './db-schema'
+import { Schema, Timestamp, CallServiceLog } from './db-schema'
 import { migrator } from './migrations/this-sucks'
 import { Automation } from '../shared/types'
 import { repoRootDir } from './utils'
@@ -50,4 +50,49 @@ async function _createDatabase(dbPath?: string) {
 
   await doit.migrateToLatest()
   return db
+}
+
+export async function fetchAutomationLogs(
+  db: Kysely<Schema>,
+  automations: Automation[],
+  beforeTimestamp?: Timestamp,
+  limit = 30
+) {
+  let q = db
+    .selectFrom('automationLogs as a')
+    .leftJoin('signals as s', 's.id', 'a.signalId')
+    .limit(limit)
+
+  if (beforeTimestamp) {
+    q = q.where('a.createdAt', '<', beforeTimestamp)
+  }
+
+  const rows = await q
+    .select(['s.data as signalData', 's.type as signalType'])
+    .selectAll('a')
+    .execute()
+
+  if (rows.length < 1) {
+    return []
+  }
+
+  // Fetch the call service logs for each automation log
+  const automationLogIds = rows.map((r) => r.id)
+  const serviceLogs = await db
+    .selectFrom('callServiceLogs')
+    .where('automationLogId', 'in', automationLogIds)
+    .selectAll()
+    .execute()
+
+  // Group service logs by automation log ID using a Map
+  const serviceLogsByAutomationId = serviceLogs.reduce((acc, x) => {
+    if (!acc.has(x.automationLogId)) {
+      acc.set(x.automationLogId, [])
+    }
+
+    acc.get(x.automationLogId)?.push(x)
+    return acc
+  }, new Map<number, CallServiceLog[]>())
+
+  return rows
 }

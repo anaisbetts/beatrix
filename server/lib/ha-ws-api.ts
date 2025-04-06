@@ -9,7 +9,8 @@ import {
 } from 'home-assistant-js-websocket'
 import { LRUCache } from 'lru-cache'
 
-import { Observable, Subscription } from 'rxjs'
+import { filter, Observable, share, Subscription, SubscriptionLike } from 'rxjs'
+import { SerialSubscription } from '../../shared/serial-subscription'
 
 const d = debug('ha:ws')
 
@@ -46,10 +47,10 @@ const cache = new LRUCache<string, any>({
   ttlAutopurge: false,
 })
 
-export interface HomeAssistantApi {
+export interface HomeAssistantApi extends SubscriptionLike {
   fetchServices(): Promise<HassServices>
 
-  fetchStates(): Promise<HassState[]>
+  fetchStates(): Promise<Record<string, HassState>>
 
   eventsObservable(): Observable<HassEventBase>
 
@@ -73,6 +74,9 @@ export interface HomeAssistantApi {
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
+  private eventsSub = new SerialSubscription()
+  private services: Promise<Record<string, HassState>> | undefined
+
   constructor(
     private connection: Connection,
     private testMode: boolean = false
@@ -85,7 +89,10 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     )
 
     const connection = await createConnection({ auth })
-    return new LiveHomeAssistantApi(connection)
+    const ret = new LiveHomeAssistantApi(connection)
+    await ret.setupStateCache()
+
+    return ret
   }
 
   async fetchServices(): Promise<HassServices> {
@@ -101,33 +108,65 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     return ret
   }
 
-  async fetchStates(): Promise<HassState[]> {
-    if (cache.has('states')) {
-      return cache.get('states') as HassState[]
-    }
-
+  private async fetchFullState(): Promise<Record<string, HassState>> {
     const ret = await this.connection.sendMessagePromise<HassState[]>({
       type: 'get_states',
     })
 
     ret.forEach((x: any) => delete x.context)
-    cache.set('states', ret, { ttl: 1000 })
+    return ret.reduce(
+      (acc, x) => {
+        const entityId = x.entity_id
+        if (entityId) {
+          acc[entityId] = x
+        }
+        return acc
+      },
+      {} as Record<string, HassState>
+    )
+  }
+
+  private async setupStateCache() {
+    this.services = this.fetchFullState()
+
+    const state = await this.services
+    this.services = Promise.resolve(state)
+
+    this.eventsSub.current = this.eventsObservable()
+      .pipe(filter((x) => x.event_type === 'state_changed'))
+      .subscribe((ev) => {
+        const entityId = ev.data.entity_id
+        if (entityId) {
+          delete ev.data.new_state.context
+          state[entityId] = ev.data.new_state
+        }
+      })
+  }
+
+  fetchStates(): Promise<Record<string, HassState>> {
+    if (this.services) {
+      return this.services
+    }
+
+    const ret = (this.services = this.fetchFullState())
     return ret
   }
 
+  private eventsObs = new Observable<HassEvent>((subj) => {
+    const disp = new Subscription()
+
+    this.connection
+      .subscribeEvents<HassEvent>((ev) => subj.next(ev))
+      .then(
+        (unsub) => disp.add(() => void unsub()),
+        (err) => subj.error(err)
+      )
+
+    return disp
+  }).pipe(share())
+
   eventsObservable(): Observable<HassEvent> {
-    return new Observable((subj) => {
-      const disp = new Subscription()
-
-      this.connection
-        .subscribeEvents<HassEvent>((ev) => subj.next(ev))
-        .then(
-          (unsub) => disp.add(() => void unsub()),
-          (err) => subj.error(err)
-        )
-
-      return disp
-    })
+    return this.eventsObs
   }
 
   async sendNotification(
@@ -194,6 +233,14 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     }
   ): HassState[] {
     return filterUncommonEntitiesFromTime(entities, Date.now(), options)
+  }
+
+  unsubscribe(): void {
+    this.eventsSub.unsubscribe()
+  }
+
+  get closed() {
+    return this.eventsSub.closed
   }
 }
 

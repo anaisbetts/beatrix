@@ -25,6 +25,7 @@ import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
 import { createInMemoryDatabase } from './db'
+import { SerialSubscription } from '../shared/serial-subscription'
 
 const d = debug('ha:eval')
 
@@ -132,9 +133,13 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     return Promise.resolve(mockServices as unknown as HassServices)
   }
 
-  fetchStates(): Promise<HassState[]> {
+  fetchStates(): Promise<Record<string, HassState>> {
     d('Fetching states in eval mode')
-    return Promise.resolve(mockStates as unknown as HassState[])
+    const states = mockStates as unknown as HassState[]
+
+    return Promise.resolve(
+      Object.fromEntries(states.map((x) => [x.entity_id, x]))
+    )
   }
 
   eventsObservable(): Observable<HassEventBase> {
@@ -188,6 +193,15 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     // fake out the current time
     const d = new Date('2025-03-29T18:09:00.000Z')
     return filterUncommonEntitiesFromTime(entities, d.getTime(), options)
+  }
+
+  private dontcare = new SerialSubscription()
+  unsubscribe(): void {
+    this.dontcare.unsubscribe()
+  }
+
+  get closed() {
+    return this.dontcare.closed
   }
 }
 

@@ -14,6 +14,7 @@
     "dev:server": "mkdir ./notebook && bun run ./server/index.ts serve -n ./notebook",
     "dev:vite": "vite",
     "evals": "bun run ./server/index.ts evals",
+    "f": "bun fix && bun lint && bun test",
     "fix": "eslint --fix && prettier --write .",
     "lint": "tsc && eslint && prettier --check .",
     "mcp": "bun run ./server/index.ts mcp",

@@ -66,11 +66,11 @@ export interface HomeAssistantApi extends SubscriptionLike {
   ): Promise<T | null>
 
   filterUncommonEntities(
-    entities: HassState[],
+    entities: Record<string, HassState>,
     options?: {
       includeUnavailable?: boolean
     }
-  ): HassState[]
+  ): Record<string, HassState>
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
@@ -145,7 +145,9 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
   fetchStates(): Promise<Record<string, HassState>> {
     if (this.services) {
-      return this.services
+      // NB: We do the Object.assign here so that callers get a stable snapshot
+      // rather than a constantly shifting live object
+      return this.services.then((x) => Object.assign({}, x))
     }
 
     const ret = (this.services = this.fetchFullState())
@@ -227,11 +229,11 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   }
 
   filterUncommonEntities(
-    entities: HassState[],
+    entities: Record<string, HassState>,
     options?: {
       includeUnavailable?: boolean
     }
-  ): HassState[] {
+  ): Record<string, HassState> {
     return filterUncommonEntitiesFromTime(entities, Date.now(), options)
   }
 
@@ -262,6 +264,41 @@ export async function extractNotifiers(svcs: HassServices) {
 function deviceTrackerNameToNotifyName(tracker: string) {
   // XXX: There is no nice way to do this and it sucks ass
   return `mobile_app_${tracker.replace('device_tracker.', '')}`
+}
+
+export async function fetchHAUserInformation(api: HomeAssistantApi) {
+  const states = await api.fetchStates()
+
+  const people = Object.keys(states).filter((state) =>
+    state.startsWith('person.')
+  )
+
+  d('people: %o', people)
+
+  const ret = people.reduce(
+    (acc, x) => {
+      const state = states[x]
+      const name =
+        (state.attributes.friendly_name as string) ??
+        state.entity_id.replace('person.', '')
+
+      const notifiers = (
+        (state.attributes.device_trackers as string[]) ?? []
+      ).map((t: string) => deviceTrackerNameToNotifyName(t))
+
+      acc[state.entity_id.replace('person.', '')] = {
+        name,
+        notifiers,
+        state: state.state,
+      }
+
+      return acc
+    },
+    {} as Record<string, HAPersonInformation>
+  )
+
+  d('ret: %o', ret)
+  return ret
 }
 
 const LOW_VALUE_REGEXES = [
@@ -299,60 +336,35 @@ const LOW_VALUE_REGEXES = [
   /_connectivity/,
 ]
 
-export async function fetchHAUserInformation(api: HomeAssistantApi) {
-  const states = await api.fetchStates()
-
-  const people = states.filter((state) => state.entity_id.startsWith('person.'))
-  d('people: %o', people)
-
-  const ret = people.reduce(
-    (acc, x) => {
-      const name =
-        (x.attributes.friendly_name as string) ??
-        x.entity_id.replace('person.', '')
-
-      const notifiers = ((x.attributes.device_trackers as string[]) ?? []).map(
-        (t: string) => deviceTrackerNameToNotifyName(t)
-      )
-
-      acc[x.entity_id.replace('person.', '')] = {
-        name,
-        notifiers,
-        state: x.state,
-      }
-
-      return acc
-    },
-    {} as Record<string, HAPersonInformation>
-  )
-
-  d('ret: %o', ret)
-  return ret
-}
-
 export function filterUncommonEntitiesFromTime(
-  entities: HassState[],
+  entities: Record<string, HassState>,
   currentTime: number,
   options: {
     includeUnavailable?: boolean
   } = {}
-): HassState[] {
+): Record<string, HassState> {
   // Default options
   const { includeUnavailable = false } = options
   // Combine domain and pattern filters into a single array of RegExp objects
 
   // Step 1: Filter out unavailable/unknown entities if configured
   let filtered = includeUnavailable
-    ? entities
-    : entities.filter(
+    ? Object.keys(entities)
+    : Object.keys(entities).filter(
         (e) =>
-          e.state !== 'unavailable' &&
-          e.state !== 'unknown' &&
-          changedRecently(new Date(e.last_changed), 10 * 24, currentTime)
+          entities[e].state !== 'unavailable' &&
+          entities[e].state !== 'unknown' &&
+          changedRecently(
+            new Date(entities[e].last_changed),
+            10 * 24,
+            currentTime
+          )
       )
 
-  return filtered.filter(
-    (x) => !LOW_VALUE_REGEXES.find((re) => re.test(x.entity_id))
+  return Object.fromEntries(
+    filtered
+      .filter((x) => !LOW_VALUE_REGEXES.find((re) => re.test(x)))
+      .map((k) => [k, entities[k]])
   )
 }
 

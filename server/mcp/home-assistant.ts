@@ -51,9 +51,9 @@ export function createHomeAssistantServer(
           await runtime.api.fetchStates()
         )
 
-        const matchingStates = states
-          .filter((state) => prefixMap[state.entity_id.replace(/\..*$/, '')])
-          .map((x) => x.entity_id)
+        const matchingStates = Object.keys(states).filter(
+          (id) => prefixMap[id.replace(/\..*$/, '')]
+        )
 
         d('get-entities-by-prefix: %o', matchingStates)
         return {
@@ -82,16 +82,10 @@ export function createHomeAssistantServer(
     },
     async ({ entity_ids }) => {
       try {
-        const ids = Object.fromEntries(
-          (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((k) => [
-            k,
-            true,
-          ])
-        )
-
+        const ids = Array.isArray(entity_ids) ? entity_ids : [entity_ids]
         const states = await runtime.api.fetchStates()
 
-        const entityState = states.filter((state) => ids[state.entity_id])
+        const entityState = ids.map((x) => states[x])
 
         if (entityState.length !== Object.keys(ids).length) {
           throw new Error(
@@ -123,9 +117,9 @@ export function createHomeAssistantServer(
     async () => {
       try {
         const allStates = await runtime.api.fetchStates()
-        const states = runtime.api
-          .filterUncommonEntities(allStates)
-          .map((x) => x.entity_id)
+        const states = Object.keys(
+          runtime.api.filterUncommonEntities(allStates)
+        )
 
         d('get-all-entities: %d entities', states.length)
         return {
@@ -161,12 +155,7 @@ export function createHomeAssistantServer(
       },
       async ({ prompt, entity_ids }) => {
         let msgs: MessageParam[] | undefined = undefined
-        const ids = Object.fromEntries(
-          (Array.isArray(entity_ids) ? entity_ids : [entity_ids]).map((k) => [
-            k,
-            true,
-          ])
-        )
+        const ids = Array.isArray(entity_ids) ? entity_ids : [entity_ids]
 
         try {
           let serviceCalledCount = 0
@@ -190,7 +179,7 @@ export function createHomeAssistantServer(
           }
 
           const newState = await runtime.api.fetchStates()
-          const entityStates = newState.filter((state) => ids[state.entity_id])
+          const entityStates = ids.map((x) => newState[x])
 
           return {
             content: [{ type: 'text', text: JSON.stringify(entityStates) }],

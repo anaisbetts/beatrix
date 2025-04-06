@@ -2,7 +2,7 @@ import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 export type ModelDriverType = 'anthropic' | 'ollama' | 'openai'
 
-export type SignalType = 'cron' | 'state' | 'event'
+export type SignalType = 'cron' | 'state' | 'event' | 'offset' | 'time'
 
 export type AutomationType = 'manual' | 'determine-signal' | 'execute-signal'
 
@@ -11,8 +11,6 @@ export interface Automation {
   contents: string
   fileName: string
 }
-
-export type TriggerType = 'cron' | 'state' | 'offset' | 'time'
 
 export type StateRegexTrigger = {
   type: 'state'
@@ -28,7 +26,6 @@ export type CronTrigger = {
 export type RelativeTimeTrigger = {
   type: 'offset'
   offsetInSeconds: number
-  repeatForever: boolean
 }
 
 export type AbsoluteTimeTrigger = {

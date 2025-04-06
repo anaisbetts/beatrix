@@ -11,7 +11,7 @@
     "dev": "concurrently \"bun dev:server\" \"bun dev:vite\"",
     "dev:debug": "concurrently \"DEBUG='*' bun dev:server\" \"bun dev:vite\"",
     "dev:eval-mode": "concurrently \"bun dev:server serve -e\" \"bun dev:vite\"",
-    "dev:server": "mkdir ./notebook && bun run ./server/index.ts serve -n ./notebook",
+    "dev:server": "mkdir -p ./notebook && bun run ./server/index.ts serve -n ./notebook",
     "dev:vite": "vite",
     "evals": "bun run ./server/index.ts evals",
     "f": "bun fix && bun lint && bun test",

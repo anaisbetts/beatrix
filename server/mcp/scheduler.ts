@@ -200,7 +200,7 @@ export function createSchedulerServer(
     },
     async ({ offset_in_seconds }) => {
       d(
-        'creating relative time trigger for automation hash: %s, offset: %d seconds, repeat: %s',
+        'creating relative time trigger for automation hash: %s, offset: %d seconds',
         automationHash,
         offset_in_seconds
       )

@@ -157,7 +157,6 @@ export async function fetchAutomationLogs(
             signaledBy = {
               type: 'offset',
               offsetInSeconds: signalData.offsetInSeconds,
-              repeatForever: signalData.repeatForever,
             } as RelativeTimeTrigger
             break
           case 'time':

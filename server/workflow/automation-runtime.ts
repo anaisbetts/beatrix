@@ -3,7 +3,12 @@ import { Schema, Signal } from '../db-schema'
 import { LargeLanguageProvider } from '../llm'
 import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { parseAllAutomations } from './parser'
-import { Automation, CronTrigger } from '../../shared/types'
+import {
+  Automation,
+  CronTrigger,
+  RelativeTimeTrigger,
+  AbsoluteTimeTrigger,
+} from '../../shared/types'
 import {
   defer,
   from,
@@ -14,6 +19,7 @@ import {
   of,
   share,
   switchMap,
+  timer,
 } from 'rxjs'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
 import { rescheduleAutomations } from './scheduler-step'
@@ -153,6 +159,44 @@ export class LiveAutomationRuntime implements AutomationRuntime {
           observableList.push(
             cronToObservable(cron).pipe(map(() => ({ signal, automation })))
           )
+          break
+        case 'offset':
+          d(
+            'Creating relative time trigger for automation %s',
+            signal.automationHash
+          )
+
+          const relativeTimeData: RelativeTimeTrigger = JSON.parse(signal.data)
+          const offsetInSeconds = relativeTimeData.offsetInSeconds
+
+          observableList.push(
+            timer(offsetInSeconds * 1000).pipe(
+              map(() => ({ signal, automation }))
+            )
+          )
+          break
+        case 'time':
+          d(
+            'Creating absolute time trigger for automation %s',
+            signal.automationHash
+          )
+
+          const absoluteTimeData: AbsoluteTimeTrigger = JSON.parse(signal.data)
+          const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
+          const currentTime = Date.now()
+          const timeUntilTarget = targetTime - currentTime
+
+          // Only schedule if the time is in the future
+          if (timeUntilTarget > 0) {
+            observableList.push(
+              timer(timeUntilTarget).pipe(map(() => ({ signal, automation })))
+            )
+          } else {
+            d(
+              'Skipping past-due absolute time trigger: %s',
+              absoluteTimeData.iso8601Time
+            )
+          }
           break
       }
     }

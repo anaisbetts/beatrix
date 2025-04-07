@@ -275,34 +275,65 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 interface TriggerHandler {
   readonly signal: Signal
   readonly automation: Automation
+
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 }
 
 class CronTriggerHandler implements TriggerHandler {
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 
   constructor(
     public readonly signal: Signal,
     public readonly automation: Automation
   ) {
     const data: CronTrigger = JSON.parse(signal.data)
-    const cron = parseCronExpression(data.cron)
-    d(
-      'CronTriggerHandler created for signal %s, automation %s. Cron: %s',
-      signal.id,
-      automation.hash,
-      data.cron
-    )
-    this.trigger = this.cronToObservable(cron).pipe(
-      map(() => {
-        d(
-          'Cron trigger fired for signal %s, automation %s',
-          this.signal.id,
-          this.automation.hash
-        )
-        return { signal: this.signal, automation: this.automation }
-      })
-    )
+    let cron: Cron | null = null // Declare outside try
+
+    this.isValid = false // Default to invalid
+    this.friendlyTriggerDescription = 'Invalid cron expression'
+
+    try {
+      cron = parseCronExpression(data.cron) // Assign inside try
+      this.friendlyTriggerDescription = cron
+        .getNextDate(new Date())
+        .toLocaleString()
+      this.isValid = true // Set to valid only if parsing and date calculation succeed
+
+      d(
+        'CronTriggerHandler created for signal %s, automation %s. Cron: %s',
+        signal.id,
+        automation.hash,
+        data.cron
+      )
+    } catch (error) {
+      d('Error parsing cron expression "%s": %o', data.cron, error)
+      // isValid remains false, description remains 'Invalid cron expression'
+    }
+
+    // Create trigger only if cron is valid
+    if (this.isValid && cron) {
+      this.trigger = this.cronToObservable(cron).pipe(
+        map(() => {
+          d(
+            'Cron trigger fired for signal %s, automation %s',
+            this.signal.id,
+            this.automation.hash
+          )
+          return { signal: this.signal, automation: this.automation }
+        })
+      )
+    } else {
+      this.trigger = NEVER // Don't schedule if invalid
+      d(
+        'Cron expression %s is invalid or parsing failed, not scheduling trigger for signal %s',
+        data.cron,
+        signal.id
+      )
+    }
   }
 
   cronToObservable(cron: Cron): Observable<void> {
@@ -325,6 +356,8 @@ class CronTriggerHandler implements TriggerHandler {
 
 class RelativeTimeTriggerHandler implements TriggerHandler {
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 
   constructor(
     public readonly signal: Signal,
@@ -332,6 +365,11 @@ class RelativeTimeTriggerHandler implements TriggerHandler {
   ) {
     const relativeTimeData: RelativeTimeTrigger = JSON.parse(signal.data)
     const offsetInSeconds = relativeTimeData.offsetInSeconds
+    const fireTime = new Date(Date.now() + offsetInSeconds * 1000)
+
+    this.isValid = true
+    this.friendlyTriggerDescription = fireTime.toLocaleString()
+
     d(
       'RelativeTimeTriggerHandler created for signal %s, automation %s. Offset: %d seconds',
       signal.id,
@@ -355,6 +393,8 @@ class RelativeTimeTriggerHandler implements TriggerHandler {
 
 class AbsoluteTimeTriggerHandler implements TriggerHandler {
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 
   constructor(
     public readonly signal: Signal,
@@ -364,6 +404,10 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
     const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
     const currentTime = Date.now()
     const timeUntilTarget = targetTime - currentTime
+
+    this.isValid = true
+    this.friendlyTriggerDescription = new Date(targetTime).toLocaleString()
+
     d(
       'AbsoluteTimeTriggerHandler created for signal %s, automation %s. Target time: %s',
       signal.id,
@@ -373,6 +417,7 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
 
     // Only schedule if the time is in the future
     if (timeUntilTarget > 0) {
+      this.isValid = true
       d(
         'Scheduling absolute time trigger for signal %s in %d ms',
         signal.id,
@@ -390,12 +435,14 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
         })
       )
     } else {
+      this.isValid = false
       d(
         'Skipping past-due absolute time trigger for signal %s: Target time %s is in the past.',
         signal.id,
         absoluteTimeData.iso8601Time
       )
       this.trigger = NEVER
+      this.friendlyTriggerDescription += ' (Past due)'
     }
   }
 }

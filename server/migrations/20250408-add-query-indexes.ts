@@ -1,6 +1,8 @@
 import { Kysely } from 'kysely'
 
-export async function up(db: Kysely<any>): Promise<void> {
+import { Schema } from '../db-schema'
+
+export async function up(db: Kysely<Schema>): Promise<void> {
   await db.schema
     .createIndex('idx_signals_automation_hash')
     .on('signals')
@@ -26,7 +28,7 @@ export async function up(db: Kysely<any>): Promise<void> {
     .execute()
 }
 
-export async function down(db: Kysely<any>): Promise<void> {
+export async function down(db: Kysely<Schema>): Promise<void> {
   await db.schema.dropIndex('idx_signals_automation_hash').execute()
   await db.schema.dropIndex('idx_automation_logs_created_at').execute()
   await db.schema.dropIndex('idx_automation_logs_signal_id').execute()

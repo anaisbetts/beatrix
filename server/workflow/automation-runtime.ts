@@ -6,6 +6,7 @@ import {
   NEVER,
   Observable,
   defer,
+  filter,
   from,
   map,
   merge,
@@ -21,10 +22,15 @@ import {
   Automation,
   CronTrigger,
   RelativeTimeTrigger,
+  StateRegexTrigger,
 } from '../../shared/types'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
-import { HomeAssistantApi } from '../lib/ha-ws-api'
+import {
+  HassState,
+  HomeAssistantApi,
+  observeStatesForEntities,
+} from '../lib/ha-ws-api'
 import { LargeLanguageProvider } from '../llm'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
@@ -247,6 +253,20 @@ export class LiveAutomationRuntime implements AutomationRuntime {
               new AbsoluteTimeTriggerHandler(signal, automation)
             )
             break
+          case 'state':
+            d('Creating StateRegexTriggerHandler for signal ID %s', signal.id)
+            try {
+              triggerHandlers.push(
+                new StateRegexTriggerHandler(signal, automation, this)
+              )
+            } catch (error) {
+              d(
+                'Error creating StateRegexTrigger handler for signal ID %s: %o',
+                signal.id,
+                error
+              )
+            }
+            break
           default:
             d(
               'Unknown signal type %s for signal ID %s. Skipping.',
@@ -444,5 +464,73 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
       this.trigger = NEVER
       this.friendlyTriggerDescription += ' (Past due)'
     }
+  }
+}
+
+class StateRegexTriggerHandler implements TriggerHandler {
+  readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
+
+  constructor(
+    public readonly signal: Signal,
+    public readonly automation: Automation,
+    private readonly runtime: AutomationRuntime
+  ) {
+    const stateData: StateRegexTrigger = JSON.parse(signal.data)
+    let regex: RegExp | null = null
+
+    this.isValid = false // Default to invalid
+    this.friendlyTriggerDescription = `Invalid state regex trigger for entities: ${stateData.entityIds.join(', ')}`
+
+    try {
+      regex = new RegExp(stateData.regex, 'i') // Case-insensitive match
+      this.isValid = true
+      this.friendlyTriggerDescription = `State match on [${stateData.entityIds.join(', ')}] for regex /${stateData.regex}/i`
+
+      d(
+        'StateRegexTriggerHandler created for signal %s, automation %s. Entities: %o, Regex: /%s/i',
+        signal.id,
+        automation.hash,
+        stateData.entityIds,
+        stateData.regex
+      )
+    } catch (error) {
+      d(
+        'Error compiling regex "%s" for signal ID %s: %o',
+        stateData.regex,
+        signal.id,
+        error
+      )
+      // isValid remains false, description remains the default error message
+      this.trigger = NEVER
+      return // Don't proceed if regex is invalid
+    }
+
+    // Only create the observable if the regex is valid
+    this.trigger = observeStatesForEntities(
+      this.runtime.api,
+      stateData.entityIds
+    ).pipe(
+      filter((state: HassState | undefined | null): state is HassState => {
+        if (!state) {
+          return false // Skip null/undefined states
+        }
+
+        const match = regex.test(state.state) // Use the compiled regex (isValid check ensures regex is non-null)
+        return match
+      }),
+      map((matchedState: HassState) => {
+        d(
+          'State regex trigger fired for signal %s, automation %s. Matched entity: %s, State: "%s"',
+          this.signal.id,
+          this.automation.hash,
+          matchedState.entity_id,
+          matchedState.state
+        )
+        return { signal: this.signal, automation: this.automation }
+      }),
+      share()
+    )
   }
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+
 import { distribute, fillArray } from './math'
 
 describe('the distribute method', () => {

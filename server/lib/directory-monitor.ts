@@ -1,15 +1,15 @@
+import debug from 'debug'
+import { watch } from 'fs'
+import { join } from 'path'
 import {
+  Observable,
   bufferTime,
   concatMap,
   map,
-  Observable,
   repeat,
   shareReplay,
   take,
 } from 'rxjs'
-import { watch } from 'fs'
-import { join } from 'path'
-import debug from 'debug'
 
 const d = debug('b:directory-monitor')
 

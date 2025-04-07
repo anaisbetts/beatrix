@@ -1,26 +1,27 @@
+import { deepEquals } from 'bun'
+import { Kysely } from 'kysely'
+
+import {
+  AbsoluteTimeTrigger,
+  CronTrigger,
+  RelativeTimeTrigger,
+  StateRegexTrigger,
+  Trigger,
+} from '../../shared/types'
 import { createInMemoryDatabase } from '../db'
+import { Schema } from '../db-schema'
 import {
   EvalHomeAssistantApi,
   failureGrader,
   runScenario,
 } from '../eval-framework'
 import { LargeLanguageProvider } from '../llm'
+import { LiveAutomationRuntime } from '../workflow/automation-runtime'
 import { automationFromString } from '../workflow/parser'
 import {
   createDefaultSchedulerTools,
   schedulerPrompt,
 } from '../workflow/scheduler-step'
-import { Kysely } from 'kysely'
-import { Schema } from '../db-schema'
-import { deepEquals } from 'bun'
-import { LiveAutomationRuntime } from '../workflow/automation-runtime'
-import {
-  CronTrigger,
-  StateRegexTrigger,
-  AbsoluteTimeTrigger,
-  RelativeTimeTrigger,
-  Trigger,
-} from '../../shared/types'
 
 export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const inputAutomation = automationFromString(

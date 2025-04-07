@@ -5,7 +5,7 @@ import {
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { createBuiltinServers, LargeLanguageProvider } from '../llm'
+import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 // Basic Home Assistant entity listing eval
 export async function* listEntitiesEval(llm: LargeLanguageProvider) {

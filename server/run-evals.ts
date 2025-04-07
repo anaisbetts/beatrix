@@ -1,14 +1,4 @@
 import {
-  bulkLightOperationsEval,
-  climateControlEval,
-  complexAutomationEval,
-  entityAttributeQueryEval,
-  listEntitiesEval,
-  multiEntityStatusEval,
-  sceneActivationEval,
-} from './evals/home-assistant'
-
-import {
   climateControlModeEval,
   climateControlTemperatureEval,
   lightBrightnessEval,
@@ -18,26 +8,34 @@ import {
   mediaPlayerControlEval,
   multipleEntityControlEval,
 } from './evals/call-service'
-
-import { smokeTestEval, smokeTestToolsEval } from './evals/simple-evals'
-import { LargeLanguageProvider } from './llm'
+import {
+  bulkLightOperationsEval,
+  climateControlEval,
+  complexAutomationEval,
+  entityAttributeQueryEval,
+  listEntitiesEval,
+  multiEntityStatusEval,
+  sceneActivationEval,
+} from './evals/home-assistant'
 import {
   listNotifyTargetsEval,
   listPeopleEval,
-  notifyPersonEval,
-  notifyWithTitleEval,
-  notifyMultiplePeopleEval,
   notifyEveryoneEval,
+  notifyMultiplePeopleEval,
+  notifyPersonEval,
   notifySpecificDeviceEval,
+  notifyWithTitleEval,
 } from './evals/notify'
 import {
-  simplestSchedulerEval,
   evalAbsoluteTimePrompts,
   evalCronPrompts,
   evalMixedPrompts,
   evalRelativeTimePrompts,
   evalStateRegexPrompts,
+  simplestSchedulerEval,
 } from './evals/scheduling'
+import { smokeTestEval, smokeTestToolsEval } from './evals/simple-evals'
+import { LargeLanguageProvider } from './llm'
 
 async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
   for (const generator of generators) {

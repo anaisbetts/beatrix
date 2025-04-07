@@ -1,10 +1,9 @@
 import {
-  callService,
   FriendlyStateEntity,
   HAAttributeList,
   Scene,
+  callService,
 } from './ha-rest-api'
-
 import { defaultValueFromExample, lerp } from './math'
 import { asyncMap } from './promise-extras'
 

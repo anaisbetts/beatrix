@@ -1,5 +1,6 @@
-import getFileInfo, { type FileInfo } from './utils/get-file-info'
 import path from 'path'
+
+import getFileInfo, { type FileInfo } from './utils/get-file-info'
 
 /**
  * Options for serveStatic().

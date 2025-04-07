@@ -5,7 +5,7 @@ import {
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { createBuiltinServers, LargeLanguageProvider } from '../llm'
+import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 // Basic notification target listing eval
 export async function* listNotifyTargetsEval(llm: LargeLanguageProvider) {

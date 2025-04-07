@@ -1,9 +1,10 @@
-import { describe, expect, it, beforeEach, mock } from 'bun:test'
-import { EvalHomeAssistantApi } from './eval-framework'
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { HassServices } from 'home-assistant-js-websocket'
 import { NEVER } from 'rxjs'
+
 import mockServices from '../mocks/services.json'
 import mockStates from '../mocks/states.json'
-import { HassServices } from 'home-assistant-js-websocket'
+import { EvalHomeAssistantApi } from './eval-framework'
 import { CallServiceOptions, HassState } from './lib/ha-ws-api'
 
 // Create mock notifiers for testing

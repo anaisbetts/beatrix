@@ -1,6 +1,7 @@
 import type { FileBlob } from 'bun'
-import { isErrorlike } from '../types'
 import * as mime from 'mime-types'
+
+import { isErrorlike } from '../types'
 
 export interface FileInfo {
   /**

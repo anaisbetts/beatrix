@@ -1,8 +1,9 @@
 import * as crypto from 'crypto'
+import debug from 'debug'
 import * as fs from 'fs/promises'
 import * as path from 'path'
-import debug from 'debug'
 import { firstValueFrom, from, toArray } from 'rxjs'
+
 import { Automation } from '../../shared/types'
 
 const d = debug('b:parser')

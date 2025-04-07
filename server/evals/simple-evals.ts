@@ -5,7 +5,7 @@ import {
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { createBuiltinServers, LargeLanguageProvider } from '../llm'
+import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 export async function* smokeTestEval(llm: LargeLanguageProvider) {
   yield await runScenario(

@@ -1,4 +1,5 @@
 import { Generated, Insertable, Selectable } from 'kysely'
+
 import { AutomationType } from '../shared/types'
 
 export type Timestamp = string

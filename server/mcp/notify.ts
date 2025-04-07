@@ -1,12 +1,13 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import debug from 'debug'
+import { z } from 'zod'
+
 import pkg from '../../package.json'
 import {
+  HomeAssistantApi,
   extractNotifiers,
   fetchHAUserInformation,
-  HomeAssistantApi,
 } from '../lib/ha-ws-api'
-import { z } from 'zod'
-import debug from 'debug'
 
 const d = debug('b:notify')
 

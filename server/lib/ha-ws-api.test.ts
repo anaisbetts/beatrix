@@ -1,5 +1,6 @@
 import { describe, expect, it, jest } from 'bun:test'
 import { Connection } from 'home-assistant-js-websocket'
+
 import { LiveHomeAssistantApi } from './ha-ws-api'
 
 describe('LiveHomeAssistantApi', () => {

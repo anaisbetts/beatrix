@@ -1,7 +1,8 @@
-import { describe, test, expect } from 'bun:test'
-import { parseAutomations } from './parser'
-import { Automation } from '../../shared/types'
+import { describe, expect, test } from 'bun:test'
 import * as path from 'path'
+
+import { Automation } from '../../shared/types'
+import { parseAutomations } from './parser'
 
 describe('Workflow loop functions', () => {
   describe('parseAutomations', () => {

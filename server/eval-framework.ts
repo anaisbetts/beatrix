@@ -1,31 +1,31 @@
+import { asyncMap } from '@anaisbetts/commands'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import debug from 'debug'
+import { HassEventBase, HassServices } from 'home-assistant-js-websocket'
+import { NEVER, Observable, firstValueFrom, lastValueFrom, toArray } from 'rxjs'
+
+import mockServices from '../mocks/services.json'
+import mockStates from '../mocks/states.json'
 import { messagesToString } from '../shared/prompt'
+import { SerialSubscription } from '../shared/serial-subscription'
+import { GradeResult, ScenarioResult } from '../shared/types'
 import {
   ANTHROPIC_EVAL_MODEL,
   AnthropicLargeLanguageProvider,
 } from './anthropic'
-import { firstValueFrom, lastValueFrom, NEVER, Observable, toArray } from 'rxjs'
-import { LargeLanguageProvider } from './llm'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { asyncMap } from '@anaisbetts/commands'
-import debug from 'debug'
-
-import mockServices from '../mocks/services.json'
-import mockStates from '../mocks/states.json'
-import { HassEventBase, HassServices } from 'home-assistant-js-websocket'
+import { createInMemoryDatabase } from './db'
 import {
   CallServiceOptions,
-  extractNotifiers,
-  filterUncommonEntitiesFromTime,
   HassState,
   HomeAssistantApi,
+  extractNotifiers,
+  filterUncommonEntitiesFromTime,
 } from './lib/ha-ws-api'
-import { GradeResult, ScenarioResult } from '../shared/types'
+import { LargeLanguageProvider } from './llm'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
-import { createInMemoryDatabase } from './db'
-import { SerialSubscription } from '../shared/serial-subscription'
 
 const d = debug('b:eval')
 

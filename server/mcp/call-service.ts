@@ -1,7 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import pkg from '../../package.json'
-import { z } from 'zod'
 import debug from 'debug'
+import { z } from 'zod'
+
+import pkg from '../../package.json'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 
 const d = debug('b:call-service')

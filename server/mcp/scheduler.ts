@@ -1,15 +1,16 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import pkg from '../../package.json'
 import debug from 'debug'
 import { Kysely } from 'kysely'
-import { Schema } from '../db-schema'
 import { z } from 'zod'
+
+import pkg from '../../package.json'
 import {
-  StateRegexTrigger,
+  AbsoluteTimeTrigger,
   CronTrigger,
   RelativeTimeTrigger,
-  AbsoluteTimeTrigger,
+  StateRegexTrigger,
 } from '../../shared/types'
+import { Schema } from '../db-schema'
 
 const d = debug('b:scheduler')
 

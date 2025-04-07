@@ -1,9 +1,10 @@
-import { firstValueFrom, Observable, of, throwError, timer } from 'rxjs'
-import { handleWebsocketRpc } from './ws-rpc'
+import { describe, expect, it } from 'bun:test'
+import { Observable, firstValueFrom, of, throwError, timer } from 'rxjs'
+
 import { IpcResponse } from '../../shared/ws-rpc'
 import { IpcRequest } from '../../shared/ws-rpc'
 import { ServerMessage } from '../../shared/ws-rpc'
-import { describe, expect, it } from 'bun:test'
+import { handleWebsocketRpc } from './ws-rpc'
 
 class TestHandler {
   itReturnsAValue() {

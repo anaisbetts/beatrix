@@ -1,12 +1,13 @@
+import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import debug from 'debug'
+import OpenAI from 'openai'
+import { Observable, from } from 'rxjs'
+
 import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
-import debug from 'debug'
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { connectServersToClient, LargeLanguageProvider } from './llm'
-import { from, Observable } from 'rxjs'
-import OpenAI from 'openai'
-import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import { LargeLanguageProvider, connectServersToClient } from './llm'
 
 const d = debug('b:llm')
 

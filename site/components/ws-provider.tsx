@@ -1,17 +1,19 @@
-import { createContext, useContext, ReactNode, useEffect } from 'react'
-import { ServerWebsocketApi } from '../../shared/prompt'
 import { useObservable } from '@anaisbetts/commands'
+import { ReactNode, createContext, useContext, useEffect } from 'react'
 import {
   EMPTY,
+  Observable,
+  Subject,
   fromEvent,
   map,
   mergeMap,
-  Observable,
   of,
   retry,
-  Subject,
 } from 'rxjs'
+
 import { createRemoteClient } from '@/lib/ws-rpc'
+
+import { ServerWebsocketApi } from '../../shared/prompt'
 import { Asyncify, IpcResponse } from '../../shared/ws-rpc'
 
 type WebSocketContextType = {

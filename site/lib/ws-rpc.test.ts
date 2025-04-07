@@ -1,22 +1,23 @@
+import { describe, expect, it } from 'bun:test'
+import debug from 'debug'
 import {
+  Observable,
+  Subject,
   concat,
   delay,
   firstValueFrom,
   map,
-  Observable,
   of,
   share,
-  Subject,
   tap,
   throwError,
   timer,
   toArray,
 } from 'rxjs'
-import { IpcResponse, ServerMessage } from '../../shared/ws-rpc'
-import { createRemoteClient, RecursiveProxyHandler } from './ws-rpc'
-import { describe, expect, it } from 'bun:test'
+
 import { handleWebsocketRpc } from '../../server/lib/ws-rpc'
-import debug from 'debug'
+import { IpcResponse, ServerMessage } from '../../shared/ws-rpc'
+import { RecursiveProxyHandler, createRemoteClient } from './ws-rpc'
 
 interface TestInterface {
   itShouldReturnAString(): string

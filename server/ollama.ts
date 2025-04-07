@@ -1,18 +1,19 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import pkg from '../package.json'
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import Anthropic from '@anthropic-ai/sdk'
 import {
   ContentBlockParam,
   MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { withTimeout, TimeoutError } from './lib/promise-extras'
-import debug from 'debug'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { Ollama, Message, Tool } from 'ollama'
+import debug from 'debug'
+import { Message, Ollama, Tool } from 'ollama'
+import { Observable, from, map } from 'rxjs'
+
+import pkg from '../package.json'
+import { TimeoutError, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider } from './llm'
-import { from, map, Observable } from 'rxjs'
 
 const d = debug('b:llm')
 

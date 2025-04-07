@@ -94,12 +94,14 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     let serverId: bigint | undefined = previousConversationId
       ? BigInt(previousConversationId)
       : undefined
+    let previousMessages: MessageParam[] = []
 
     const resp = convo.pipe(
       mergeMap((prevMsgs) => {
         const msgs: MessageParam[] = prevMsgs.map((msg) =>
           pick(msg, ['content', 'role'])
         )
+        previousMessages = msgs
 
         return llm.executePromptWithTools(prompt, tools, msgs)
       }),
@@ -134,16 +136,18 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     resp
       .pipe(
         toArray(),
-        mergeMap(async (msgs) => {
-          const filteredMsgs: MessageParam[] = msgs.map((msg: any) =>
+        mergeMap(async (newMsgs) => {
+          const filteredNewMsgs: MessageParam[] = newMsgs.map((msg: any) =>
             pick(msg, ['content', 'role'])
           )
+
+          const fullMessageLog = [...previousMessages, ...filteredNewMsgs]
 
           await this.runtime.db
             .updateTable('automationLogs')
             .set({
               type: 'manual',
-              messageLog: JSON.stringify(filteredMsgs),
+              messageLog: JSON.stringify(fullMessageLog),
             })
             .where('id', '=', Number(serverId!))
             .execute()

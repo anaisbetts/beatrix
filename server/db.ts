@@ -16,7 +16,7 @@ import {
 import { repoRootDir } from './utils'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
-const d = debug('ha:db')
+const d = debug('b:db')
 
 export async function createDatabaseViaEnv() {
   const dbPath = path.join(process.env.DATA_DIR ?? repoRootDir(), 'app.db')

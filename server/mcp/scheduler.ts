@@ -11,7 +11,7 @@ import {
   AbsoluteTimeTrigger,
 } from '../../shared/types'
 
-const d = debug('ha:scheduler')
+const d = debug('b:scheduler')
 
 export function createSchedulerServer(
   db: Kysely<Schema>,

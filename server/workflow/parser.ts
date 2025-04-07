@@ -5,7 +5,7 @@ import debug from 'debug'
 import { firstValueFrom, from, toArray } from 'rxjs'
 import { Automation } from '../../shared/types'
 
-const d = debug('ha:parser')
+const d = debug('b:parser')
 
 export async function* parseAutomations(
   directoryPath: string

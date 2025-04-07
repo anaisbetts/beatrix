@@ -6,7 +6,7 @@ import { lastValueFrom, toArray } from 'rxjs'
 import debug from 'debug'
 import { AutomationRuntime } from './automation-runtime'
 
-const d = debug('ha:scheduler-step')
+const d = debug('b:scheduler')
 
 export async function rescheduleAutomations(
   runtime: AutomationRuntime,

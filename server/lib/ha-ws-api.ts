@@ -12,7 +12,7 @@ import { LRUCache } from 'lru-cache'
 import { filter, Observable, share, Subscription, SubscriptionLike } from 'rxjs'
 import { SerialSubscription } from '../../shared/serial-subscription'
 
-const d = debug('ha:ws')
+const d = debug('b:ws')
 
 export interface HassState {
   entity_id: string

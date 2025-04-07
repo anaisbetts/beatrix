@@ -11,7 +11,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { connectServersToClient, LargeLanguageProvider } from './llm'
 import { from, Observable } from 'rxjs'
 
-const d = debug('ha:llm')
+const d = debug('b:llm')
 
 // Reserve tokens for model responses
 const RESPONSE_TOKEN_RESERVE = 4000

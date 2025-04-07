@@ -4,7 +4,7 @@ import { z } from 'zod'
 import debug from 'debug'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 
-const d = debug('ha:call-service')
+const d = debug('b:call-service')
 
 export function createCallServiceServer(
   runtime: AutomationRuntime,

@@ -11,7 +11,7 @@ import { watch } from 'fs'
 import { join } from 'path'
 import debug from 'debug'
 
-const d = debug('ha:directory-monitor')
+const d = debug('b:directory-monitor')
 
 /**
  * Options for the directory monitor

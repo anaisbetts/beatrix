@@ -29,7 +29,7 @@ import { TimerBasedCronScheduler as scheduler } from 'cron-schedule/schedulers/t
 import debug from 'debug'
 import { runExecutionForAutomation } from './execution-step'
 
-const d = debug('ha:automation')
+const d = debug('b:automation')
 
 interface SignalledAutomation {
   signal: Signal

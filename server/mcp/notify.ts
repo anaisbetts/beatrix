@@ -8,7 +8,7 @@ import {
 import { z } from 'zod'
 import debug from 'debug'
 
-const d = debug('ha:notify')
+const d = debug('b:notify')
 
 export function createNotifyServer(
   api: HomeAssistantApi,

@@ -27,7 +27,7 @@ import { LiveAutomationRuntime } from './workflow/automation-runtime'
 import { createInMemoryDatabase } from './db'
 import { SerialSubscription } from '../shared/serial-subscription'
 
-const d = debug('ha:eval')
+const d = debug('b:eval')
 
 export type Grader = (messages: MessageParam[]) => Promise<GradeResult>
 

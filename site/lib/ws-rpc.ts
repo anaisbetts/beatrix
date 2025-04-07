@@ -2,7 +2,7 @@ import { from, mergeMap, Observable, ReplaySubject } from 'rxjs'
 import { Asyncify, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
 import debug from 'debug'
 
-const d = debug('ha:ws-rpc-client')
+const d = debug('b:ws')
 
 export function createRemoteClient<T>(
   sender: (msg: string) => Promise<void>,

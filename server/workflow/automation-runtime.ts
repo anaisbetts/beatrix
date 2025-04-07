@@ -6,6 +6,7 @@ import {
   NEVER,
   Observable,
   defer,
+  filter,
   from,
   map,
   merge,
@@ -21,10 +22,15 @@ import {
   Automation,
   CronTrigger,
   RelativeTimeTrigger,
+  StateRegexTrigger,
 } from '../../shared/types'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
-import { HomeAssistantApi } from '../lib/ha-ws-api'
+import {
+  HassState,
+  HomeAssistantApi,
+  observeStatesForEntities,
+} from '../lib/ha-ws-api'
 import { LargeLanguageProvider } from '../llm'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
@@ -247,6 +253,20 @@ export class LiveAutomationRuntime implements AutomationRuntime {
               new AbsoluteTimeTriggerHandler(signal, automation)
             )
             break
+          case 'state':
+            d('Creating StateRegexTriggerHandler for signal ID %s', signal.id)
+            try {
+              triggerHandlers.push(
+                new StateRegexTriggerHandler(signal, automation, this)
+              )
+            } catch (error) {
+              d(
+                'Error creating StateRegexTrigger handler for signal ID %s: %o',
+                signal.id,
+                error
+              )
+            }
+            break
           default:
             d(
               'Unknown signal type %s for signal ID %s. Skipping.',
@@ -275,34 +295,65 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 interface TriggerHandler {
   readonly signal: Signal
   readonly automation: Automation
+
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 }
 
 class CronTriggerHandler implements TriggerHandler {
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 
   constructor(
     public readonly signal: Signal,
     public readonly automation: Automation
   ) {
     const data: CronTrigger = JSON.parse(signal.data)
-    const cron = parseCronExpression(data.cron)
-    d(
-      'CronTriggerHandler created for signal %s, automation %s. Cron: %s',
-      signal.id,
-      automation.hash,
-      data.cron
-    )
-    this.trigger = this.cronToObservable(cron).pipe(
-      map(() => {
-        d(
-          'Cron trigger fired for signal %s, automation %s',
-          this.signal.id,
-          this.automation.hash
-        )
-        return { signal: this.signal, automation: this.automation }
-      })
-    )
+    let cron: Cron | null = null // Declare outside try
+
+    this.isValid = false // Default to invalid
+    this.friendlyTriggerDescription = 'Invalid cron expression'
+
+    try {
+      cron = parseCronExpression(data.cron) // Assign inside try
+      this.friendlyTriggerDescription = cron
+        .getNextDate(new Date())
+        .toLocaleString()
+      this.isValid = true // Set to valid only if parsing and date calculation succeed
+
+      d(
+        'CronTriggerHandler created for signal %s, automation %s. Cron: %s',
+        signal.id,
+        automation.hash,
+        data.cron
+      )
+    } catch (error) {
+      d('Error parsing cron expression "%s": %o', data.cron, error)
+      // isValid remains false, description remains 'Invalid cron expression'
+    }
+
+    // Create trigger only if cron is valid
+    if (this.isValid && cron) {
+      this.trigger = this.cronToObservable(cron).pipe(
+        map(() => {
+          d(
+            'Cron trigger fired for signal %s, automation %s',
+            this.signal.id,
+            this.automation.hash
+          )
+          return { signal: this.signal, automation: this.automation }
+        })
+      )
+    } else {
+      this.trigger = NEVER // Don't schedule if invalid
+      d(
+        'Cron expression %s is invalid or parsing failed, not scheduling trigger for signal %s',
+        data.cron,
+        signal.id
+      )
+    }
   }
 
   cronToObservable(cron: Cron): Observable<void> {
@@ -325,6 +376,8 @@ class CronTriggerHandler implements TriggerHandler {
 
 class RelativeTimeTriggerHandler implements TriggerHandler {
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 
   constructor(
     public readonly signal: Signal,
@@ -332,6 +385,11 @@ class RelativeTimeTriggerHandler implements TriggerHandler {
   ) {
     const relativeTimeData: RelativeTimeTrigger = JSON.parse(signal.data)
     const offsetInSeconds = relativeTimeData.offsetInSeconds
+    const fireTime = new Date(Date.now() + offsetInSeconds * 1000)
+
+    this.isValid = true
+    this.friendlyTriggerDescription = fireTime.toLocaleString()
+
     d(
       'RelativeTimeTriggerHandler created for signal %s, automation %s. Offset: %d seconds',
       signal.id,
@@ -355,6 +413,8 @@ class RelativeTimeTriggerHandler implements TriggerHandler {
 
 class AbsoluteTimeTriggerHandler implements TriggerHandler {
   readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
 
   constructor(
     public readonly signal: Signal,
@@ -364,6 +424,10 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
     const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
     const currentTime = Date.now()
     const timeUntilTarget = targetTime - currentTime
+
+    this.isValid = true
+    this.friendlyTriggerDescription = new Date(targetTime).toLocaleString()
+
     d(
       'AbsoluteTimeTriggerHandler created for signal %s, automation %s. Target time: %s',
       signal.id,
@@ -373,6 +437,7 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
 
     // Only schedule if the time is in the future
     if (timeUntilTarget > 0) {
+      this.isValid = true
       d(
         'Scheduling absolute time trigger for signal %s in %d ms',
         signal.id,
@@ -390,12 +455,82 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
         })
       )
     } else {
+      this.isValid = false
       d(
         'Skipping past-due absolute time trigger for signal %s: Target time %s is in the past.',
         signal.id,
         absoluteTimeData.iso8601Time
       )
       this.trigger = NEVER
+      this.friendlyTriggerDescription += ' (Past due)'
     }
+  }
+}
+
+class StateRegexTriggerHandler implements TriggerHandler {
+  readonly trigger: Observable<SignalledAutomation>
+  readonly friendlyTriggerDescription: string
+  readonly isValid: boolean
+
+  constructor(
+    public readonly signal: Signal,
+    public readonly automation: Automation,
+    private readonly runtime: AutomationRuntime
+  ) {
+    const stateData: StateRegexTrigger = JSON.parse(signal.data)
+    let regex: RegExp | null = null
+
+    this.isValid = false // Default to invalid
+    this.friendlyTriggerDescription = `Invalid state regex trigger for entities: ${stateData.entityIds.join(', ')}`
+
+    try {
+      regex = new RegExp(stateData.regex, 'i') // Case-insensitive match
+      this.isValid = true
+      this.friendlyTriggerDescription = `State match on [${stateData.entityIds.join(', ')}] for regex /${stateData.regex}/i`
+
+      d(
+        'StateRegexTriggerHandler created for signal %s, automation %s. Entities: %o, Regex: /%s/i',
+        signal.id,
+        automation.hash,
+        stateData.entityIds,
+        stateData.regex
+      )
+    } catch (error) {
+      d(
+        'Error compiling regex "%s" for signal ID %s: %o',
+        stateData.regex,
+        signal.id,
+        error
+      )
+      // isValid remains false, description remains the default error message
+      this.trigger = NEVER
+      return // Don't proceed if regex is invalid
+    }
+
+    // Only create the observable if the regex is valid
+    this.trigger = observeStatesForEntities(
+      this.runtime.api,
+      stateData.entityIds
+    ).pipe(
+      filter((state: HassState | undefined | null): state is HassState => {
+        if (!state) {
+          return false // Skip null/undefined states
+        }
+
+        const match = regex.test(state.state) // Use the compiled regex (isValid check ensures regex is non-null)
+        return match
+      }),
+      map((matchedState: HassState) => {
+        d(
+          'State regex trigger fired for signal %s, automation %s. Matched entity: %s, State: "%s"',
+          this.signal.id,
+          this.automation.hash,
+          matchedState.entity_id,
+          matchedState.state
+        )
+        return { signal: this.signal, automation: this.automation }
+      }),
+      share()
+    )
   }
 }

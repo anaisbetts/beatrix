@@ -2,13 +2,23 @@ import debug from 'debug'
 import {
   Connection,
   HassEvent,
-  HassEventBase,
   HassServices,
   createConnection,
   createLongLivedTokenAuth,
 } from 'home-assistant-js-websocket'
 import { LRUCache } from 'lru-cache'
-import { Observable, Subscription, SubscriptionLike, filter, share } from 'rxjs'
+import {
+  EMPTY,
+  Observable,
+  Subscription,
+  SubscriptionLike,
+  concat,
+  filter,
+  from,
+  of,
+  share,
+  switchMap,
+} from 'rxjs'
 
 import { SerialSubscription } from '../../shared/serial-subscription'
 
@@ -52,7 +62,7 @@ export interface HomeAssistantApi extends SubscriptionLike {
 
   fetchStates(): Promise<Record<string, HassState>>
 
-  eventsObservable(): Observable<HassEventBase>
+  eventsObservable(): Observable<HassEvent>
 
   sendNotification(
     target: string,
@@ -299,6 +309,33 @@ export async function fetchHAUserInformation(api: HomeAssistantApi) {
 
   d('ret: %o', ret)
   return ret
+}
+
+export function observeStatesForEntities(
+  conn: HomeAssistantApi,
+  ids: string[]
+): Observable<HassState> {
+  const future = conn.eventsObservable().pipe(
+    filter((ev) => ev.event_type === 'state_changed'),
+    switchMap((ev) => {
+      const entityId = ev.data.entity_id
+
+      if (ids.includes(entityId)) {
+        return of(ev.data.new_state as HassState)
+      } else {
+        return EMPTY
+      }
+    })
+  )
+
+  return concat(
+    from(conn.fetchStates()).pipe(
+      switchMap((states) => {
+        return from(ids.map((id) => states[id]))
+      })
+    ),
+    future
+  )
 }
 
 const LOW_VALUE_REGEXES = [

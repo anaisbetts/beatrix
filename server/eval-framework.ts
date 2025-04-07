@@ -2,7 +2,7 @@ import { asyncMap } from '@anaisbetts/commands'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
-import { HassEventBase, HassServices } from 'home-assistant-js-websocket'
+import { HassEvent, HassServices } from 'home-assistant-js-websocket'
 import { NEVER, Observable, firstValueFrom, lastValueFrom, toArray } from 'rxjs'
 
 import mockServices from '../mocks/services.json'
@@ -142,7 +142,7 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     )
   }
 
-  eventsObservable(): Observable<HassEventBase> {
+  eventsObservable(): Observable<HassEvent> {
     return NEVER
   }
 

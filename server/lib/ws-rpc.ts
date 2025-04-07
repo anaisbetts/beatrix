@@ -12,7 +12,7 @@ import { getAllProperties } from '../../shared/utility'
 import debug from 'debug'
 import { ServerMessage, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
 
-const d = debug('ha:ws-rpc')
+const d = debug('b:ws')
 
 export function handleWebsocketRpc<T extends object>(
   routes: T,

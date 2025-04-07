@@ -8,7 +8,7 @@ import { from, Observable } from 'rxjs'
 import OpenAI from 'openai'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
-const d = debug('ha:llm')
+const d = debug('b:llm')
 
 // Reserve tokens for model responses
 const RESPONSE_TOKEN_RESERVE = 4000

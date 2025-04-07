@@ -8,7 +8,7 @@ import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { firstValueFrom, toArray } from 'rxjs'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 
-const d = debug('ha:home-assistant')
+const d = debug('b:home-assistant')
 
 export function createHomeAssistantServer(
   runtime: AutomationRuntime,

@@ -27,7 +27,7 @@ interface TestInterface {
   itReturnsAPromiseThatRejects(): Promise<void>
 }
 
-const d = debug('ha:ws-rpc-client')
+const d = debug('b:ws')
 
 class TestInterfaceImpl implements TestInterface {
   itShouldReturnAString(): string {

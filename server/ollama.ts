@@ -14,7 +14,7 @@ import { Ollama, Message, Tool } from 'ollama'
 import { LargeLanguageProvider } from './llm'
 import { from, map, Observable } from 'rxjs'
 
-const d = debug('ha:llm')
+const d = debug('b:llm')
 
 // Reserve tokens for model responses
 const MAX_ITERATIONS = 10 // Safety limit for iterations

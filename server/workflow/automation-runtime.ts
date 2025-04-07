@@ -19,6 +19,7 @@ import {
   of,
   share,
   switchMap,
+  tap,
   timer,
 } from 'rxjs'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
@@ -41,6 +42,7 @@ export interface AutomationRuntime {
   readonly db: Kysely<Schema>
 
   automationList: Automation[]
+  scheduledTriggers: TriggerHandler[]
 
   reparseAutomations: Observable<void>
   scannedAutomationDir: Observable<Automation[]>
@@ -51,6 +53,7 @@ export interface AutomationRuntime {
 
 export class LiveAutomationRuntime implements AutomationRuntime {
   automationList: Automation[]
+  scheduledTriggers: TriggerHandler[]
 
   reparseAutomations: Observable<void>
   scannedAutomationDir: Observable<Automation[]>
@@ -65,6 +68,8 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     private readonly automationDirectory?: string
   ) {
     this.automationList = []
+    this.scheduledTriggers = []
+
     this.reparseAutomations = this.automationDirectory
       ? merge(
           of(), // Start on initial subscribe
@@ -103,8 +108,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     )
 
     this.signalFired = defer(() => this.createdSignalsForForAutomations).pipe(
-      switchMap(() => from(this.observableForDatabaseSignals())),
-      switchMap((x) => x)
+      switchMap(() => from(this.handlersForDatabaseSignals())),
+      tap({ next: (x) => (this.scheduledTriggers = x) }),
+      switchMap((xs) => merge(...xs.map((x) => x.trigger)))
     )
 
     this.automationExecuted = defer(() => this.signalFired).pipe(
@@ -125,8 +131,8 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     return this.automationExecuted.subscribe()
   }
 
-  private async observableForDatabaseSignals() {
-    const observableList: Observable<SignalledAutomation>[] = []
+  private async handlersForDatabaseSignals(): Promise<TriggerHandler[]> {
+    const triggerHandlers: TriggerHandler[] = []
 
     d('Loading signals from database')
     const signals = await this.db.selectFrom('signals').selectAll().execute()
@@ -153,26 +159,15 @@ export class LiveAutomationRuntime implements AutomationRuntime {
       switch (signal.type) {
         case 'cron':
           d('Creating trigger for automation %s', signal.automationHash)
-
-          const data: CronTrigger = JSON.parse(signal.data)
-          const cron = parseCronExpression(data.cron)
-          observableList.push(
-            cronToObservable(cron).pipe(map(() => ({ signal, automation })))
-          )
+          triggerHandlers.push(new CronTriggerHandler(signal, automation))
           break
         case 'offset':
           d(
             'Creating relative time trigger for automation %s',
             signal.automationHash
           )
-
-          const relativeTimeData: RelativeTimeTrigger = JSON.parse(signal.data)
-          const offsetInSeconds = relativeTimeData.offsetInSeconds
-
-          observableList.push(
-            timer(offsetInSeconds * 1000).pipe(
-              map(() => ({ signal, automation }))
-            )
+          triggerHandlers.push(
+            new RelativeTimeTriggerHandler(signal, automation)
           )
           break
         case 'time':
@@ -180,37 +175,87 @@ export class LiveAutomationRuntime implements AutomationRuntime {
             'Creating absolute time trigger for automation %s',
             signal.automationHash
           )
-
-          const absoluteTimeData: AbsoluteTimeTrigger = JSON.parse(signal.data)
-          const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
-          const currentTime = Date.now()
-          const timeUntilTarget = targetTime - currentTime
-
-          // Only schedule if the time is in the future
-          if (timeUntilTarget > 0) {
-            observableList.push(
-              timer(timeUntilTarget).pipe(map(() => ({ signal, automation })))
-            )
-          } else {
-            d(
-              'Skipping past-due absolute time trigger: %s',
-              absoluteTimeData.iso8601Time
-            )
-          }
+          triggerHandlers.push(
+            new AbsoluteTimeTriggerHandler(signal, automation)
+          )
           break
       }
     }
 
-    return merge(...observableList)
+    return triggerHandlers
   }
 }
 
-function cronToObservable(cron: Cron): Observable<void> {
-  return new Observable<void>((subj) => {
-    const handle = scheduler.setInterval(cron, () => {
-      subj.next()
-    })
+interface TriggerHandler {
+  readonly signal: Signal
+  readonly automation: Automation
+  readonly trigger: Observable<SignalledAutomation>
+}
 
-    return () => scheduler.clearTimeoutOrInterval(handle)
-  }).pipe(share())
+class CronTriggerHandler implements TriggerHandler {
+  readonly trigger: Observable<SignalledAutomation>
+
+  constructor(
+    public readonly signal: Signal,
+    public readonly automation: Automation
+  ) {
+    const data: CronTrigger = JSON.parse(signal.data)
+    const cron = parseCronExpression(data.cron)
+    this.trigger = this.cronToObservable(cron).pipe(
+      map(() => ({ signal: this.signal, automation: this.automation }))
+    )
+  }
+
+  cronToObservable(cron: Cron): Observable<void> {
+    return new Observable<void>((subj) => {
+      const handle = scheduler.setInterval(cron, () => {
+        subj.next()
+      })
+
+      return () => scheduler.clearTimeoutOrInterval(handle)
+    }).pipe(share())
+  }
+}
+
+class RelativeTimeTriggerHandler implements TriggerHandler {
+  readonly trigger: Observable<SignalledAutomation>
+
+  constructor(
+    public readonly signal: Signal,
+    public readonly automation: Automation
+  ) {
+    const relativeTimeData: RelativeTimeTrigger = JSON.parse(signal.data)
+    const offsetInSeconds = relativeTimeData.offsetInSeconds
+
+    this.trigger = timer(offsetInSeconds * 1000).pipe(
+      map(() => ({ signal: this.signal, automation: this.automation }))
+    )
+  }
+}
+
+class AbsoluteTimeTriggerHandler implements TriggerHandler {
+  readonly trigger: Observable<SignalledAutomation>
+
+  constructor(
+    public readonly signal: Signal,
+    public readonly automation: Automation
+  ) {
+    const absoluteTimeData: AbsoluteTimeTrigger = JSON.parse(signal.data)
+    const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
+    const currentTime = Date.now()
+    const timeUntilTarget = targetTime - currentTime
+
+    // Only schedule if the time is in the future
+    if (timeUntilTarget > 0) {
+      this.trigger = timer(timeUntilTarget).pipe(
+        map(() => ({ signal: this.signal, automation: this.automation }))
+      )
+    } else {
+      d(
+        'Skipping past-due absolute time trigger: %s',
+        absoluteTimeData.iso8601Time
+      )
+      this.trigger = NEVER
+    }
+  }
 }

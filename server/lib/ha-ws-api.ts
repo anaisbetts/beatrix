@@ -9,7 +9,8 @@ import {
 } from 'home-assistant-js-websocket'
 import { LRUCache } from 'lru-cache'
 
-import { Observable, Subscription } from 'rxjs'
+import { filter, Observable, share, Subscription, SubscriptionLike } from 'rxjs'
+import { SerialSubscription } from '../../shared/serial-subscription'
 
 const d = debug('ha:ws')
 
@@ -46,10 +47,10 @@ const cache = new LRUCache<string, any>({
   ttlAutopurge: false,
 })
 
-export interface HomeAssistantApi {
+export interface HomeAssistantApi extends SubscriptionLike {
   fetchServices(): Promise<HassServices>
 
-  fetchStates(): Promise<HassState[]>
+  fetchStates(): Promise<Record<string, HassState>>
 
   eventsObservable(): Observable<HassEventBase>
 
@@ -65,14 +66,17 @@ export interface HomeAssistantApi {
   ): Promise<T | null>
 
   filterUncommonEntities(
-    entities: HassState[],
+    entities: Record<string, HassState>,
     options?: {
       includeUnavailable?: boolean
     }
-  ): HassState[]
+  ): Record<string, HassState>
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
+  private eventsSub = new SerialSubscription()
+  private services: Promise<Record<string, HassState>> | undefined
+
   constructor(
     private connection: Connection,
     private testMode: boolean = false
@@ -85,7 +89,10 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     )
 
     const connection = await createConnection({ auth })
-    return new LiveHomeAssistantApi(connection)
+    const ret = new LiveHomeAssistantApi(connection)
+    await ret.setupStateCache()
+
+    return ret
   }
 
   async fetchServices(): Promise<HassServices> {
@@ -101,33 +108,67 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     return ret
   }
 
-  async fetchStates(): Promise<HassState[]> {
-    if (cache.has('states')) {
-      return cache.get('states') as HassState[]
-    }
-
+  private async fetchFullState(): Promise<Record<string, HassState>> {
     const ret = await this.connection.sendMessagePromise<HassState[]>({
       type: 'get_states',
     })
 
     ret.forEach((x: any) => delete x.context)
-    cache.set('states', ret, { ttl: 1000 })
+    return ret.reduce(
+      (acc, x) => {
+        const entityId = x.entity_id
+        if (entityId) {
+          acc[entityId] = x
+        }
+        return acc
+      },
+      {} as Record<string, HassState>
+    )
+  }
+
+  private async setupStateCache() {
+    this.services = this.fetchFullState()
+
+    const state = await this.services
+    this.services = Promise.resolve(state)
+
+    this.eventsSub.current = this.eventsObservable()
+      .pipe(filter((x) => x.event_type === 'state_changed'))
+      .subscribe((ev) => {
+        const entityId = ev.data.entity_id
+        if (entityId) {
+          delete ev.data.new_state.context
+          state[entityId] = ev.data.new_state
+        }
+      })
+  }
+
+  fetchStates(): Promise<Record<string, HassState>> {
+    if (this.services) {
+      // NB: We do the Object.assign here so that callers get a stable snapshot
+      // rather than a constantly shifting live object
+      return this.services.then((x) => Object.assign({}, x))
+    }
+
+    const ret = (this.services = this.fetchFullState())
     return ret
   }
 
+  private eventsObs = new Observable<HassEvent>((subj) => {
+    const disp = new Subscription()
+
+    this.connection
+      .subscribeEvents<HassEvent>((ev) => subj.next(ev))
+      .then(
+        (unsub) => disp.add(() => void unsub()),
+        (err) => subj.error(err)
+      )
+
+    return disp
+  }).pipe(share())
+
   eventsObservable(): Observable<HassEvent> {
-    return new Observable((subj) => {
-      const disp = new Subscription()
-
-      this.connection
-        .subscribeEvents<HassEvent>((ev) => subj.next(ev))
-        .then(
-          (unsub) => disp.add(() => void unsub()),
-          (err) => subj.error(err)
-        )
-
-      return disp
-    })
+    return this.eventsObs
   }
 
   async sendNotification(
@@ -188,12 +229,20 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   }
 
   filterUncommonEntities(
-    entities: HassState[],
+    entities: Record<string, HassState>,
     options?: {
       includeUnavailable?: boolean
     }
-  ): HassState[] {
+  ): Record<string, HassState> {
     return filterUncommonEntitiesFromTime(entities, Date.now(), options)
+  }
+
+  unsubscribe(): void {
+    this.eventsSub.unsubscribe()
+  }
+
+  get closed() {
+    return this.eventsSub.closed
   }
 }
 
@@ -215,6 +264,41 @@ export async function extractNotifiers(svcs: HassServices) {
 function deviceTrackerNameToNotifyName(tracker: string) {
   // XXX: There is no nice way to do this and it sucks ass
   return `mobile_app_${tracker.replace('device_tracker.', '')}`
+}
+
+export async function fetchHAUserInformation(api: HomeAssistantApi) {
+  const states = await api.fetchStates()
+
+  const people = Object.keys(states).filter((state) =>
+    state.startsWith('person.')
+  )
+
+  d('people: %o', people)
+
+  const ret = people.reduce(
+    (acc, x) => {
+      const state = states[x]
+      const name =
+        (state.attributes.friendly_name as string) ??
+        state.entity_id.replace('person.', '')
+
+      const notifiers = (
+        (state.attributes.device_trackers as string[]) ?? []
+      ).map((t: string) => deviceTrackerNameToNotifyName(t))
+
+      acc[state.entity_id.replace('person.', '')] = {
+        name,
+        notifiers,
+        state: state.state,
+      }
+
+      return acc
+    },
+    {} as Record<string, HAPersonInformation>
+  )
+
+  d('ret: %o', ret)
+  return ret
 }
 
 const LOW_VALUE_REGEXES = [
@@ -252,60 +336,35 @@ const LOW_VALUE_REGEXES = [
   /_connectivity/,
 ]
 
-export async function fetchHAUserInformation(api: HomeAssistantApi) {
-  const states = await api.fetchStates()
-
-  const people = states.filter((state) => state.entity_id.startsWith('person.'))
-  d('people: %o', people)
-
-  const ret = people.reduce(
-    (acc, x) => {
-      const name =
-        (x.attributes.friendly_name as string) ??
-        x.entity_id.replace('person.', '')
-
-      const notifiers = ((x.attributes.device_trackers as string[]) ?? []).map(
-        (t: string) => deviceTrackerNameToNotifyName(t)
-      )
-
-      acc[x.entity_id.replace('person.', '')] = {
-        name,
-        notifiers,
-        state: x.state,
-      }
-
-      return acc
-    },
-    {} as Record<string, HAPersonInformation>
-  )
-
-  d('ret: %o', ret)
-  return ret
-}
-
 export function filterUncommonEntitiesFromTime(
-  entities: HassState[],
+  entities: Record<string, HassState>,
   currentTime: number,
   options: {
     includeUnavailable?: boolean
   } = {}
-): HassState[] {
+): Record<string, HassState> {
   // Default options
   const { includeUnavailable = false } = options
   // Combine domain and pattern filters into a single array of RegExp objects
 
   // Step 1: Filter out unavailable/unknown entities if configured
   let filtered = includeUnavailable
-    ? entities
-    : entities.filter(
+    ? Object.keys(entities)
+    : Object.keys(entities).filter(
         (e) =>
-          e.state !== 'unavailable' &&
-          e.state !== 'unknown' &&
-          changedRecently(new Date(e.last_changed), 10 * 24, currentTime)
+          entities[e].state !== 'unavailable' &&
+          entities[e].state !== 'unknown' &&
+          changedRecently(
+            new Date(entities[e].last_changed),
+            10 * 24,
+            currentTime
+          )
       )
 
-  return filtered.filter(
-    (x) => !LOW_VALUE_REGEXES.find((re) => re.test(x.entity_id))
+  return Object.fromEntries(
+    filtered
+      .filter((x) => !LOW_VALUE_REGEXES.find((re) => re.test(x)))
+      .map((k) => [k, entities[k]])
   )
 }
 

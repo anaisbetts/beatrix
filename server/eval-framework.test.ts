@@ -4,13 +4,18 @@ import { NEVER } from 'rxjs'
 import mockServices from '../mocks/services.json'
 import mockStates from '../mocks/states.json'
 import { HassServices } from 'home-assistant-js-websocket'
-import { CallServiceOptions } from './lib/ha-ws-api'
+import { CallServiceOptions, HassState } from './lib/ha-ws-api'
 
 // Create mock notifiers for testing
 const mockNotifiers = [
   { name: 'valid_target', friendly_name: 'Valid Target' },
   { name: 'mobile_app_phone', friendly_name: 'Mobile App Phone' },
 ]
+
+const mockStatesArr = mockStates as unknown as HassState[]
+const mockStatesDict = Object.fromEntries(
+  mockStatesArr.map((x) => [x.entity_id, x])
+)
 
 // Mock the extractNotifiers function
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -45,15 +50,14 @@ describe('EvalHomeAssistantApi', () => {
     it('should return mock states', async () => {
       const states = await api.fetchStates()
 
-      // Verify it returns the mock states
-      expect(states).toEqual(mockStates)
-
-      // Verify it's an array
-      expect(Array.isArray(states)).toBe(true)
+      // Verify it returns the mock states dictionary
+      expect(states).toEqual(mockStatesDict)
+      expect(typeof states).toBe('object')
 
       // Verify states have the expected structure
-      if (states.length > 0) {
-        const firstState = states[0]
+      const stateKeys = Object.keys(states)
+      if (stateKeys.length > 0) {
+        const firstState = states[stateKeys[0]]
         expect(firstState).toHaveProperty('entity_id')
         expect(firstState).toHaveProperty('state')
         expect(firstState).toHaveProperty('attributes')

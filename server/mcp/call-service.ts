@@ -135,14 +135,11 @@ export function createCallServiceServer(
         }
 
         const states = await runtime.api.fetchStates()
-        const needles = Object.fromEntries(entityIds.map((k) => [k, true]))
-        const stateInfo = states.reduce(
-          (acc, x) => {
-            if (!needles[x.entity_id]) return acc
-
-            acc[x.entity_id] = {
-              state: x.state,
-              attributes: x.attributes,
+        const stateInfo = entityIds.reduce(
+          (acc, id) => {
+            acc[id] = {
+              state: states[id].state,
+              attributes: states[id].attributes,
             }
 
             return acc

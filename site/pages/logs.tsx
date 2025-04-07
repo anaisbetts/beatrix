@@ -183,7 +183,7 @@ function SignalInfo({ signal }: { signal: Trigger | null }) {
       return (
         <div className="text-muted-foreground ml-8 text-sm">
           <span className="font-semibold">Time Offset:</span>{' '}
-          {signal.offsetInSeconds}s{signal.repeatForever ? ' (repeats)' : ''}
+          {signal.offsetInSeconds}s
         </div>
       )
     case 'time':

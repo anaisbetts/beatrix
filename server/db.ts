@@ -10,6 +10,8 @@ import {
   CallServiceLogEntry,
   CronTrigger,
   StateRegexTrigger,
+  RelativeTimeTrigger,
+  AbsoluteTimeTrigger,
 } from '../shared/types'
 import { repoRootDir } from './utils'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
@@ -150,6 +152,18 @@ export async function fetchAutomationLogs(
               entityIds: signalData.entityIds,
               regex: signalData.regex,
             } as StateRegexTrigger
+            break
+          case 'offset':
+            signaledBy = {
+              type: 'offset',
+              offsetInSeconds: signalData.offsetInSeconds,
+            } as RelativeTimeTrigger
+            break
+          case 'time':
+            signaledBy = {
+              type: 'time',
+              iso8601Time: signalData.iso8601Time,
+            } as AbsoluteTimeTrigger
             break
           case 'event':
             // Handle event case if needed in the future

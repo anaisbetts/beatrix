@@ -30,7 +30,14 @@ import {
   notifyEveryoneEval,
   notifySpecificDeviceEval,
 } from './evals/notify'
-import { simplestSchedulerEval } from './evals/scheduling'
+import {
+  simplestSchedulerEval,
+  evalAbsoluteTimePrompts,
+  evalCronPrompts,
+  evalMixedPrompts,
+  evalRelativeTimePrompts,
+  evalStateRegexPrompts,
+} from './evals/scheduling'
 
 async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
   for (const generator of generators) {
@@ -76,6 +83,11 @@ export function runAllEvals(llm: LargeLanguageProvider) {
 
     // Scheduler evals
     simplestSchedulerEval(llm),
+    evalAbsoluteTimePrompts(llm),
+    evalCronPrompts(llm),
+    evalMixedPrompts(llm),
+    evalRelativeTimePrompts(llm),
+    evalStateRegexPrompts(llm),
   ])
 }
 

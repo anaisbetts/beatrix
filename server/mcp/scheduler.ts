@@ -197,25 +197,17 @@ export function createSchedulerServer(
         .describe(
           'The time offset in seconds after which the trigger will fire'
         ),
-      repeat_forever: z
-        .boolean()
-        .describe(
-          'If true, the trigger will repeat indefinitely at the specified interval'
-        )
-        .default(false),
     },
-    async ({ offset_in_seconds, repeat_forever }) => {
+    async ({ offset_in_seconds }) => {
       d(
-        'creating relative time trigger for automation hash: %s, offset: %d seconds, repeat: %s',
+        'creating relative time trigger for automation hash: %s, offset: %d seconds',
         automationHash,
-        offset_in_seconds,
-        repeat_forever
+        offset_in_seconds
       )
       try {
         const data: RelativeTimeTrigger = {
           type: 'offset',
           offsetInSeconds: offset_in_seconds,
-          repeatForever: repeat_forever,
         }
 
         await db

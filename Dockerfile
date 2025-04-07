@@ -43,7 +43,7 @@ EXPOSE ${PORT}
 CMD if [ "$(uname -m)" = "x86_64" ]; then \
     /dist/beatrix-server-linux-x64 serve -n ${NOTEBOOK_DIR}; \
     elif [ "$(uname -m)" = "aarch64" ]; then \
-    /dist/beatrix-server-linux-arm64 -n ${NOTEBOOK_DIR}; \
+    /dist/beatrix-server-linux-arm64 serve -n ${NOTEBOOK_DIR}; \
     else \
     echo "Unsupported architecture: $(uname -m)"; \
     exit 1; \

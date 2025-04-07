@@ -65,7 +65,7 @@ async function serveCommand(options: {
     subj
   )
 
-  const isProdMode = await exists(path.join(repoRootDir(), 'assets'))
+  const isProdMode = await exists(path.join(repoRootDir(), 'public'))
   if (isProdMode) {
     console.log('Running in Production Mode')
   } else {

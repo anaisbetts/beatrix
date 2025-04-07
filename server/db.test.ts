@@ -1,8 +1,9 @@
-import { promises as fs } from 'fs'
-import { createDatabase } from './db'
-import { describe, expect, it } from 'bun:test'
 import { asyncMap } from '@anaisbetts/commands'
-import { NewSignal, NewAutomationLog } from './db-schema'
+import { describe, expect, it } from 'bun:test'
+import { promises as fs } from 'fs'
+
+import { createDatabase } from './db'
+import { NewAutomationLog, NewSignal } from './db-schema'
 
 async function tryUnlink(file: string) {
   try {

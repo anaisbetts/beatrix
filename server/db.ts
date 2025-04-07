@@ -1,20 +1,21 @@
-import * as path from 'node:path'
+import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import debug from 'debug'
 import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
-import debug from 'debug'
-import { Schema } from './db-schema'
-import { migrator } from './migrations/this-sucks'
+import * as path from 'node:path'
+
 import {
+  AbsoluteTimeTrigger,
   Automation,
   AutomationLogEntry,
   CallServiceLogEntry,
   CronTrigger,
-  StateRegexTrigger,
   RelativeTimeTrigger,
-  AbsoluteTimeTrigger,
+  StateRegexTrigger,
 } from '../shared/types'
+import { Schema } from './db-schema'
+import { migrator } from './migrations/this-sucks'
 import { repoRootDir } from './utils'
-import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 const d = debug('b:db')
 

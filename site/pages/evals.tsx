@@ -1,7 +1,10 @@
-import { useState, useRef, useCallback, useMemo } from 'react'
+import { useCommand, usePromise } from '@anaisbetts/commands'
+import { Beaker, Play } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { firstValueFrom, share, toArray } from 'rxjs'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useCommand, usePromise } from '@anaisbetts/commands'
 import {
   Select,
   SelectContent,
@@ -9,14 +12,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Beaker, Play } from 'lucide-react'
-import { useWebSocket } from '../components/ws-provider'
-import { firstValueFrom, share, toArray } from 'rxjs'
+
 import {
-  ScenarioResult,
   GradeResult,
   ModelDriverType,
+  ScenarioResult,
 } from '../../shared/types'
+import { useWebSocket } from '../components/ws-provider'
 
 export default function Evals() {
   const [model, setModel] = useState('')

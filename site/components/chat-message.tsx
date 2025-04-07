@@ -1,17 +1,19 @@
-import { cx } from '@/lib/utils'
 import {
-  MessageParam,
   ContentBlockParam,
+  MessageParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
+  CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { ChevronDown } from 'lucide-react'
 import { JSX, useState } from 'react'
-import { Button } from './ui/button'
 import { Remark } from 'react-remark'
+
+import { cx } from '@/lib/utils'
+
+import { Button } from './ui/button'
 
 export function ChatMessage({
   msg,

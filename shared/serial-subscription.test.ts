@@ -1,5 +1,6 @@
-import { describe, it, spyOn, expect } from 'bun:test'
+import { describe, expect, it, spyOn } from 'bun:test'
 import { Subscription } from 'rxjs'
+
 import { SerialSubscription } from './serial-subscription'
 
 describe('SerialSubscription', () => {

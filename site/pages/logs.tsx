@@ -1,17 +1,15 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Search, ChevronDown, ChevronRight, RotateCw } from 'lucide-react'
 import { useCommand } from '@anaisbetts/commands'
-import { useWebSocket } from '../components/ws-provider'
+import { ChevronDown, ChevronRight, RotateCw, Search } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
+import { Button } from '@/components/ui/button'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -21,9 +19,9 @@ import {
 } from '@/components/ui/select'
 
 import { AutomationLogEntry, Trigger } from '../../shared/types'
-
-import { Badge } from '../components/ui/badge'
 import { ChatMessage } from '../components/chat-message'
+import { Badge } from '../components/ui/badge'
+import { useWebSocket } from '../components/ws-provider'
 
 export default function Logs() {
   const [searchText, setSearchText] = useState('')

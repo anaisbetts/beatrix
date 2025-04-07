@@ -1,14 +1,15 @@
-import {
-  createDirectoryMonitor,
-  createBufferedDirectoryMonitor,
-} from './directory-monitor'
-import { mkdtemp, writeFile, mkdir, rm } from 'fs/promises'
-import { join } from 'path'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
+import { join } from 'path'
 import { firstValueFrom } from 'rxjs'
 import { take, timeout } from 'rxjs/operators'
+
+import {
+  createBufferedDirectoryMonitor,
+  createDirectoryMonitor,
+} from './directory-monitor'
 import { delay } from './promise-extras'
-import { describe, beforeEach, afterEach, it, expect } from 'bun:test'
 
 describe('DirectoryMonitor', () => {
   let tempDir: string

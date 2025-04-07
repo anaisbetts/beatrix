@@ -1,12 +1,13 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import pkg from '../../package.json'
-import { z } from 'zod'
-import debug from 'debug'
-import { createCallServiceServer } from './call-service'
-import { messagesToString } from '../../shared/prompt'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import debug from 'debug'
 import { firstValueFrom, toArray } from 'rxjs'
+import { z } from 'zod'
+
+import pkg from '../../package.json'
+import { messagesToString } from '../../shared/prompt'
 import { AutomationRuntime } from '../workflow/automation-runtime'
+import { createCallServiceServer } from './call-service'
 
 const d = debug('b:home-assistant')
 

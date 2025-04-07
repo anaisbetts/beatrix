@@ -1,6 +1,10 @@
+import { Beaker, MessageSquare, Scroll } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+
 import Chat from '@/pages/chat'
 import Evals from '@/pages/evals'
 import Logs from '@/pages/logs'
+
 import {
   Sidebar,
   SidebarContent,
@@ -14,9 +18,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from './components/ui/sidebar'
-import { MessageSquare, Beaker, Scroll } from 'lucide-react'
 import { useIsMobile } from './hooks/use-mobile'
-import { useCallback, useMemo, useState } from 'react'
 
 interface AppSidebarProps {
   onPageClicked: (page: string) => unknown

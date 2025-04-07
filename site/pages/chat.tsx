@@ -1,11 +1,11 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Send } from 'lucide-react'
 import { useCommand, usePromise } from '@anaisbetts/commands'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import { useWebSocket } from '../components/ws-provider'
+import { Send } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { firstValueFrom, share, toArray } from 'rxjs'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -13,8 +13,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+
 import { ModelDriverType } from '../../shared/types'
 import { ChatMessage } from '../components/chat-message'
+import { useWebSocket } from '../components/ws-provider'
 
 export default function Chat() {
   const [input, setInput] = useState('')

@@ -1,5 +1,6 @@
-import { spawnPromise } from 'spawn-rx'
 import path from 'path'
+import { spawnPromise } from 'spawn-rx'
+
 import { asyncMap } from '../server/lib/promise-extras'
 
 const archNames = {

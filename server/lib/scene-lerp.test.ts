@@ -1,4 +1,5 @@
-import { lerpEntity, lerpScene } from './scene-lerp'
+import { describe, expect, it } from 'bun:test'
+
 import {
   onOffTestFrom,
   onOffTestTo,
@@ -7,7 +8,7 @@ import {
   testOneSceneTo,
   testOneTo,
 } from './mocks'
-import { describe, expect, it } from 'bun:test'
+import { lerpEntity, lerpScene } from './scene-lerp'
 
 describe('lerp-entity', () => {
   it('Can interpolate between two lights that are on', () => {

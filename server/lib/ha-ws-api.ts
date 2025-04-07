@@ -1,15 +1,15 @@
 import debug from 'debug'
 import {
-  createLongLivedTokenAuth,
-  createConnection,
   Connection,
+  HassEvent,
   HassEventBase,
   HassServices,
-  HassEvent,
+  createConnection,
+  createLongLivedTokenAuth,
 } from 'home-assistant-js-websocket'
 import { LRUCache } from 'lru-cache'
+import { Observable, Subscription, SubscriptionLike, filter, share } from 'rxjs'
 
-import { filter, Observable, share, Subscription, SubscriptionLike } from 'rxjs'
 import { SerialSubscription } from '../../shared/serial-subscription'
 
 const d = debug('b:ws')

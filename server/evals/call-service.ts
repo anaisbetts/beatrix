@@ -5,7 +5,7 @@ import {
   gradeViaSearchForContent,
   runScenario,
 } from '../eval-framework'
-import { createBuiltinServers, LargeLanguageProvider } from '../llm'
+import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 // Basic service listing evaluation
 export async function* listServicesEval(llm: LargeLanguageProvider) {

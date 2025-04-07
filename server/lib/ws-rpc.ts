@@ -1,16 +1,17 @@
+import debug from 'debug'
 import {
+  Observable,
   catchError,
   concat,
   concatMap,
   defer,
   from,
   mergeMap,
-  Observable,
   throwError,
 } from 'rxjs'
+
 import { getAllProperties } from '../../shared/utility'
-import debug from 'debug'
-import { ServerMessage, IpcRequest, IpcResponse } from '../../shared/ws-rpc'
+import { IpcRequest, IpcResponse, ServerMessage } from '../../shared/ws-rpc'
 
 const d = debug('b:ws')
 

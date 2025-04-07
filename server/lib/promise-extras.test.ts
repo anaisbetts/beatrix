@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { withTimeout } from './promise-extras'
 import { firstValueFrom, timer } from 'rxjs'
+
+import { withTimeout } from './promise-extras'
 
 async function waitThenThrow() {
   await firstValueFrom(timer(1000))

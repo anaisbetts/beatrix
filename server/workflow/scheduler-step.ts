@@ -1,9 +1,10 @@
-import { Automation } from '../../shared/types'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import debug from 'debug'
+import { lastValueFrom, toArray } from 'rxjs'
+
+import { Automation } from '../../shared/types'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
-import { lastValueFrom, toArray } from 'rxjs'
-import debug from 'debug'
 import { AutomationRuntime } from './automation-runtime'
 
 const d = debug('b:scheduler')

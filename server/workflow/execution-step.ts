@@ -2,6 +2,9 @@ import { createBuiltinServers } from '../llm'
 import { Automation } from '../../shared/types'
 import { lastValueFrom, toArray } from 'rxjs'
 import { AutomationRuntime } from './automation-runtime'
+import debug from 'debug'
+
+const d = debug('b:execution-step')
 
 export async function runExecutionForAutomation(
   runtime: AutomationRuntime,
@@ -15,10 +18,18 @@ export async function runExecutionForAutomation(
     .executeTakeFirst()
 
   if (!signal) {
+    d('Signal not found: %d', signalId)
     throw new Error('Signal not found')
   }
 
+  d(
+    'Starting execution for automation: %s, signal: %o',
+    automation.fileName,
+    signal
+  )
+
   const tools = createBuiltinServers(runtime)
+
   const msgs = await lastValueFrom(
     runtime.llm
       .executePromptWithTools(
@@ -36,6 +47,8 @@ export async function runExecutionForAutomation(
       messageLog: JSON.stringify(msgs),
     })
     .execute()
+
+  d('Execution completed for automation: %s - %o', automation.fileName, msgs)
 }
 
 const prompt = (

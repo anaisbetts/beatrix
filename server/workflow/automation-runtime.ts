@@ -307,4 +307,6 @@ export function getMemoryFile(runtime: AutomationRuntime) {
   if (!existsSync(ret)) {
     writeFileSync(ret, '', 'utf-8')
   }
+
+  return ret
 }

@@ -1,11 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import fs from 'node:fs/promises'
 import { lastValueFrom, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
 import { i } from '../logging'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
-import { AutomationRuntime } from './automation-runtime'
+import { AutomationRuntime, getMemoryFile } from './automation-runtime'
 
 export async function rescheduleAutomations(
   runtime: AutomationRuntime,
@@ -39,9 +40,13 @@ export async function runSchedulerForAutomation(
 ) {
   const tools = createDefaultSchedulerTools(runtime, automation)
 
+  const memory = await fs.readFile(getMemoryFile(runtime), 'utf-8')
   const msgs = await lastValueFrom(
     runtime.llm
-      .executePromptWithTools(schedulerPrompt(automation.contents), tools)
+      .executePromptWithTools(
+        schedulerPrompt(automation.contents, memory),
+        tools
+      )
       .pipe(toArray())
   )
 
@@ -65,7 +70,7 @@ export function createDefaultSchedulerTools(
   ]
 }
 
-export const schedulerPrompt = (automation: string) => `
+export const schedulerPrompt = (automation: string, memory: string) => `
 <task>
 You are an automation scheduling assistant for Home Assistant. Your job is to analyze the current automation instructions and determine the appropriate scheduling actions needed.
 
@@ -77,6 +82,10 @@ ${automation}
 </automation_instructions>
 
 <current_date_time>${new Date().toISOString()}</current_date_time>
+
+<saved_memory>
+${memory}
+</saved_memory>
 
 <instructions>
 Please follow these steps:

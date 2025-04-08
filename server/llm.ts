@@ -13,7 +13,7 @@ import { createNotifyServer } from './mcp/notify'
 import { createSchedulerServer } from './mcp/scheduler'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
-import { AutomationRuntime } from './workflow/automation-runtime'
+import { AutomationRuntime, getMemoryFile } from './workflow/automation-runtime'
 
 export interface LargeLanguageProvider {
   executePromptWithTools(
@@ -65,7 +65,7 @@ export function createBuiltinServers(
   }
 
   if (runtime.notebookDirectory) {
-    ret.push(createMemoryServer(runtime.notebookDirectory))
+    ret.push(createMemoryServer(getMemoryFile(runtime)))
   }
 
   return ret

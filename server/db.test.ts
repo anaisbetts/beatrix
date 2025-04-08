@@ -39,6 +39,7 @@ describe('database', () => {
         automationHash: 'test-hash-123',
         type: 'state', // From second migration
         data: '{"state": "on"}', // From second migration
+        isDead: false,
       }
 
       const insertedSignalResult = await db

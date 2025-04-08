@@ -64,6 +64,7 @@ export function createSchedulerServer(
             automationHash,
             type: 'state',
             data: JSON.stringify(data),
+            isDead: false,
           })
           .execute()
 
@@ -109,6 +110,7 @@ export function createSchedulerServer(
             automationHash,
             type: 'cron',
             data: JSON.stringify(data),
+            isDead: false,
           })
           .execute()
 
@@ -216,6 +218,7 @@ export function createSchedulerServer(
             automationHash,
             type: 'offset',
             data: JSON.stringify(data),
+            isDead: false,
           })
           .execute()
 
@@ -253,6 +256,7 @@ export function createSchedulerServer(
         const values = times.map((iso8601Time) => ({
           automationHash,
           type: 'time',
+          isDead: false,
           data: JSON.stringify({
             type: 'time',
             iso8601Time,

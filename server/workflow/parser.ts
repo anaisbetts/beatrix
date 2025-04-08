@@ -4,7 +4,6 @@ import * as path from 'path'
 import { firstValueFrom, from, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
-// Import i
 import { i } from '../logging'
 
 export async function* parseAutomations(

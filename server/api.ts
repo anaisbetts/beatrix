@@ -107,7 +107,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       this.runtime.db
     )
 
-    const tools = createBuiltinServers(rqRuntime, {
+    const tools = createBuiltinServers(rqRuntime, null, {
       testMode: this.testMode || this.evalMode,
     })
 

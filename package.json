@@ -9,7 +9,7 @@
     "build:server": "bun run ./scripts/build-server.ts",
     "build:vite": "vite build",
     "dev": "concurrently \"bun dev:server\" \"bun dev:vite\"",
-    "dev:debug": "concurrently \"DEBUG='*' bun dev:server\" \"bun dev:vite\"",
+    "dev:debug": "concurrently \"DEBUG='b:*' bun dev:server\" \"bun dev:vite\"",
     "dev:eval-mode": "concurrently \"bun dev:server -e\" \"bun dev:vite\"",
     "dev:test-mode": "concurrently \"bun dev:server -t\" \"bun dev:vite\"",
     "dev:server": "mkdir -p ./notebook && bun run ./server/index.ts serve -n ./notebook",

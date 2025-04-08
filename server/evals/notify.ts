@@ -13,7 +13,7 @@ export async function* listNotifyTargetsEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'What are all the possible notification targets in my Home Assistant setup?',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'List notification targets',
     [
       failureGrader(),
@@ -31,7 +31,7 @@ export async function* listPeopleEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Which people in my Home Assistant setup can receive notifications?',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'List people for notifications',
     [
       failureGrader(),
@@ -49,7 +49,7 @@ export async function* notifyPersonEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Send a notification to Ani saying "Dinner is ready!"',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Notify specific person',
     [
       failureGrader(),
@@ -71,7 +71,7 @@ export async function* notifyWithTitleEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Send a notification to Ulrike with the title "Urgent" and the message "Please call me back."',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Notify with title',
     [
       failureGrader(),
@@ -89,7 +89,7 @@ export async function* notifyMultiplePeopleEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Let both Ani and Effie know that "The movie is starting in 5 minutes."',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Notify multiple people',
     [
       failureGrader(),
@@ -107,7 +107,7 @@ export async function* notifyEveryoneEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Send a notification to everyone in the house saying "Fire alarm test in 10 minutes."',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Notify everyone',
     [
       failureGrader(),
@@ -125,7 +125,7 @@ export async function* notifySpecificDeviceEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Send a notification specifically to Ani\'s its an flippi saying "Don\'t forget to bring your charger."',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Notify specific device',
     [
       failureGrader(),

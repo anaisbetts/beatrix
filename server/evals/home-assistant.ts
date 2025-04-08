@@ -13,7 +13,7 @@ export async function* listEntitiesEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'List all the light entities in the living room. Give me their friendly names only.',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Entity listing',
     [
       failureGrader(),
@@ -35,7 +35,7 @@ export async function* bulkLightOperationsEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Turn off all the lights in the kitchen.',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Bulk light operations',
     [
       failureGrader(),
@@ -56,7 +56,7 @@ export async function* multiEntityStatusEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Tell me about all the lights and media players that are currently on.',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Multi-entity status checking',
     [
       failureGrader(),
@@ -79,7 +79,7 @@ export async function* climateControlEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     "Set all thermostats to 72 degrees and make sure they're in heat mode.",
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Climate control operations',
     [
       failureGrader(),
@@ -101,7 +101,7 @@ export async function* sceneActivationEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Activate the night mode opening scene.',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Scene activation',
     [
       failureGrader(),
@@ -119,7 +119,7 @@ export async function* entityAttributeQueryEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'What is the current temperature and humidity in each room?',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Entity attribute querying',
     [
       failureGrader(),
@@ -137,7 +137,7 @@ export async function* complexAutomationEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     "I'm leaving the house. Turn off all lights and make sure all media players are off.",
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Complex multi-step automation',
     [
       failureGrader(),

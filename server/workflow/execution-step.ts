@@ -29,7 +29,7 @@ export async function runExecutionForAutomation(
     signal
   )
 
-  const tools = createBuiltinServers(runtime)
+  const tools = createBuiltinServers(runtime, automation)
 
   const msgs = await lastValueFrom(
     runtime.llm

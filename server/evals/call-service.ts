@@ -13,7 +13,7 @@ export async function* listServicesEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'What services are available for my living room lights?',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'List services for entity',
     [
       failureGrader(),
@@ -31,7 +31,7 @@ export async function* lightControlEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Turn on the kitchen chandelier light',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Basic light control',
     [
       failureGrader(),
@@ -48,7 +48,7 @@ export async function* lightBrightnessEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Set the brightness of the living room lights to 50%',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Light brightness control',
     [
       failureGrader(),
@@ -66,7 +66,7 @@ export async function* lightColorEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Make the bedroom lights blue',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Light color control',
     [
       failureGrader(),
@@ -84,7 +84,7 @@ export async function* multipleEntityControlEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Turn off all the lights in the living room and kitchen',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Multiple entity control',
     [
       failureGrader(),
@@ -102,7 +102,7 @@ export async function* mediaPlayerControlEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Pause the TV in the living room',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Media player control',
     [
       failureGrader(),
@@ -122,7 +122,7 @@ export async function* climateControlTemperatureEval(
   yield await runScenario(
     llm,
     'Set the thermostat in the bedroom to 72 degrees',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Climate temperature control',
     [
       failureGrader(),
@@ -140,7 +140,7 @@ export async function* climateControlModeEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'Switch the living room thermostat to heat mode',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Climate mode control',
     [
       failureGrader(),

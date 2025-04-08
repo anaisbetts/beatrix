@@ -29,12 +29,17 @@ export async function runExecutionForAutomation(
     signal
   )
 
-  const tools = createBuiltinServers(runtime)
+  const tools = createBuiltinServers(runtime, automation)
 
   const msgs = await lastValueFrom(
     runtime.llm
       .executePromptWithTools(
-        prompt(signal.type, signal.data, automation.contents),
+        prompt(
+          signal.type,
+          signal.data,
+          automation.contents,
+          signal.executionNotes ?? ''
+        ),
         tools
       )
       .pipe(toArray())
@@ -57,7 +62,8 @@ export async function runExecutionForAutomation(
 const prompt = (
   triggerType: string,
   triggerInfo: string,
-  automation: string
+  automation: string,
+  executionNotes: string
 ) => `
 <task>
 You are an AI automation executor for Home Assistant. Your job is to execute appropriate actions based on the automation instructions when triggered. You have full context of the home environment and can make intelligent decisions about how to respond to events.
@@ -73,6 +79,10 @@ You are an AI automation executor for Home Assistant. Your job is to execute app
 ${automation}
 </automation>
 
+<execution_notes>
+${executionNotes}
+</execution_notes>
+
 <instructions>
 Follow these steps to execute this automation intelligently:
 
@@ -87,6 +97,7 @@ Follow these steps to execute this automation intelligently:
    - Historical patterns
    - User preferences mentioned in the instructions
    - Safety and comfort priorities
+   - Execution notes passed in
 
 3. If action is needed:
    - Decide which Home Assistant services to call
@@ -96,6 +107,8 @@ Follow these steps to execute this automation intelligently:
    - Ensure all safety conditions are met
 
 4. Explain your reasoning and actions clearly
+
+5. If difficulties were encountered and it would be useful for future executions, use the save-observation tool to save observations or discoveries.
 </instructions>
 
 Based on the above information, please determine if this automation should take action right now, and if so, what actions to take. Think step by step about the context of the trigger, the current state of the home, and the intent of the automation.

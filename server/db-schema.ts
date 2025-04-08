@@ -23,6 +23,7 @@ export interface SignalTable {
   automationHash: string
   type: string
   data: string
+  executionNotes: string
   isDead: boolean
 }
 

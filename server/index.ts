@@ -54,7 +54,7 @@ async function serveCommand(options: {
     conn,
     createDefaultLLMProvider(),
     db,
-    path.resolve(options.notebook, 'automations')
+    path.resolve(options.notebook)
   )
 
   console.log(
@@ -117,7 +117,10 @@ async function mcpCommand(options: { testMode: boolean }) {
   )
 
   const megaServer = new McpServer({ name: 'beatrix', version: pkg.version })
-  createBuiltinServers(runtime, { testMode: options.testMode, megaServer })
+  createBuiltinServers(runtime, null, {
+    testMode: options.testMode,
+    megaServer,
+  })
   await megaServer.server.connect(new StdioServerTransport())
 }
 

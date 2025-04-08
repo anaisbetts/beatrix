@@ -5,12 +5,15 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Observable } from 'rxjs'
 
+import { Automation } from '../shared/types'
 import { AnthropicLargeLanguageProvider } from './anthropic'
 import { createHomeAssistantServer } from './mcp/home-assistant'
+import { createMemoryServer } from './mcp/memory'
 import { createNotifyServer } from './mcp/notify'
+import { createSchedulerServer } from './mcp/scheduler'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
-import { AutomationRuntime } from './workflow/automation-runtime'
+import { AutomationRuntime, getMemoryFile } from './workflow/automation-runtime'
 
 export interface LargeLanguageProvider {
   executePromptWithTools(
@@ -45,17 +48,27 @@ export function createDefaultLLMProvider() {
 
 export function createBuiltinServers(
   runtime: AutomationRuntime,
+  automationForScheduling: Automation | null,
   opts?: { testMode?: boolean; megaServer?: McpServer }
 ) {
   const { testMode, megaServer } = opts ?? {}
-
-  return [
+  const ret = [
     createNotifyServer(runtime.api, megaServer),
     createHomeAssistantServer(runtime, {
       testMode: testMode ?? false,
       megaServer: megaServer,
     }),
   ]
+
+  if (automationForScheduling) {
+    ret.push(createSchedulerServer(runtime.db, automationForScheduling.hash))
+  }
+
+  if (runtime.notebookDirectory) {
+    ret.push(createMemoryServer(getMemoryFile(runtime)))
+  }
+
+  return ret
 }
 
 export function connectServersToClient(client: Client, servers: Server[]) {

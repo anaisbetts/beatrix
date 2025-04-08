@@ -85,7 +85,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
         // Make the filenames relative to the automation dir when returning them
         ret.automation.fileName = ret.automation.fileName.replace(
-          `${this.runtime.automationDirectory}${path.sep}`,
+          `${this.runtime.notebookDirectory}${path.sep}`,
           ''
         )
 
@@ -107,7 +107,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       this.runtime.db
     )
 
-    const tools = createBuiltinServers(rqRuntime, {
+    const tools = createBuiltinServers(rqRuntime, null, {
       testMode: this.testMode || this.evalMode,
     })
 

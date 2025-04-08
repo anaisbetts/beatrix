@@ -1,12 +1,11 @@
-import { Cron, parseCronExpression } from 'cron-schedule'
-import { TimerBasedCronScheduler as scheduler } from 'cron-schedule/schedulers/timer-based.js'
 import debug from 'debug'
 import { Kysely } from 'kysely'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import {
   NEVER,
   Observable,
   defer,
-  filter,
   from,
   map,
   merge,
@@ -14,33 +13,28 @@ import {
   startWith,
   switchMap,
   tap,
-  timer,
 } from 'rxjs'
 
-import {
-  AbsoluteTimeSignal,
-  Automation,
-  CronSignal,
-  RelativeTimeSignal,
-  SignalHandlerInfo,
-  StateRegexSignal,
-} from '../../shared/types'
+import { Automation } from '../../shared/types'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
-import {
-  HassState,
-  HomeAssistantApi,
-  observeStatesForEntities,
-} from '../lib/ha-ws-api'
+import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { LargeLanguageProvider } from '../llm'
 import { e, i } from '../logging'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
 import { rescheduleAutomations } from './scheduler-step'
+import {
+  AbsoluteTimeSignalHandler,
+  CronSignalHandler,
+  RelativeTimeSignalHandler,
+  SignalHandler,
+  StateRegexSignalHandler,
+} from './signal-handlers'
 
-const d = debug('b:automation')
+export const d = debug('b:automation')
 
-interface SignalledAutomation {
+export interface SignalledAutomation {
   signal: Signal
   automation: Automation
 }
@@ -49,7 +43,7 @@ export interface AutomationRuntime {
   readonly api: HomeAssistantApi
   readonly llm: LargeLanguageProvider
   readonly db: Kysely<Schema>
-  readonly automationDirectory: string | undefined
+  readonly notebookDirectory: string | undefined
 
   automationList: Automation[]
   scheduledSignals: SignalHandler[]
@@ -64,7 +58,7 @@ export interface AutomationRuntime {
 export class LiveAutomationRuntime implements AutomationRuntime {
   automationList: Automation[]
   scheduledSignals: SignalHandler[]
-  automationDirectory: string | undefined
+  notebookDirectory: string | undefined
 
   reparseAutomations: Observable<void>
   scannedAutomationDir: Observable<Automation[]>
@@ -76,24 +70,24 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     readonly api: HomeAssistantApi,
     readonly llm: LargeLanguageProvider,
     readonly db: Kysely<Schema>,
-    automationDirectory?: string
+    notebookDirectory?: string
   ) {
     this.automationList = []
     this.scheduledSignals = []
-    this.automationDirectory = automationDirectory
+    this.notebookDirectory = notebookDirectory
 
-    this.reparseAutomations = this.automationDirectory
+    this.reparseAutomations = this.notebookDirectory
       ? merge(
           createBufferedDirectoryMonitor(
             {
-              path: this.automationDirectory,
+              path: getAutomationDirectory(this),
               recursive: true,
             },
             2000
           ).pipe(
             tap(() =>
               i(
-                `Detected change in automation directory: ${this.automationDirectory}`
+                `Detected change in automation directory: ${this.notebookDirectory}`
               )
             ),
             map(() => {})
@@ -101,14 +95,12 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         ).pipe(startWith())
       : NEVER
 
-    this.scannedAutomationDir = this.automationDirectory
+    this.scannedAutomationDir = this.notebookDirectory
       ? defer(() => this.reparseAutomations).pipe(
           switchMap(() => {
-            i(
-              `Reparsing automations from directory: ${this.automationDirectory}`
-            )
+            i(`Reparsing automations from directory: ${this.notebookDirectory}`)
             return from(
-              parseAllAutomations(this.automationDirectory!).then(
+              parseAllAutomations(getAutomationDirectory(this)).then(
                 (automations) => {
                   i(`Parsed ${automations.length} automations`)
                   this.automationList = automations
@@ -293,228 +285,28 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   }
 }
 
-interface SignalHandler extends SignalHandlerInfo {
-  readonly signal: Signal
-  readonly signalObservable: Observable<SignalledAutomation>
+export function getAutomationDirectory(runtime: AutomationRuntime) {
+  if (!runtime.notebookDirectory) {
+    throw new Error('Automation directory is not set')
+  }
+
+  const ret = path.join(runtime.notebookDirectory, 'automations')
+  if (!existsSync(ret)) {
+    mkdirSync(ret, { recursive: true })
+  }
+
+  return ret
 }
 
-class CronSignalHandler implements SignalHandler {
-  readonly signalObservable: Observable<SignalledAutomation>
-  readonly friendlySignalDescription: string
-  readonly isValid: boolean
-
-  constructor(
-    public readonly signal: Signal,
-    public readonly automation: Automation
-  ) {
-    const data: CronSignal = JSON.parse(signal.data)
-    let cron: Cron | null = null // Declare outside try
-
-    this.isValid = false // Default to invalid
-    this.friendlySignalDescription = 'Invalid cron expression'
-
-    try {
-      cron = parseCronExpression(data.cron) // Assign inside try
-      this.friendlySignalDescription = cron
-        .getNextDate(new Date())
-        .toLocaleString()
-      this.isValid = true // Set to valid only if parsing and date calculation succeed
-
-      d(
-        'CronSignalHandler created for signal %s, automation %s. Cron: %s',
-        signal.id,
-        automation.hash,
-        data.cron
-      )
-    } catch (error) {
-      i(
-        `Invalid cron expression "${data.cron}" for signal ${signal.id}:`,
-        error
-      )
-      // isValid remains false, description remains 'Invalid cron expression'
-    }
-
-    // Create trigger only if cron is valid
-    if (this.isValid && cron) {
-      this.signalObservable = this.cronToObservable(cron).pipe(
-        map(() => {
-          d(
-            'Cron trigger fired for signal %s, automation %s',
-            this.signal.id,
-            this.automation.hash
-          )
-          return { signal: this.signal, automation: this.automation }
-        })
-      )
-    } else {
-      this.signalObservable = NEVER // Don't schedule if invalid
-      d(
-        'Cron expression %s is invalid or parsing failed, not scheduling trigger for signal %s',
-        data.cron,
-        signal.id
-      )
-    }
+export function getMemoryFile(runtime: AutomationRuntime) {
+  if (!runtime.notebookDirectory) {
+    throw new Error('Automation directory is not set')
   }
 
-  cronToObservable(cron: Cron): Observable<void> {
-    d('Setting up cron interval for: %o', cron)
-    return new Observable<void>((subj) => {
-      const task = () => {
-        d('Cron task executing for signal %s', this.signal.id)
-        subj.next()
-      }
-      const handle = scheduler.setInterval(cron, task)
-      d('Cron interval scheduled with handle %o', handle)
-
-      return () => {
-        d('Clearing cron interval with handle %o', handle)
-        scheduler.clearTimeoutOrInterval(handle)
-      }
-    }).pipe(share())
+  const ret = path.join(runtime.notebookDirectory, 'memory.md')
+  if (!existsSync(ret)) {
+    writeFileSync(ret, '', 'utf-8')
   }
-}
 
-class RelativeTimeSignalHandler implements SignalHandler {
-  readonly signalObservable: Observable<SignalledAutomation>
-  readonly friendlySignalDescription: string
-  readonly isValid: boolean
-
-  constructor(
-    public readonly signal: Signal,
-    public readonly automation: Automation
-  ) {
-    const relativeTimeData: RelativeTimeSignal = JSON.parse(signal.data)
-    const offsetInSeconds = relativeTimeData.offsetInSeconds
-    const fireTime = new Date(Date.now() + offsetInSeconds * 1000)
-
-    this.isValid = true
-    this.friendlySignalDescription = fireTime.toLocaleString()
-
-    d(
-      'RelativeTimeSignalHandler created for signal %s, automation %s. Offset: %d seconds',
-      signal.id,
-      automation.hash,
-      offsetInSeconds
-    )
-
-    this.signalObservable = timer(offsetInSeconds * 1000).pipe(
-      map(() => {
-        i(
-          `Relative time trigger fired for signal ${this.signal.id}, automation ${this.automation.hash} (offset: ${offsetInSeconds}s)`
-        )
-        return { signal: this.signal, automation: this.automation }
-      })
-    )
-  }
-}
-
-class AbsoluteTimeSignalHandler implements SignalHandler {
-  readonly signalObservable: Observable<SignalledAutomation>
-  readonly friendlySignalDescription: string
-  readonly isValid: boolean
-
-  constructor(
-    public readonly signal: Signal,
-    public readonly automation: Automation
-  ) {
-    const absoluteTimeData: AbsoluteTimeSignal = JSON.parse(signal.data)
-    const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
-    const currentTime = Date.now()
-    const timeUntilTarget = targetTime - currentTime
-
-    this.isValid = true
-    this.friendlySignalDescription = new Date(targetTime).toLocaleString()
-
-    d(
-      'AbsoluteTimeSignalHandler created for signal %s, automation %s. Target time: %s',
-      signal.id,
-      automation.hash,
-      absoluteTimeData.iso8601Time
-    )
-
-    // Only schedule if the time is in the future
-    if (timeUntilTarget > 0) {
-      this.isValid = true
-      i(
-        `Scheduling absolute time trigger for signal ${signal.id} at ${this.friendlySignalDescription} (in ${timeUntilTarget} ms)`
-      )
-      this.signalObservable = timer(timeUntilTarget).pipe(
-        map(() => {
-          i(
-            `Absolute time trigger fired for signal ${this.signal.id}, automation ${this.automation.hash} at ${absoluteTimeData.iso8601Time}`
-          )
-          return { signal: this.signal, automation: this.automation }
-        })
-      )
-    } else {
-      this.isValid = false
-      i(
-        `Skipping past-due absolute time trigger for signal ${signal.id}: Target time ${absoluteTimeData.iso8601Time} is in the past.`
-      )
-      this.signalObservable = NEVER
-      this.friendlySignalDescription += ' (Past due)'
-    }
-  }
-}
-
-class StateRegexSignalHandler implements SignalHandler {
-  readonly signalObservable: Observable<SignalledAutomation>
-  readonly friendlySignalDescription: string
-  readonly isValid: boolean
-
-  constructor(
-    public readonly signal: Signal,
-    public readonly automation: Automation,
-    private readonly runtime: AutomationRuntime
-  ) {
-    const stateData: StateRegexSignal = JSON.parse(signal.data)
-    let regex: RegExp | null = null
-
-    this.isValid = false // Default to invalid
-    this.friendlySignalDescription = `Invalid state regex trigger for entities: ${stateData.entityIds.join(', ')}`
-
-    try {
-      regex = new RegExp(stateData.regex, 'i') // Case-insensitive match
-      this.isValid = true
-      this.friendlySignalDescription = `State match on [${stateData.entityIds.join(', ')}] for regex /${stateData.regex}/i`
-
-      d(
-        'StateRegexSignalHandler created for signal %s, automation %s. Entities: %o, Regex: /%s/i',
-        signal.id,
-        automation.hash,
-        stateData.entityIds,
-        stateData.regex
-      )
-    } catch (error) {
-      i(
-        `Invalid state regex "/${stateData.regex}/i" for signal ID ${signal.id}:`,
-        error
-      )
-      // isValid remains false, description remains the default error message
-      this.signalObservable = NEVER
-      return // Don't proceed if regex is invalid
-    }
-
-    // Only create the observable if the regex is valid
-    this.signalObservable = observeStatesForEntities(
-      this.runtime.api,
-      stateData.entityIds
-    ).pipe(
-      filter((state: HassState | undefined | null): state is HassState => {
-        if (!state) {
-          return false // Skip null/undefined states
-        }
-
-        const match = regex.test(state.state) // Use the compiled regex (isValid check ensures regex is non-null)
-        return match
-      }),
-      map((matchedState: HassState) => {
-        i(
-          `State regex trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Matched entity: ${matchedState.entity_id}, State: "${matchedState.state}"`
-        )
-        return { signal: this.signal, automation: this.automation }
-      }),
-      share()
-    )
-  }
+  return ret
 }

@@ -39,8 +39,14 @@ export function createSchedulerServer(
         .describe(
           'The regex to match against the entity state. Note that this will be a case-insensitive regex'
         ),
+      execution_notes: z
+        .string()
+        .optional()
+        .describe(
+          'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
+        ),
     },
-    async ({ entity_ids, regex }) => {
+    async ({ entity_ids, regex, execution_notes }) => {
       i(
         `Creating state regex trigger for automation ${automationHash}: entities ${JSON.stringify(entity_ids)}, regex /${regex}/i`
       )
@@ -65,6 +71,7 @@ export function createSchedulerServer(
             type: 'state',
             data: JSON.stringify(data),
             isDead: false,
+            executionNotes: execution_notes ?? '',
           })
           .execute()
 
@@ -93,8 +100,14 @@ export function createSchedulerServer(
         .describe(
           'The cron schedule to use. Note that extremely rapid firing jobs will be limited.'
         ),
+      execution_notes: z
+        .string()
+        .optional()
+        .describe(
+          'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
+        ),
     },
-    async ({ cron }) => {
+    async ({ cron, execution_notes }) => {
       i(
         `Creating cron trigger for automation ${automationHash}: cron "${cron}"`
       )
@@ -111,6 +124,7 @@ export function createSchedulerServer(
             type: 'cron',
             data: JSON.stringify(data),
             isDead: false,
+            executionNotes: execution_notes ?? '',
           })
           .execute()
 
@@ -201,8 +215,14 @@ export function createSchedulerServer(
         .describe(
           'The time offset in seconds after which the trigger will fire'
         ),
+      execution_notes: z
+        .string()
+        .optional()
+        .describe(
+          'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
+        ),
     },
-    async ({ offset_in_seconds }) => {
+    async ({ offset_in_seconds, execution_notes }) => {
       i(
         `Creating relative time trigger for automation ${automationHash}: offset ${offset_in_seconds} seconds`
       )
@@ -219,6 +239,7 @@ export function createSchedulerServer(
             type: 'offset',
             data: JSON.stringify(data),
             isDead: false,
+            executionNotes: execution_notes ?? '',
           })
           .execute()
 
@@ -245,8 +266,14 @@ export function createSchedulerServer(
         .describe(
           'The ISO 8601 date and time(s) when the trigger should fire (e.g. "2025-04-01T18:30:00Z" or ["2025-04-02T08:00:00Z", "2025-04-03T17:30:00Z"])'
         ),
+      execution_notes: z
+        .string()
+        .optional()
+        .describe(
+          'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
+        ),
     },
-    async ({ time }) => {
+    async ({ time, execution_notes }) => {
       const times = Array.isArray(time) ? time : [time]
       i(
         `Creating absolute time trigger for automation ${automationHash}: times ${JSON.stringify(times)}`
@@ -261,6 +288,7 @@ export function createSchedulerServer(
             type: 'time',
             iso8601Time,
           } as AbsoluteTimeSignal),
+          executionNotes: execution_notes ?? '',
         }))
 
         await db.insertInto('signals').values(values).execute()

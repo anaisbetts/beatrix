@@ -28,7 +28,7 @@ export async function* smokeTestToolsEval(llm: LargeLanguageProvider) {
   yield await runScenario(
     llm,
     'What lights are in the foyer? Tell me the friendly names of each light.',
-    createBuiltinServers(runtime),
+    createBuiltinServers(runtime, null),
     'Default mocked tools',
     [
       failureGrader(),

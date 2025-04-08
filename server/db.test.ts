@@ -40,6 +40,7 @@ describe('database', () => {
         type: 'state', // From second migration
         data: '{"state": "on"}', // From second migration
         isDead: false,
+        executionNotes: '',
       }
 
       const insertedSignalResult = await db

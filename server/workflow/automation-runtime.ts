@@ -135,17 +135,16 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 
     this.signalFired = defer(() => this.createdSignalsForForAutomations).pipe(
       switchMap(() => {
-        i('Setting up triggers based on database signals')
+        d('Setting up Signals based on database')
         return from(this.handlersForDatabaseSignals())
       }),
       tap({
         next: (handlers) => {
-          i(`Created ${handlers.length} trigger handlers from database signals`)
+          i(`Created ${handlers.length} Signal handlers from database`)
           this.scheduledSignals = handlers
         },
       }),
       switchMap((handlers) => {
-        i('Merging %d trigger observables', handlers.length)
         if (handlers.length === 0) {
           return NEVER
         }

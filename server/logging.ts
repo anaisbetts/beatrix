@@ -1,4 +1,7 @@
-import { Logger } from '@denodnt/logger'
+import path from 'node:path'
+
+import Logger from './logger/logger'
+import { getDataDir, isProdMode, repoRootDir } from './utils'
 
 let logger: Logger | null = new Logger()
 logger.enableConsole()
@@ -8,13 +11,15 @@ logger.enable('warn')
 logger.enable('error')
 
 export async function startLogger() {
-  await logger?.initFileLogger('./logs', {
-    rotate: true,
-    maxBackupCount: 10,
-    maxBytes: 32 * 1048576,
-  })
-
-  logger?.enableFile()
+  if (isProdMode) {
+    await logger?.initFileLogger(path.join(getDataDir(), 'logs'), {
+      rotate: true,
+      maxBytes: 32 * 1048576,
+      maxBackupCount: 10,
+    })
+  } else {
+    await logger?.initFileLogger(repoRootDir())
+  }
 }
 
 export function disableLogging() {

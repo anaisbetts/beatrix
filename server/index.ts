@@ -3,7 +3,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ServerWebSocket } from 'bun'
 import { Command } from 'commander'
 import { configDotenv } from 'dotenv'
-import { exists } from 'fs/promises'
 import { mkdir } from 'fs/promises'
 import { sql } from 'kysely'
 import path from 'path'
@@ -23,7 +22,7 @@ import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, startLogger } from './logging'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import serveStatic from './serve-static-bun'
-import { repoRootDir } from './utils'
+import { isProdMode, repoRootDir } from './utils'
 import {
   AutomationRuntime,
   LiveAutomationRuntime,
@@ -68,7 +67,6 @@ async function serveCommand(options: {
     subj
   )
 
-  const isProdMode = await exists(path.join(repoRootDir(), 'public'))
   if (isProdMode) {
     console.log('Running in Production Mode')
   } else {

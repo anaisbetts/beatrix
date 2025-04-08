@@ -8,7 +8,7 @@ import {
   extractNotifiers,
   fetchHAUserInformation,
 } from '../lib/ha-ws-api'
-import { w } from '../logging'
+import { i, w } from '../logging'
 
 const d = debug('b:notify')
 
@@ -85,7 +85,9 @@ export function createNotifyServer(
     },
     async ({ target, message, title }) => {
       try {
-        d('send-notification: %s %s', target, message)
+        i(
+          `Sending notification to person: ${target}, title: "${title ?? ''}", message: "${message}"`
+        )
         const info = await fetchHAUserInformation(api)
 
         if (!info[target]) {
@@ -137,7 +139,9 @@ export function createNotifyServer(
     { target: z.string(), message: z.string(), title: z.string().optional() },
     async ({ target, message, title }) => {
       try {
-        d('send-notification: %s %s', target, message)
+        i(
+          `Sending notification to target: ${target}, title: "${title ?? ''}", message: "${message}"`
+        )
         await api.sendNotification(target, message, title)
 
         return {

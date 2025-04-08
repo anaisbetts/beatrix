@@ -12,7 +12,6 @@ import {
 
 import { getAllProperties } from '../../shared/utility'
 import { IpcRequest, IpcResponse, ServerMessage } from '../../shared/ws-rpc'
-import { e } from '../logging'
 
 const d = debug('b:ws')
 
@@ -49,7 +48,7 @@ export function handleWebsocketRpc<T extends object>(
 
           return handleSingleResponse(rq, sm, retVal)
         } catch (err) {
-          e('handleWebsocketRpc: error handling request:', err)
+          d('handleWebsocketRpc: error handling request:', err)
           if (rq && rq.requestId) {
             d(
               'handleWebsocketRpc: sending error response for request %s',
@@ -71,7 +70,7 @@ export function handleWebsocketRpc<T extends object>(
     )
     .subscribe({
       error: (err) => {
-        e('handleWebsocketRpc: socket subscription failed:', err)
+        d('handleWebsocketRpc: socket subscription failed:', err)
         console.error('Socket has failed!', err)
       },
       complete: () => d('handleWebsocketRpc: socket completed'),
@@ -160,7 +159,7 @@ function handleSingleResponse(
 
     return concat(items, fobs).pipe(
       catchError((err: any) => {
-        e(
+        d(
           'handleSingleResponse: error in observable for %s: %o',
           rq.requestId,
           err
@@ -198,7 +197,7 @@ function handleSingleResponse(
           return serverMessage.reply(JSON.stringify(resp))
         },
         (err) => {
-          e('handleSingleResponse: promise rejected for %s:', rq.requestId, err)
+          d('handleSingleResponse: promise rejected for %s:', rq.requestId, err)
           const resp: IpcResponse = {
             requestId: rq.requestId,
             type: 'error',

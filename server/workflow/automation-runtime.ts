@@ -77,9 +77,8 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   ) {
     this.automationList = []
     this.scheduledTriggers = []
-    d(
-      'Initializing LiveAutomationRuntime with directory: %s',
-      automationDirectory
+    i(
+      `Initializing automation runtime. Automation directory: ${automationDirectory ?? 'Not specified'}`
     )
 
     this.reparseAutomations = this.automationDirectory
@@ -93,9 +92,8 @@ export class LiveAutomationRuntime implements AutomationRuntime {
             2000
           ).pipe(
             tap(() =>
-              d(
-                'Detected change in automation directory: %s',
-                this.automationDirectory
+              i(
+                `Detected change in automation directory: ${this.automationDirectory}`
               )
             ),
             map(() => {})
@@ -106,14 +104,13 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     this.scannedAutomationDir = this.automationDirectory
       ? defer(() => this.reparseAutomations).pipe(
           switchMap(() => {
-            d(
-              'Reparsing automations from directory: %s',
-              this.automationDirectory
+            i(
+              `Reparsing automations from directory: ${this.automationDirectory}`
             )
             return from(
               parseAllAutomations(this.automationDirectory!).then(
                 (automations) => {
-                  d('Parsed %d automations', automations.length)
+                  i(`Parsed ${automations.length} automations`)
                   this.automationList = automations
                   return automations
                 }
@@ -128,9 +125,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
       () => this.scannedAutomationDir
     ).pipe(
       switchMap((automations) => {
-        d('Rescheduling automations, count: %d', automations.length)
+        i(`Scheduling triggers for ${automations.length} automations`)
         return from(rescheduleAutomations(this, automations)).pipe(
-          tap(() => d('Finished rescheduling automations'))
+          tap(() => i('Finished scheduling triggers'))
         )
       }),
       share() // Share the result of rescheduling
@@ -138,29 +135,25 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 
     this.signalFired = defer(() => this.createdSignalsForForAutomations).pipe(
       switchMap(() => {
-        d('Setting up triggers based on database signals')
+        i('Setting up triggers based on database signals')
         return from(this.handlersForDatabaseSignals())
       }),
       tap({
         next: (handlers) => {
-          d('Created %d trigger handlers', handlers.length)
+          i(`Created ${handlers.length} trigger handlers from database signals`)
           this.scheduledTriggers = handlers
         },
       }),
       switchMap((handlers) => {
-        d('Merging %d trigger observables', handlers.length)
+        i('Merging %d trigger observables', handlers.length)
         if (handlers.length === 0) {
           return NEVER
         }
         return merge(...handlers.map((handler) => handler.trigger))
       }),
       tap(({ signal, automation }) =>
-        d(
-          'Signal fired for automation %s (%s), signal type: %s, signal ID: %s',
-          automation.hash,
-          automation.fileName,
-          signal.type,
-          signal.id
+        i(
+          `Signal ID ${signal.id} (${signal.type}) fired for automation: ${automation.fileName} (${automation.hash})`
         )
       ),
       share() // Share the fired signals
@@ -168,17 +161,17 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 
     this.automationExecuted = defer(() => this.signalFired).pipe(
       switchMap(({ signal, automation }) => {
-        d(
-          'Executing automation %s (%s), triggered by signal %s (ID: %s)',
-          automation.hash,
-          automation.fileName,
-          signal.type,
-          signal.id
+        i(
+          `Executing automation ${automation.fileName} (${automation.hash}), triggered by signal ID ${signal.id} (${signal.type})`
         )
         return from(
           runExecutionForAutomation(this, automation, signal.id)
         ).pipe(
-          tap(() => d('Finished execution for automation %s', automation.hash))
+          tap(() =>
+            i(
+              `Finished execution for automation ${automation.fileName} (${automation.hash})`
+            )
+          )
         )
       }),
       share() // Share the execution result
@@ -186,7 +179,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   }
 
   start() {
-    d('Starting LiveAutomationRuntime event subscription')
+    i('Starting automation runtime event processing')
     const subscription = this.automationExecuted.subscribe({
       error: (err) => e('Error in automation execution pipeline:', err),
       complete: () => d('Automation execution pipeline completed'),
@@ -198,9 +191,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   private async handlersForDatabaseSignals(): Promise<TriggerHandler[]> {
     const triggerHandlers: TriggerHandler[] = []
 
-    d('Loading signals from database')
+    i('Loading signals from database')
     const signals = await this.db.selectFrom('signals').selectAll().execute()
-    d('Loaded %d signals from database', signals.length)
+    i(`Loaded ${signals.length} signals from database`)
 
     for (const signal of signals) {
       d(
@@ -223,7 +216,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
           .where('id', '=', signal.id) // Use ID for deletion
           .execute()
 
-        d('Deleted signal ID: %s', signal.id)
+        i(
+          `Deleted orphaned signal ID: ${signal.id} (automation hash ${signal.automationHash} not found)`
+        )
 
         continue
       }
@@ -260,18 +255,15 @@ export class LiveAutomationRuntime implements AutomationRuntime {
                 new StateRegexTriggerHandler(signal, automation, this)
               )
             } catch (error) {
-              d(
-                'Error creating StateRegexTrigger handler for signal ID %s: %o',
-                signal.id,
+              e(
+                `Error creating StateRegexTrigger handler for signal ID ${signal.id}:`,
                 error
               )
             }
             break
           default:
-            d(
-              'Unknown signal type %s for signal ID %s. Skipping.',
-              signal.type,
-              signal.id
+            i(
+              `Unknown signal type '${signal.type}' for signal ID ${signal.id}. Skipping.`
             )
         }
       } catch (err) {
@@ -285,9 +277,8 @@ export class LiveAutomationRuntime implements AutomationRuntime {
       }
     }
 
-    d(
-      'Finished processing signals. Created %d trigger handlers.',
-      triggerHandlers.length
+    i(
+      `Finished processing signals. Active trigger handlers: ${triggerHandlers.length}`
     )
     return triggerHandlers
   }
@@ -331,7 +322,10 @@ class CronTriggerHandler implements TriggerHandler {
         data.cron
       )
     } catch (error) {
-      d('Error parsing cron expression "%s": %o', data.cron, error)
+      i(
+        `Invalid cron expression "${data.cron}" for signal ${signal.id}:`,
+        error
+      )
       // isValid remains false, description remains 'Invalid cron expression'
     }
 
@@ -400,11 +394,8 @@ class RelativeTimeTriggerHandler implements TriggerHandler {
 
     this.trigger = timer(offsetInSeconds * 1000).pipe(
       map(() => {
-        d(
-          'Relative time trigger fired for signal %s, automation %s after %d seconds',
-          this.signal.id,
-          this.automation.hash,
-          offsetInSeconds
+        i(
+          `Relative time trigger fired for signal ${this.signal.id}, automation ${this.automation.hash} (offset: ${offsetInSeconds}s)`
         )
         return { signal: this.signal, automation: this.automation }
       })
@@ -439,28 +430,21 @@ class AbsoluteTimeTriggerHandler implements TriggerHandler {
     // Only schedule if the time is in the future
     if (timeUntilTarget > 0) {
       this.isValid = true
-      d(
-        'Scheduling absolute time trigger for signal %s in %d ms',
-        signal.id,
-        timeUntilTarget
+      i(
+        `Scheduling absolute time trigger for signal ${signal.id} at ${this.friendlyTriggerDescription} (in ${timeUntilTarget} ms)`
       )
       this.trigger = timer(timeUntilTarget).pipe(
         map(() => {
-          d(
-            'Absolute time trigger fired for signal %s, automation %s at %s',
-            this.signal.id,
-            this.automation.hash,
-            absoluteTimeData.iso8601Time
+          i(
+            `Absolute time trigger fired for signal ${this.signal.id}, automation ${this.automation.hash} at ${absoluteTimeData.iso8601Time}`
           )
           return { signal: this.signal, automation: this.automation }
         })
       )
     } else {
       this.isValid = false
-      d(
-        'Skipping past-due absolute time trigger for signal %s: Target time %s is in the past.',
-        signal.id,
-        absoluteTimeData.iso8601Time
+      i(
+        `Skipping past-due absolute time trigger for signal ${signal.id}: Target time ${absoluteTimeData.iso8601Time} is in the past.`
       )
       this.trigger = NEVER
       this.friendlyTriggerDescription += ' (Past due)'
@@ -497,10 +481,8 @@ class StateRegexTriggerHandler implements TriggerHandler {
         stateData.regex
       )
     } catch (error) {
-      d(
-        'Error compiling regex "%s" for signal ID %s: %o',
-        stateData.regex,
-        signal.id,
+      i(
+        `Invalid state regex "/${stateData.regex}/i" for signal ID ${signal.id}:`,
         error
       )
       // isValid remains false, description remains the default error message
@@ -522,12 +504,8 @@ class StateRegexTriggerHandler implements TriggerHandler {
         return match
       }),
       map((matchedState: HassState) => {
-        d(
-          'State regex trigger fired for signal %s, automation %s. Matched entity: %s, State: "%s"',
-          this.signal.id,
-          this.automation.hash,
-          matchedState.entity_id,
-          matchedState.state
+        i(
+          `State regex trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Matched entity: ${matchedState.entity_id}, State: "${matchedState.state}"`
         )
         return { signal: this.signal, automation: this.automation }
       }),

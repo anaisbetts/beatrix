@@ -11,7 +11,7 @@ import {
   StateRegexTrigger,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
-import { w } from '../logging'
+import { i, w } from '../logging'
 
 const d = debug('b:scheduler')
 
@@ -41,11 +41,8 @@ export function createSchedulerServer(
         ),
     },
     async ({ entity_ids, regex }) => {
-      d(
-        'creating state regex trigger for automation hash: %s %o => %s',
-        automationHash,
-        entity_ids,
-        regex
+      i(
+        `Creating state regex trigger for automation ${automationHash}: entities ${JSON.stringify(entity_ids)}, regex /${regex}/i`
       )
       try {
         const ids = Object.fromEntries(
@@ -97,10 +94,8 @@ export function createSchedulerServer(
         ),
     },
     async ({ cron }) => {
-      d(
-        'creating cron trigger for automation hash: %s, %s',
-        automationHash,
-        cron
+      i(
+        `Creating cron trigger for automation ${automationHash}: cron "${cron}"`
       )
       try {
         const data: CronTrigger = {
@@ -136,7 +131,7 @@ export function createSchedulerServer(
     'List all current schedules that when triggered, will result in this automation being evaluated.',
     {},
     async () => {
-      d('listing scheduled triggers for automation hash: %s', automationHash)
+      i(`Listing scheduled triggers for automation ${automationHash}`)
       try {
         const rows = await db
           .selectFrom('signals')
@@ -144,7 +139,9 @@ export function createSchedulerServer(
           .select(['id', 'type', 'data'])
           .execute()
 
-        d('found %d scheduled triggers', rows.length)
+        i(
+          `Found ${rows.length} scheduled triggers for automation ${automationHash}`
+        )
         return {
           content: [{ type: 'text', text: JSON.stringify(rows) }],
         }
@@ -164,17 +161,16 @@ export function createSchedulerServer(
     'Cancel all active triggers that have been created by this automation',
     {},
     async () => {
-      d(
-        'cancelling all scheduled triggers for automation hash: %s',
-        automationHash
-      )
+      i(`Cancelling all scheduled triggers for automation ${automationHash}`)
       try {
         const rows = await db
           .deleteFrom('signals')
           .where('automationHash', '=', automationHash)
           .execute()
 
-        d('cancelled %d scheduled triggers', rows.length)
+        i(
+          `Cancelled ${rows.length} scheduled triggers for automation ${automationHash}`
+        )
         return {
           content: [
             {
@@ -205,10 +201,8 @@ export function createSchedulerServer(
         ),
     },
     async ({ offset_in_seconds }) => {
-      d(
-        'creating relative time trigger for automation hash: %s, offset: %d seconds',
-        automationHash,
-        offset_in_seconds
+      i(
+        `Creating relative time trigger for automation ${automationHash}: offset ${offset_in_seconds} seconds`
       )
       try {
         const data: RelativeTimeTrigger = {
@@ -250,14 +244,12 @@ export function createSchedulerServer(
         ),
     },
     async ({ time }) => {
-      d(
-        'creating absolute time trigger for automation hash: %s, times: %o',
-        automationHash,
-        time
+      const times = Array.isArray(time) ? time : [time]
+      i(
+        `Creating absolute time trigger for automation ${automationHash}: times ${JSON.stringify(times)}`
       )
-      try {
-        const times = Array.isArray(time) ? time : [time]
 
+      try {
         const values = times.map((iso8601Time) => ({
           automationHash,
           type: 'time',

@@ -11,6 +11,8 @@ import {
   take,
 } from 'rxjs'
 
+import { i } from '../logging'
+
 const d = debug('b:directory-monitor')
 
 /**
@@ -45,7 +47,8 @@ export function createDirectoryMonitor(
   return new Observable<string>((subscriber) => {
     const { path, recursive = false, fullPath = true } = options
 
-    d('Starting directory monitor for %s (recursive: %s)', path, recursive)
+    // Log monitor start at info level
+    i(`Starting directory monitor for path: ${path} (recursive: ${recursive})`)
 
     // Create watcher
     const watcher = watch(path, { recursive }, (eventType, filename) => {

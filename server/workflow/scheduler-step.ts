@@ -1,20 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import debug from 'debug'
 import { lastValueFrom, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
+import { i } from '../logging'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { AutomationRuntime } from './automation-runtime'
-
-const d = debug('b:scheduler')
 
 export async function rescheduleAutomations(
   runtime: AutomationRuntime,
   automations: Automation[]
 ) {
   for (const automation of automations) {
-    d('Examining automation %s (%s)', automation.hash, automation.fileName)
+    i(`Examining automation: ${automation.fileName} (${automation.hash})`)
     const automationRecord = await runtime.db
       .selectFrom('signals')
       .where('automationHash', '=', automation.hash)
@@ -22,15 +20,15 @@ export async function rescheduleAutomations(
       .executeTakeFirst()
 
     if (automationRecord) {
-      d(
-        'Automation %s (%s) already has a signal, skipping',
-        automation.hash,
-        automation.fileName
+      i(
+        `Automation ${automation.fileName} (${automation.hash}) already has signals, skipping rescheduling.`
       )
       continue
     }
 
-    d('Querying LLM for automation')
+    i(
+      `Querying LLM to determine scheduling for automation: ${automation.fileName}`
+    )
     await runSchedulerForAutomation(runtime, automation)
   }
 }

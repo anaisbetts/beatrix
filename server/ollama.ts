@@ -14,6 +14,7 @@ import { Observable, from, map } from 'rxjs'
 import pkg from '../package.json'
 import { TimeoutError, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider } from './llm'
+import { e } from './logging'
 
 const d = debug('b:llm')
 
@@ -135,12 +136,12 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
             role: 'assistant',
             content: `I apologize, but the AI service took too long to respond. Let's continue with what we have so far.`,
           })
-          yield msgs[msgs.length - 1]
 
+          yield msgs[msgs.length - 1]
           continue
         } else {
           // For other errors, log and rethrow
-          d('Error in Ollama API call: %o', err)
+          e('Error in Ollama API call', err)
           throw err
         }
       }
@@ -173,6 +174,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
           role: 'tool',
           content: JSON.stringify(toolResp.content),
         })
+
         yield msgs[msgs.length - 1]
       }
     }

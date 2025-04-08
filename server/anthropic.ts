@@ -11,6 +11,7 @@ import { Observable, from } from 'rxjs'
 import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider, connectServersToClient } from './llm'
+import { e } from './logging'
 
 const d = debug('b:llm')
 
@@ -162,7 +163,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
         )
       } catch (err) {
         if (err instanceof TimeoutError) {
-          d('Anthropic API call timed out: %s', err.message)
+          e('Anthropic API call timed out:', err.message)
           // Add a system message about the timeout and continue to next iteration
           msgs.push({
             role: 'assistant',
@@ -178,7 +179,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
           continue
         } else {
           // For other errors, log and rethrow
-          d('Error in Anthropic API call: %o', err)
+          e('Error in Anthropic API call:', err)
           throw err
         }
       }
@@ -246,11 +247,11 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
             // Handle both timeout errors and other execution errors
             let errorMsg = ''
             if (err instanceof TimeoutError) {
-              d('Tool execution timed out: %s', toolCall.name)
+              e(`Tool execution timed out: ${toolCall.name}`)
               errorMsg = `Tool '${toolCall.name}' execution timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
             } else {
-              d('Error executing tool %s: %o', toolCall.name, err)
-              errorMsg = `Error executing tool ${toolCall.name}: ${err instanceof Error ? err.message : String(err)}`
+              e(`Error executing tool ${toolCall.name}:`, err)
+              errorMsg = `Error executing tool '${toolCall.name}': ${err instanceof Error ? err.message : String(err)}`
             }
 
             return {

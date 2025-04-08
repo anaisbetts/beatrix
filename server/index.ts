@@ -3,7 +3,6 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ServerWebSocket } from 'bun'
 import { Command } from 'commander'
 import { configDotenv } from 'dotenv'
-import { exists } from 'fs/promises'
 import { mkdir } from 'fs/promises'
 import { sql } from 'kysely'
 import path from 'path'
@@ -20,9 +19,10 @@ import { EvalHomeAssistantApi, createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
+import { disableLogging, i, startLogger } from './logging'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import serveStatic from './serve-static-bun'
-import { repoRootDir } from './utils'
+import { isProdMode, repoRootDir } from './utils'
 import {
   AutomationRuntime,
   LiveAutomationRuntime,
@@ -45,6 +45,8 @@ async function serveCommand(options: {
     : await LiveHomeAssistantApi.createViaEnv()
 
   const db = await createDatabaseViaEnv()
+  await startLogger(db)
+
   await mkdir(path.join(options.notebook, 'automations'), {
     recursive: true,
   })
@@ -65,11 +67,10 @@ async function serveCommand(options: {
     subj
   )
 
-  const isProdMode = await exists(path.join(repoRootDir(), 'public'))
   if (isProdMode) {
-    console.log('Running in Production Mode')
+    i('Running in Production Mode')
   } else {
-    console.log('Running in development server-only mode')
+    i('Running in development server-only mode')
   }
 
   // Setup graceful shutdown handler
@@ -103,6 +104,10 @@ async function serveCommand(options: {
 }
 
 async function mcpCommand(options: { testMode: boolean }) {
+  // Because MCP relies on stdio for transport, it is important that we don't
+  // spam any other console output
+  disableLogging()
+
   const runtime = new LiveAutomationRuntime(
     await LiveHomeAssistantApi.createViaEnv(),
     createDefaultLLMProvider(),

@@ -3,6 +3,7 @@ import { lastValueFrom, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
 import { createBuiltinServers } from '../llm'
+import { i } from '../logging'
 import { AutomationRuntime } from './automation-runtime'
 
 const d = debug('b:execution-step')
@@ -23,9 +24,8 @@ export async function runExecutionForAutomation(
     throw new Error('Signal not found')
   }
 
-  d(
-    'Starting execution for automation: %s, signal: %o',
-    automation.fileName,
+  i(
+    `Starting execution for automation ${automation.fileName}, signal ID: ${signalId}`,
     signal
   )
 
@@ -49,7 +49,9 @@ export async function runExecutionForAutomation(
     })
     .execute()
 
-  d('Execution completed for automation: %s - %o', automation.fileName, msgs)
+  i(
+    `Execution completed for automation ${automation.fileName}, signal ID: ${signalId}`
+  )
 }
 
 const prompt = (

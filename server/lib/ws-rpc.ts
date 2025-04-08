@@ -48,7 +48,7 @@ export function handleWebsocketRpc<T extends object>(
 
           return handleSingleResponse(rq, sm, retVal)
         } catch (err) {
-          d('handleWebsocketRpc: error handling request: %o', err)
+          d('handleWebsocketRpc: error handling request:', err)
           if (rq && rq.requestId) {
             d(
               'handleWebsocketRpc: sending error response for request %s',
@@ -69,9 +69,9 @@ export function handleWebsocketRpc<T extends object>(
       })
     )
     .subscribe({
-      error: (e) => {
-        d('handleWebsocketRpc: socket subscription failed: %o', e)
-        console.error('Socket has failed!', e)
+      error: (err) => {
+        d('handleWebsocketRpc: socket subscription failed:', err)
+        console.error('Socket has failed!', err)
       },
       complete: () => d('handleWebsocketRpc: socket completed'),
     })
@@ -158,21 +158,21 @@ function handleSingleResponse(
     )
 
     return concat(items, fobs).pipe(
-      catchError((e: any) => {
+      catchError((err: any) => {
         d(
           'handleSingleResponse: error in observable for %s: %o',
           rq.requestId,
-          e
+          err
         )
-        const err: IpcResponse = {
+        const resp: IpcResponse = {
           requestId: rq.requestId,
           type: 'error',
           object: {
-            message: e?.message || String(e),
+            message: err?.message || String(err),
           },
         }
 
-        return from(serverMessage.reply(JSON.stringify(err)))
+        return from(serverMessage.reply(JSON.stringify(resp)))
       })
     )
   }
@@ -196,17 +196,13 @@ function handleSingleResponse(
           }
           return serverMessage.reply(JSON.stringify(resp))
         },
-        (e) => {
-          d(
-            'handleSingleResponse: promise rejected for %s: %o',
-            rq.requestId,
-            e
-          )
+        (err) => {
+          d('handleSingleResponse: promise rejected for %s:', rq.requestId, err)
           const resp: IpcResponse = {
             requestId: rq.requestId,
             type: 'error',
             object: {
-              message: e?.message || String(e),
+              message: err?.message || String(err),
             },
           }
           return serverMessage.reply(JSON.stringify(resp))

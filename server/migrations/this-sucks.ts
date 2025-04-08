@@ -6,9 +6,10 @@ import { MigrationProvider } from 'kysely'
 import * as m1 from './20250323-create'
 import * as m2 from './20250331-add-signal-type-data'
 import * as m3 from './20250405-add-service-log'
-import * as m4 from './20250408-add-query-indexes'
+import * as m4 from './20250407-add-query-indexes'
+import * as m5 from './20250408-add-logs-table'
 
-const migrations = [m1, m2, m3, m4]
+const migrations = [m1, m2, m3, m4, m5]
 
 export const migrator: MigrationProvider = {
   async getMigrations() {

@@ -9,6 +9,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
+app.log
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 

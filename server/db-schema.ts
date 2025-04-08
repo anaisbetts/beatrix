@@ -8,6 +8,13 @@ export interface Schema {
   signals: SignalTable
   automationLogs: AutomationLogTable
   callServiceLogs: CallServiceLogTable
+  logs: LogTable
+}
+
+export interface LogTable {
+  createdAt: number
+  level: number
+  message: string
 }
 
 export interface SignalTable {

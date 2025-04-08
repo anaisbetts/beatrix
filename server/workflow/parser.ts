@@ -1,12 +1,11 @@
 import * as crypto from 'crypto'
-import debug from 'debug'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { firstValueFrom, from, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
-
-const d = debug('b:parser')
+// Import i
+import { i } from '../logging'
 
 export async function* parseAutomations(
   directoryPath: string
@@ -15,7 +14,8 @@ export async function* parseAutomations(
   const files = await fs.readdir(directoryPath)
   const mdFiles = files.filter((file) => file.endsWith('.md'))
 
-  d('Found %d markdown files in %s', mdFiles.length, directoryPath)
+  // Log number of markdown files found at info level
+  i(`Found ${mdFiles.length} automation definition files in ${directoryPath}`)
 
   // Process each file
   for (const file of mdFiles) {
@@ -30,7 +30,8 @@ export async function* parseAutomations(
     // Filter out empty parts and trim each part
     const automations = parts.map((text) => text.trim()).filter(Boolean)
 
-    d('Found %d automations in file %s', automations.length, file)
+    // Log number of automations found within a file at info level
+    i(`Found ${automations.length} automations in file: ${file}`)
 
     // If no separators found or all parts are empty, treat the entire file as one automation
     if (automations.length === 0) {

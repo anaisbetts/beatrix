@@ -40,12 +40,12 @@ async function serveCommand(options: {
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
-  await startLogger()
   const conn = options.evalMode
     ? new EvalHomeAssistantApi()
     : await LiveHomeAssistantApi.createViaEnv()
 
   const db = await createDatabaseViaEnv()
+  await startLogger(db)
 
   await mkdir(path.join(options.notebook, 'automations'), {
     recursive: true,

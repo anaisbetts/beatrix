@@ -32,7 +32,7 @@ import {
   observeStatesForEntities,
 } from '../lib/ha-ws-api'
 import { LargeLanguageProvider } from '../llm'
-import { e } from '../logging'
+import { e, i } from '../logging'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
 import { rescheduleAutomations } from './scheduler-step'
@@ -214,16 +214,15 @@ export class LiveAutomationRuntime implements AutomationRuntime {
       )
 
       if (!automation) {
-        d(
-          'Automation hash %s from signal ID %s not found in current automation list. Deleting signal.',
-          signal.automationHash,
-          signal.id
+        i(
+          `Automation hash ${signal.automationHash} from signal ID ${signal.id} not found in current automation list. Deleting signal.`
         )
 
         await this.db
           .deleteFrom('signals')
           .where('id', '=', signal.id) // Use ID for deletion
           .execute()
+
         d('Deleted signal ID: %s', signal.id)
 
         continue

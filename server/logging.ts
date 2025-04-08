@@ -1,29 +1,33 @@
 import { Logger } from '@denodnt/logger'
 
-const logger = new Logger()
+let logger: Logger | null = new Logger()
+logger.enableConsole()
+
+logger.enable('info')
+logger.enable('warn')
+logger.enable('error')
 
 export async function startLogger() {
-  await logger.initFileLogger('./logs', {
+  await logger?.initFileLogger('./logs', {
     rotate: true,
     maxBackupCount: 10,
   })
 
-  logger.enable('info')
-  logger.enable('warn')
-  logger.enable('error')
+  logger?.enableFile()
+}
 
-  logger.enableConsole()
-  logger.enableFile()
+export function disableLogging() {
+  logger = null
 }
 
 export function i(...args: unknown[]) {
-  void logger.warn(...args)
+  void logger?.warn(...args)
 }
 
 export function w(...args: unknown[]) {
-  void logger.warn(...args)
+  void logger?.warn(...args)
 }
 
 export function e(...args: unknown[]) {
-  void logger.error(...args)
+  void logger?.error(...args)
 }

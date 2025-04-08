@@ -20,7 +20,7 @@ import { EvalHomeAssistantApi, createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
-import { startLogger } from './logging'
+import { disableLogging, startLogger } from './logging'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import serveStatic from './serve-static-bun'
 import { repoRootDir } from './utils'
@@ -41,11 +41,13 @@ async function serveCommand(options: {
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
+  await startLogger()
   const conn = options.evalMode
     ? new EvalHomeAssistantApi()
     : await LiveHomeAssistantApi.createViaEnv()
 
   const db = await createDatabaseViaEnv()
+
   await mkdir(path.join(options.notebook, 'automations'), {
     recursive: true,
   })
@@ -55,8 +57,6 @@ async function serveCommand(options: {
     db,
     path.resolve(options.notebook, 'automations')
   )
-
-  await startLogger()
 
   console.log(
     `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode}})`
@@ -106,6 +106,10 @@ async function serveCommand(options: {
 }
 
 async function mcpCommand(options: { testMode: boolean }) {
+  // Because MCP relies on stdio for transport, it is important that we don't
+  // spam any other console output
+  disableLogging()
+
   const runtime = new LiveAutomationRuntime(
     await LiveHomeAssistantApi.createViaEnv(),
     createDefaultLLMProvider(),

@@ -12,6 +12,7 @@ import {
   merge,
   of,
   share,
+  startWith,
   switchMap,
   tap,
   timer,
@@ -49,6 +50,7 @@ export interface AutomationRuntime {
   readonly api: HomeAssistantApi
   readonly llm: LargeLanguageProvider
   readonly db: Kysely<Schema>
+  readonly automationDirectory: string | undefined
 
   automationList: Automation[]
   scheduledSignals: SignalHandler[]
@@ -63,6 +65,7 @@ export interface AutomationRuntime {
 export class LiveAutomationRuntime implements AutomationRuntime {
   automationList: Automation[]
   scheduledSignals: SignalHandler[]
+  automationDirectory: string | undefined
 
   reparseAutomations: Observable<void>
   scannedAutomationDir: Observable<Automation[]>
@@ -74,14 +77,14 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     readonly api: HomeAssistantApi,
     readonly llm: LargeLanguageProvider,
     readonly db: Kysely<Schema>,
-    private readonly automationDirectory?: string
+    automationDirectory?: string
   ) {
     this.automationList = []
     this.scheduledSignals = []
+    this.automationDirectory = automationDirectory
 
     this.reparseAutomations = this.automationDirectory
       ? merge(
-          of(), // Start on initial subscribe
           createBufferedDirectoryMonitor(
             {
               path: this.automationDirectory,
@@ -96,7 +99,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
             ),
             map(() => {})
           )
-        )
+        ).pipe(startWith())
       : NEVER
 
     this.scannedAutomationDir = this.automationDirectory

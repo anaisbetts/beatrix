@@ -1,12 +1,12 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
 
-import { SignalHandlerInfo } from '../server/workflow/automation-runtime'
 import {
   Automation,
   AutomationLogEntry,
   ModelDriverType,
   ScenarioResult,
+  SignalHandlerInfo,
 } from './types'
 
 export type MessageParamWithExtras = MessageParam & {

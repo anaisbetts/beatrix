@@ -58,10 +58,10 @@ async function serveCommand(options: {
   )
 
   console.log(
-    `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode}})`
+    `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode})`
   )
-  const subj: Subject<ServerMessage> = new Subject()
 
+  const subj: Subject<ServerMessage> = new Subject()
   handleWebsocketRpc<ServerWebsocketApi>(
     new ServerWebsocketApiImpl(runtime, options.testMode, options.evalMode),
     subj
@@ -72,6 +72,8 @@ async function serveCommand(options: {
   } else {
     i('Running in development server-only mode')
   }
+
+  runtime.start()
 
   // Setup graceful shutdown handler
   process.on('SIGINT', () => {

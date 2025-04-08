@@ -23,6 +23,7 @@ export interface SignalTable {
   automationHash: string
   type: string
   data: string
+  isDead: boolean
 }
 
 export interface CallServiceLogTable {

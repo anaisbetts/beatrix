@@ -2,11 +2,11 @@ import { deepEquals } from 'bun'
 import { Kysely } from 'kysely'
 
 import {
-  AbsoluteTimeTrigger,
-  CronTrigger,
-  RelativeTimeTrigger,
-  StateRegexTrigger,
-  Trigger,
+  AbsoluteTimeSignal,
+  CronSignal,
+  RelativeTimeSignal,
+  SignalData,
+  StateRegexSignal,
 } from '../../shared/types'
 import { createInMemoryDatabase } from '../db'
 import { Schema } from '../db-schema'
@@ -55,7 +55,7 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
 function findSingularScheduleGrader(
   db: Kysely<Schema>,
   expectedType: string,
-  expectedData: Trigger
+  expectedData: SignalData
 ) {
   return async () => {
     let points = 0
@@ -97,53 +97,51 @@ function findSingularScheduleGrader(
     }
 
     // Construct the full trigger object from parsed data + type
-    let foundTrigger: Trigger | null = null
+    let foundSignal: SignalData | null = null
     switch (row.type) {
       case 'cron':
-        foundTrigger = { type: 'cron', cron: parsedData.cron }
+        foundSignal = { type: 'cron', cron: parsedData.cron }
         break
       case 'state':
-        foundTrigger = {
+        foundSignal = {
           type: 'state',
           entityIds: parsedData.entityIds,
           regex: parsedData.regex,
         }
         break
       case 'offset':
-        foundTrigger = {
+        foundSignal = {
           type: 'offset',
           offsetInSeconds: parsedData.offsetInSeconds,
         }
         break
       case 'time':
-        foundTrigger = { type: 'time', iso8601Time: parsedData.iso8601Time }
+        foundSignal = { type: 'time', iso8601Time: parsedData.iso8601Time }
         break
     }
 
-    if (foundTrigger && deepEquals(foundTrigger, expectedData)) {
+    if (foundSignal && deepEquals(foundSignal, expectedData)) {
       points += 2 // Points for correct data
     }
 
     return {
       score: points,
       possibleScore: 4,
-      graderInfo: `Found ${rows.length} signals. Type match: ${row.type === expectedType}. Data match: ${foundTrigger && deepEquals(foundTrigger, expectedData)}. Expected: ${JSON.stringify(expectedData)}, Found: ${row.data}`,
+      graderInfo: `Found ${rows.length} signals. Type match: ${row.type === expectedType}. Data match: ${foundSignal && deepEquals(foundSignal, expectedData)}. Expected: ${JSON.stringify(expectedData)}, Found: ${row.data}`,
     }
   }
 }
 
-type ExpectedTrigger = Trigger
-
 function findMultipleSchedulesGrader(
   db: Kysely<Schema>,
-  expectedTriggers: ExpectedTrigger[]
+  expectedSignals: SignalData[]
 ) {
   return async () => {
     const rows = await db.selectFrom('signals').selectAll().execute()
     let points = 0
-    const possibleScore = expectedTriggers.length * 2 + 1
+    const possibleScore = expectedSignals.length * 2 + 1
 
-    const foundTriggers: Trigger[] = rows.map((row) => {
+    const foundSignals: SignalData[] = rows.map((row) => {
       const data = JSON.parse(row.data)
       switch (row.type) {
         case 'cron':
@@ -170,13 +168,13 @@ function findMultipleSchedulesGrader(
       }
     })
 
-    if (rows.length === expectedTriggers.length) {
+    if (rows.length === expectedSignals.length) {
       points += 1
     }
 
     let matches = 0
-    const remainingExpected = [...expectedTriggers]
-    const remainingFound = [...foundTriggers]
+    const remainingExpected = [...expectedSignals]
+    const remainingFound = [...foundSignals]
 
     for (let i = remainingFound.length - 1; i >= 0; i--) {
       const found = remainingFound[i]
@@ -192,7 +190,7 @@ function findMultipleSchedulesGrader(
 
     points += matches * 2
 
-    const graderInfo = `Found ${rows.length} signals (${matches} matched). Expected: ${JSON.stringify(expectedTriggers)}, Found: ${JSON.stringify(foundTriggers)}`
+    const graderInfo = `Found ${rows.length} signals (${matches} matched). Expected: ${JSON.stringify(expectedSignals)}, Found: ${JSON.stringify(foundSignals)}`
 
     return {
       score: points,
@@ -214,7 +212,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
-  const expected1: AbsoluteTimeTrigger = {
+  const expected1: AbsoluteTimeSignal = {
     type: 'time',
     iso8601Time: '2025-04-25T07:15:00',
   }
@@ -239,7 +237,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
-  const expected2: CronTrigger[] = [
+  const expected2: CronSignal[] = [
     { type: 'cron', cron: '0 7 * * *' },
     { type: 'cron', cron: '0 20 * * *' },
   ]
@@ -260,7 +258,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
-  const expected7: CronTrigger[] = [
+  const expected7: CronSignal[] = [
     { type: 'cron', cron: '0 23 * * *' },
     { type: 'cron', cron: '0 3 * * *' },
   ]
@@ -282,7 +280,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools8 = createDefaultSchedulerTools(service8, inputAutomation8)
-  const expected8: CronTrigger[] = [
+  const expected8: CronSignal[] = [
     { type: 'cron', cron: '0 8 * * *' },
     { type: 'cron', cron: '0 12 * * *' },
     { type: 'cron', cron: '0 17 * * *' },
@@ -305,7 +303,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
-  const expected9: CronTrigger[] = [
+  const expected9: CronSignal[] = [
     { type: 'cron', cron: '45 6 * * 1-5' },
     { type: 'cron', cron: '30 8 * * 0,6' },
   ]
@@ -329,7 +327,7 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
-  const expected2: CronTrigger = {
+  const expected2: CronSignal = {
     type: 'cron',
     cron: '0 8 * * 1-5',
   }
@@ -353,7 +351,7 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools3 = createDefaultSchedulerTools(service3, inputAutomation3)
-  const expected3: CronTrigger = {
+  const expected3: CronSignal = {
     type: 'cron',
     cron: '0 0 1 * *',
   }
@@ -369,7 +367,7 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
   )
 }
 
-// --- Consolidated Mixed Trigger Evals ---
+// --- Consolidated Mixed Signal Evals ---
 export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 1: Sunset and Sunrise (becomes state triggers)
   const prompt1 =
@@ -381,7 +379,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
-  const expected1: StateRegexTrigger[] = [
+  const expected1: StateRegexSignal[] = [
     { type: 'state', entityIds: ['sun.sun'], regex: '^below_horizon$' },
     { type: 'state', entityIds: ['sun.sun'], regex: '^above_horizon$' },
   ]
@@ -403,7 +401,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
-  const expected2: StateRegexTrigger = {
+  const expected2: StateRegexSignal = {
     type: 'state',
     entityIds: ['person.ani'],
     regex: '^home$',
@@ -429,7 +427,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools3 = createDefaultSchedulerTools(service3, inputAutomation3)
-  const expected3: CronTrigger = {
+  const expected3: CronSignal = {
     type: 'cron',
     cron: '0 22 * * *',
   }
@@ -454,7 +452,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
-  const expected4: StateRegexTrigger = {
+  const expected4: StateRegexSignal = {
     type: 'state',
     entityIds: ['input_boolean.night_mode'],
     regex: '^on$',
@@ -480,7 +478,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools5 = createDefaultSchedulerTools(service5, inputAutomation5)
-  const expected5: (CronTrigger | StateRegexTrigger)[] = [
+  const expected5: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 8 * * *' },
     {
       type: 'state',
@@ -506,7 +504,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools6 = createDefaultSchedulerTools(service6, inputAutomation6)
-  const expected6: (CronTrigger | StateRegexTrigger)[] = [
+  const expected6: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 23 * * *' },
     {
       type: 'state',
@@ -532,7 +530,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
-  const expected7: StateRegexTrigger = {
+  const expected7: StateRegexSignal = {
     type: 'state',
     entityIds: ['sun.sun'],
     regex: '^below_horizon$',
@@ -558,7 +556,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
-  const expected9: (CronTrigger | StateRegexTrigger)[] = [
+  const expected9: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 22 * * *' },
     {
       type: 'state',
@@ -587,7 +585,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
-  const expected1: StateRegexTrigger = {
+  const expected1: StateRegexSignal = {
     type: 'state',
     entityIds: ['person.ani'],
     regex: '^not_home$',
@@ -612,7 +610,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
-  const expected2: RelativeTimeTrigger = {
+  const expected2: RelativeTimeSignal = {
     type: 'offset',
     offsetInSeconds: 45 * 60,
   }
@@ -637,7 +635,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
-  const expected4: StateRegexTrigger = {
+  const expected4: StateRegexSignal = {
     type: 'state',
     entityIds: ['group.all_people'],
     regex: '^not_home$',
@@ -663,7 +661,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools5 = createDefaultSchedulerTools(service5, inputAutomation5)
-  const expected5: CronTrigger = {
+  const expected5: CronSignal = {
     type: 'cron',
     cron: '*/15 * * * *',
   }
@@ -688,7 +686,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
-  const expected7: CronTrigger = {
+  const expected7: CronSignal = {
     type: 'cron',
     cron: '0,30 16-23 * * *',
   }
@@ -715,7 +713,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
-  const expected1: StateRegexTrigger = {
+  const expected1: StateRegexSignal = {
     type: 'state',
     entityIds: ['group.all_people'],
     regex: '^home$',
@@ -740,7 +738,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
-  const expected2: StateRegexTrigger = {
+  const expected2: StateRegexSignal = {
     type: 'state',
     entityIds: ['switch.sync_box_light_sync'],
     regex: '^off$',
@@ -766,7 +764,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
-  const expected4: StateRegexTrigger = {
+  const expected4: StateRegexSignal = {
     type: 'state',
     entityIds: ['switch.sync_box_power'],
     regex: '^on$',
@@ -792,7 +790,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
-  const expected7: StateRegexTrigger = {
+  const expected7: StateRegexSignal = {
     type: 'state',
     entityIds: ['update.esphome_some_device'], // Made specific for testability
     regex: '^on$',
@@ -817,7 +815,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools8 = createDefaultSchedulerTools(service8, inputAutomation8)
-  const expected8: StateRegexTrigger = {
+  const expected8: StateRegexSignal = {
     type: 'state',
     entityIds: ['input_boolean.red_alert'],
     regex: '^off$',
@@ -841,7 +839,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     await createInMemoryDatabase()
   )
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
-  const expected9: StateRegexTrigger = {
+  const expected9: StateRegexSignal = {
     type: 'state',
     entityIds: ['input_boolean.night_mode'],
     regex: '^on$',

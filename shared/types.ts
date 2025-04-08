@@ -12,37 +12,43 @@ export interface Automation {
   fileName: string
 }
 
-export type StateRegexTrigger = {
+export type StateRegexSignal = {
   type: 'state'
   entityIds: string[]
   regex: string
 }
 
-export type CronTrigger = {
+export type CronSignal = {
   type: 'cron'
   cron: string
 }
 
-export type RelativeTimeTrigger = {
+export type RelativeTimeSignal = {
   type: 'offset'
   offsetInSeconds: number
 }
 
-export type AbsoluteTimeTrigger = {
+export type AbsoluteTimeSignal = {
   type: 'time'
   iso8601Time: string // ISO 8601 date and time format
 }
 
-export type Trigger =
-  | CronTrigger
-  | StateRegexTrigger
-  | RelativeTimeTrigger
-  | AbsoluteTimeTrigger
+export type SignalData =
+  | CronSignal
+  | StateRegexSignal
+  | RelativeTimeSignal
+  | AbsoluteTimeSignal
 
 export interface SignalEntry {
   createdAt: Date
   type: SignalType
   data: string
+}
+
+export interface SignalHandlerInfo {
+  readonly automation: Automation
+  readonly friendlySignalDescription: string
+  readonly isValid: boolean
 }
 
 export interface CallServiceLogEntry {
@@ -60,7 +66,7 @@ export interface AutomationLogEntry {
 
   servicesCalled: CallServiceLogEntry[]
 
-  signaledBy: Trigger | null
+  signaledBy: SignalData | null
 }
 
 export type ScenarioResult = {

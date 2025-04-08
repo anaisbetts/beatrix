@@ -90,3 +90,20 @@ export function pick<T extends object, K extends keyof T>(
     {} as Pick<T, K>
   )
 }
+
+export function omit<T extends object, K extends keyof T>(
+  obj: T,
+  disallowedKeys: K[]
+): Omit<T, K> {
+  const result = {} as Omit<T, K>
+  const unk: any = result
+  const disallowedKeysSet = new Set(disallowedKeys)
+
+  getAllProperties(obj).forEach((key) => {
+    if (!disallowedKeysSet.has(key as K)) {
+      unk[key] = obj[key as keyof T]
+    }
+  })
+
+  return result
+}

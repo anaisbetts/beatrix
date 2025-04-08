@@ -5,13 +5,13 @@ import { BunSqliteDialect } from 'kysely-bun-worker/normal'
 import * as path from 'node:path'
 
 import {
-  AbsoluteTimeTrigger,
+  AbsoluteTimeSignal,
   Automation,
   AutomationLogEntry,
   CallServiceLogEntry,
-  CronTrigger,
-  RelativeTimeTrigger,
-  StateRegexTrigger,
+  CronSignal,
+  RelativeTimeSignal,
+  StateRegexSignal,
 } from '../shared/types'
 import { Schema } from './db-schema'
 import { migrator } from './migrations/this-sucks'
@@ -145,26 +145,26 @@ export async function fetchAutomationLogs(
             signaledBy = {
               type: 'cron',
               cron: signalData.cron,
-            } as CronTrigger
+            } as CronSignal
             break
           case 'state':
             signaledBy = {
               type: 'state',
               entityIds: signalData.entityIds,
               regex: signalData.regex,
-            } as StateRegexTrigger
+            } as StateRegexSignal
             break
           case 'offset':
             signaledBy = {
               type: 'offset',
               offsetInSeconds: signalData.offsetInSeconds,
-            } as RelativeTimeTrigger
+            } as RelativeTimeSignal
             break
           case 'time':
             signaledBy = {
               type: 'time',
               iso8601Time: signalData.iso8601Time,
-            } as AbsoluteTimeTrigger
+            } as AbsoluteTimeSignal
             break
           case 'event':
             // Handle event case if needed in the future

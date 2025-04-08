@@ -5,10 +5,10 @@ import { z } from 'zod'
 
 import pkg from '../../package.json'
 import {
-  AbsoluteTimeTrigger,
-  CronTrigger,
-  RelativeTimeTrigger,
-  StateRegexTrigger,
+  AbsoluteTimeSignal,
+  CronSignal,
+  RelativeTimeSignal,
+  StateRegexSignal,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
 import { i, w } from '../logging'
@@ -52,7 +52,7 @@ export function createSchedulerServer(
           ])
         )
 
-        const data: StateRegexTrigger = {
+        const data: StateRegexSignal = {
           type: 'state',
           entityIds: Object.keys(ids),
           regex,
@@ -64,14 +64,15 @@ export function createSchedulerServer(
             automationHash,
             type: 'state',
             data: JSON.stringify(data),
+            isDead: false,
           })
           .execute()
 
         return {
-          content: [{ type: 'text', text: 'Trigger created' }],
+          content: [{ type: 'text', text: 'Signal created' }],
         }
       } catch (err: any) {
-        w('error creating state regex trigger:', err)
+        w('error creating state regex signal:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],
@@ -98,7 +99,7 @@ export function createSchedulerServer(
         `Creating cron trigger for automation ${automationHash}: cron "${cron}"`
       )
       try {
-        const data: CronTrigger = {
+        const data: CronSignal = {
           type: 'cron',
           cron,
         }
@@ -109,11 +110,12 @@ export function createSchedulerServer(
             automationHash,
             type: 'cron',
             data: JSON.stringify(data),
+            isDead: false,
           })
           .execute()
 
         return {
-          content: [{ type: 'text', text: 'Trigger created' }],
+          content: [{ type: 'text', text: 'Signal created' }],
         }
       } catch (err: any) {
         w('error creating cron trigger:', err)
@@ -205,7 +207,7 @@ export function createSchedulerServer(
         `Creating relative time trigger for automation ${automationHash}: offset ${offset_in_seconds} seconds`
       )
       try {
-        const data: RelativeTimeTrigger = {
+        const data: RelativeTimeSignal = {
           type: 'offset',
           offsetInSeconds: offset_in_seconds,
         }
@@ -216,11 +218,12 @@ export function createSchedulerServer(
             automationHash,
             type: 'offset',
             data: JSON.stringify(data),
+            isDead: false,
           })
           .execute()
 
         return {
-          content: [{ type: 'text', text: 'Trigger created' }],
+          content: [{ type: 'text', text: 'Signal created' }],
         }
       } catch (err: any) {
         w('error creating relative time trigger:', err)
@@ -253,10 +256,11 @@ export function createSchedulerServer(
         const values = times.map((iso8601Time) => ({
           automationHash,
           type: 'time',
+          isDead: false,
           data: JSON.stringify({
             type: 'time',
             iso8601Time,
-          } as AbsoluteTimeTrigger),
+          } as AbsoluteTimeSignal),
         }))
 
         await db.insertInto('signals').values(values).execute()
@@ -265,12 +269,12 @@ export function createSchedulerServer(
           content: [
             {
               type: 'text',
-              text: `Trigger${times.length > 1 ? 's' : ''} created`,
+              text: `${times.length} Signals created`,
             },
           ],
         }
       } catch (err: any) {
-        w('error creating absolute time trigger:', err)
+        w('error creating absolute time signal:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],

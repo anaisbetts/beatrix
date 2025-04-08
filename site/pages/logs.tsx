@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-import { AutomationLogEntry, Trigger } from '../../shared/types'
+import { AutomationLogEntry, SignalData } from '../../shared/types'
 import { ChatMessage } from '../components/chat-message'
 import { Badge } from '../components/ui/badge'
 import { useWebSocket } from '../components/ws-provider'
@@ -159,7 +159,7 @@ export default function Logs() {
   )
 }
 
-function SignalInfo({ signal }: { signal: Trigger | null }) {
+function SignalInfo({ signal }: { signal: SignalData | null }) {
   if (!signal) return null
 
   switch (signal.type) {

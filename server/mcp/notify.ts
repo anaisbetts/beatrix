@@ -21,6 +21,8 @@ export function createNotifyServer(
     new McpServer({
       name: 'notify',
       version: pkg.version,
+      description:
+        'This server allows you to send notifications to people and devices in Home Assistant. When asking to notify a person this is *always* preferable to using Home Assistant directly!',
     })
 
   server.tool(

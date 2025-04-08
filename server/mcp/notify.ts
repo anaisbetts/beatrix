@@ -8,6 +8,7 @@ import {
   extractNotifiers,
   fetchHAUserInformation,
 } from '../lib/ha-ws-api'
+import { w } from '../logging'
 
 const d = debug('b:notify')
 
@@ -32,10 +33,13 @@ export function createNotifyServer(
         const resp = await extractNotifiers(svcs)
 
         d('list-notify-targets: %o', resp)
+
         return {
           content: [{ type: 'text', text: JSON.stringify(resp) }],
         }
       } catch (err: any) {
+        w('list-notify-targets Error:', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,
@@ -57,7 +61,8 @@ export function createNotifyServer(
           content: [{ type: 'text', text: JSON.stringify(info) }],
         }
       } catch (err: any) {
-        d('list-people Error: %s', err)
+        w('list-people Error:', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,
@@ -115,9 +120,11 @@ export function createNotifyServer(
         return {
           content: [{ type: 'text', text: 'Notifications sent' }],
         }
-      } catch (e: any) {
+      } catch (err: any) {
+        w('send-notification-to-person Error:', err)
+
         return {
-          content: [{ type: 'text', text: JSON.stringify(e) }],
+          content: [{ type: 'text', text: JSON.stringify(err) }],
           isError: true,
         }
       }
@@ -136,9 +143,11 @@ export function createNotifyServer(
         return {
           content: [{ type: 'text', text: 'Notification sent' }],
         }
-      } catch (e: any) {
+      } catch (err: any) {
+        w('send-notification Error:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }

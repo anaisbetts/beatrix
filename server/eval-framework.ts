@@ -23,6 +23,7 @@ import {
   filterUncommonEntitiesFromTime,
 } from './lib/ha-ws-api'
 import { LargeLanguageProvider } from './llm'
+import { e } from './logging'
 import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
@@ -81,12 +82,12 @@ export async function runScenario(
     messages = await firstValueFrom(
       llm.executePromptWithTools(prompt, tools).pipe(toArray())
     )
-  } catch (e: any) {
-    d('Error executing prompt with tools: %o', e)
+  } catch (err: any) {
+    e('Error executing prompt with tools:', err)
     messages = [
       {
         role: 'assistant',
-        content: `!!!Error!!! executing prompt with tools, this should always fail ${e.message}\n${e.stack}`,
+        content: `!!!Error!!! executing prompt with tools, this should always fail ${err.message}\n${err.stack}`,
       },
     ]
   }

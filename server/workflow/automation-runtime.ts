@@ -32,6 +32,7 @@ import {
   observeStatesForEntities,
 } from '../lib/ha-ws-api'
 import { LargeLanguageProvider } from '../llm'
+import { e } from '../logging'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
 import { rescheduleAutomations } from './scheduler-step'
@@ -187,7 +188,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   start() {
     d('Starting LiveAutomationRuntime event subscription')
     const subscription = this.automationExecuted.subscribe({
-      error: (err) => d('Error in automation execution pipeline: %o', err),
+      error: (err) => e('Error in automation execution pipeline:', err),
       complete: () => d('Automation execution pipeline completed'),
     })
     d('Automation execution pipeline subscribed')
@@ -274,11 +275,12 @@ export class LiveAutomationRuntime implements AutomationRuntime {
               signal.id
             )
         }
-      } catch (error) {
-        d(
-          'Error creating trigger handler for signal ID %s: %o',
+      } catch (err) {
+        e(
+          'Error creating trigger handler for signal %s, type %s: %o',
           signal.id,
-          error
+          signal.type,
+          err
         )
         // Optionally, delete the problematic signal or handle the error differently
       }

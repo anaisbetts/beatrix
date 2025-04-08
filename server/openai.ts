@@ -8,6 +8,7 @@ import { Observable, from } from 'rxjs'
 import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider, connectServersToClient } from './llm'
+import { e } from './logging'
 
 const d = debug('b:llm')
 
@@ -188,7 +189,7 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
           continue
         } else {
           // For other errors, log and rethrow
-          d('Error in OpenAI API call: %o', err)
+          e('Error in OpenAI API call:', err)
           throw err
         }
       }
@@ -255,8 +256,8 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
 
             const resultContent = toolResp.content as string
             return {
-              toolCall,
-              result: resultContent ?? '',
+              tool_call_id: toolCall.id,
+              content: resultContent ?? '',
               // Return token estimation for accounting
               tokenEstimate: resultContent ? resultContent.length / 4 + 10 : 10,
             }
@@ -264,16 +265,16 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
             // Handle both timeout errors and other execution errors
             let errorMsg = ''
             if (err instanceof TimeoutError) {
-              d('Tool execution timed out: %s', toolCall.function.name)
+              e('Tool execution timed out:', err.message)
               errorMsg = `Tool '${toolCall.function.name}' execution timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
             } else {
-              d('Error executing tool %s: %o', toolCall.function.name, err)
-              errorMsg = `Error executing tool ${toolCall.function.name}: ${err instanceof Error ? err.message : String(err)}`
+              e('Error executing tool:', err)
+              errorMsg = `Error executing tool '${toolCall.function.name}': ${err instanceof Error ? err.message : String(err)}`
             }
 
             return {
-              toolCall,
-              result: errorMsg,
+              tool_call_id: toolCall.id,
+              content: errorMsg,
               tokenEstimate: errorMsg.length / 4 + 10,
             }
           }
@@ -288,8 +289,8 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
       toolResultsMap.forEach((result) => {
         msgs.push({
           role: 'tool',
-          tool_call_id: result.toolCall.id,
-          content: result.result,
+          tool_call_id: result.tool_call_id,
+          content: result.content,
         })
 
         totalToolTokens += result.tokenEstimate
@@ -305,8 +306,8 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
       // Create an Anthropic-compatible message from the tool results
       const toolResults = Array.from(toolResultsMap).map(([, result]) => ({
         type: 'tool_result' as const,
-        tool_use_id: result.toolCall.id,
-        content: result.result,
+        tool_use_id: result.tool_call_id,
+        content: result.content,
       }))
 
       const toolResultsMessage: MessageParam = {

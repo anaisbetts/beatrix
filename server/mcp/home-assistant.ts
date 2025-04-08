@@ -6,6 +6,7 @@ import { z } from 'zod'
 
 import pkg from '../../package.json'
 import { messagesToString } from '../../shared/prompt'
+import { w } from '../logging'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 import { createCallServiceServer } from './call-service'
 
@@ -61,7 +62,7 @@ export function createHomeAssistantServer(
           content: [{ type: 'text', text: JSON.stringify(matchingStates) }],
         }
       } catch (err: any) {
-        d('get-entities-by-prefix Error: %s', err)
+        w('get-entities-by-prefix Error:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],
@@ -99,7 +100,8 @@ export function createHomeAssistantServer(
           content: [{ type: 'text', text: JSON.stringify(entityState) }],
         }
       } catch (err: any) {
-        d('get-state-for-entity Error: %s', err)
+        w('get-state-for-entity Error:', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,
@@ -127,7 +129,8 @@ export function createHomeAssistantServer(
           content: [{ type: 'text', text: JSON.stringify(states) }],
         }
       } catch (err: any) {
-        d('get-all-entities Error: %s', err)
+        w('get-all-entities Error:', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,
@@ -186,8 +189,8 @@ export function createHomeAssistantServer(
             content: [{ type: 'text', text: JSON.stringify(entityStates) }],
           }
         } catch (err: any) {
-          d('call-service Error: %s', err)
-          d('msgs: %s', messagesToString(msgs ?? []))
+          w('call-service Error:', err)
+          w('msgs:', messagesToString(msgs ?? []))
 
           const lastMsg = msgs
             ? messagesToString([msgs[msgs.length - 1]])

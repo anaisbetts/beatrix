@@ -3,6 +3,7 @@ import debug from 'debug'
 import { z } from 'zod'
 
 import pkg from '../../package.json'
+import { w } from '../logging'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 
 const d = debug('b:call-service')
@@ -56,7 +57,8 @@ export function createCallServiceServer(
           content: [{ type: 'text', text: JSON.stringify(matchingServices) }],
         }
       } catch (err: any) {
-        d('list-services-for-entity Error: %s', err)
+        w('list-services-for-entity Error:', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,
@@ -157,7 +159,8 @@ export function createCallServiceServer(
           ],
         }
       } catch (err: any) {
-        d('call-service Error: %s', err)
+        w('call-service Error:', err)
+
         return {
           content: [{ type: 'text', text: err.toString() }],
           isError: true,

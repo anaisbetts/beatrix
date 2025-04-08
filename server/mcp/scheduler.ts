@@ -11,6 +11,7 @@ import {
   StateRegexTrigger,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
+import { w } from '../logging'
 
 const d = debug('b:scheduler')
 
@@ -72,10 +73,11 @@ export function createSchedulerServer(
         return {
           content: [{ type: 'text', text: 'Trigger created' }],
         }
-      } catch (e: any) {
-        d('error creating state regex trigger: %o', e)
+      } catch (err: any) {
+        w('error creating state regex trigger:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }
@@ -118,10 +120,11 @@ export function createSchedulerServer(
         return {
           content: [{ type: 'text', text: 'Trigger created' }],
         }
-      } catch (e: any) {
-        d('error creating cron trigger: %o', e)
+      } catch (err: any) {
+        w('error creating cron trigger:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }
@@ -145,10 +148,11 @@ export function createSchedulerServer(
         return {
           content: [{ type: 'text', text: JSON.stringify(rows) }],
         }
-      } catch (e: any) {
-        d('error listing scheduled triggers: %o', e)
+      } catch (err: any) {
+        w('error listing scheduled triggers:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }
@@ -179,10 +183,11 @@ export function createSchedulerServer(
             },
           ],
         }
-      } catch (e: any) {
-        d('error cancelling scheduled triggers: %o', e)
+      } catch (err: any) {
+        w('error cancelling scheduled triggers:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }
@@ -223,10 +228,11 @@ export function createSchedulerServer(
         return {
           content: [{ type: 'text', text: 'Trigger created' }],
         }
-      } catch (e: any) {
-        d('error creating relative time trigger: %o', e)
+      } catch (err: any) {
+        w('error creating relative time trigger:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }
@@ -271,10 +277,11 @@ export function createSchedulerServer(
             },
           ],
         }
-      } catch (e: any) {
-        d('error creating absolute time trigger: %o', e)
+      } catch (err: any) {
+        w('error creating absolute time trigger:', err)
+
         return {
-          content: [{ type: 'text', text: e.toString() }],
+          content: [{ type: 'text', text: err.toString() }],
           isError: true,
         }
       }

@@ -21,7 +21,7 @@ export function disableLogging() {
 }
 
 export function i(...args: unknown[]) {
-  void logger?.warn(...args)
+  void logger?.info(...args)
 }
 
 export function w(...args: unknown[]) {

@@ -49,14 +49,14 @@ export default class Logger {
    * Log message with debug level
    * @param args data to log
    */
-  async debug(...args: unknown[]): Promise<void> {
-    args = [this.getDebug(), this.getNow(), ...args]
-    this.stdout(...args)
+  async debug(...originalArgs: unknown[]): Promise<void> {
+    const argsForStdout = [this.getDebug(), this.getNow(), ...originalArgs]
+    this.stdout(...argsForStdout)
     if (this.dir) {
       const fileMsg = this.formatForFile(
         this.getDebug(),
         this.getNow(),
-        ...args
+        ...originalArgs
       )
       await this.#write({
         dir: this.dir,
@@ -70,11 +70,15 @@ export default class Logger {
    * Log message with info level
    * @param args data to log
    */
-  async info(...args: unknown[]): Promise<void> {
-    args = [this.getInfo(), this.getNow(), ...args]
-    this.stdout(...args)
+  async info(...originalArgs: unknown[]): Promise<void> {
+    const argsForStdout = [this.getInfo(), this.getNow(), ...originalArgs]
+    this.stdout(...argsForStdout)
     if (this.dir) {
-      const fileMsg = this.formatForFile(this.getInfo(), this.getNow(), ...args)
+      const fileMsg = this.formatForFile(
+        this.getInfo(),
+        this.getNow(),
+        ...originalArgs
+      )
       await this.#write({
         dir: this.dir,
         type: Types.INFO,
@@ -88,11 +92,15 @@ export default class Logger {
    * Log message with info level
    * @param args data to log
    */
-  async log(...args: unknown[]): Promise<void> {
-    args = [this.getLog(), this.getNow(), ...args]
-    this.stdout(...args)
+  async log(...originalArgs: unknown[]): Promise<void> {
+    const argsForStdout = [this.getLog(), this.getNow(), ...originalArgs]
+    this.stdout(...argsForStdout)
     if (this.dir) {
-      const fileMsg = this.formatForFile(this.getLog(), this.getNow(), ...args)
+      const fileMsg = this.formatForFile(
+        this.getLog(),
+        this.getNow(),
+        ...originalArgs
+      )
       await this.#write({
         dir: this.dir,
         type: Types.LOG,
@@ -106,11 +114,15 @@ export default class Logger {
    * Log message with warning level
    * @param args data to log
    */
-  async warn(...args: unknown[]): Promise<void> {
-    args = [this.getWarn(), this.getNow(), ...args]
-    this.stdout(...args)
+  async warn(...originalArgs: unknown[]): Promise<void> {
+    const argsForStdout = [this.getWarn(), this.getNow(), ...originalArgs]
+    this.stdout(...argsForStdout)
     if (this.dir) {
-      const fileMsg = this.formatForFile(this.getWarn(), this.getNow(), ...args)
+      const fileMsg = this.formatForFile(
+        this.getWarn(),
+        this.getNow(),
+        ...originalArgs
+      )
       await this.#write({
         dir: this.dir,
         type: Types.WARN,
@@ -124,14 +136,14 @@ export default class Logger {
    * Log message with error level
    * @param args data to log
    */
-  async error(...args: unknown[]): Promise<void> {
-    args = [this.getError(), this.getNow(), ...args]
-    this.stdout(...args)
+  async error(...originalArgs: unknown[]): Promise<void> {
+    const argsForStdout = [this.getError(), this.getNow(), ...originalArgs]
+    this.stdout(...argsForStdout)
     if (this.dir) {
       const fileMsg = this.formatForFile(
         this.getError(),
         this.getNow(),
-        ...args
+        ...originalArgs
       )
       await this.#write({
         dir: this.dir,
@@ -167,7 +179,7 @@ export default class Logger {
     return { bytes: this.encoder.encode(s), str: s }
   }
 
-  async initSubjLogger(sink: Observer<{ msg: string; type: string }>) {
+  initSubjLogger(sink: Observer<{ msg: string; type: string }>) {
     this.sink = sink
   }
 
@@ -300,23 +312,23 @@ export default class Logger {
   }
 
   private getDebug(): string {
-    return green(this.getNow() + cyan(` Debug:`))
+    return cyan(` Debug:`)
   }
 
   private getInfo(): string {
-    return green(this.getNow() + green(` Info:`))
+    return green(` Info:`)
   }
 
   private getLog(): string {
-    return green(`${this.getNow()} Log:`)
+    return green(` Log:`)
   }
 
   private getWarn(): string {
-    return green(this.getNow()) + yellow(` Warn:`)
+    return yellow(` Warn:`)
   }
 
   private getError(): string {
-    return green(this.getNow()) + red(` Error:`)
+    return red(` Error:`)
   }
 
   private getNow(): string {

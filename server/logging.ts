@@ -1,6 +1,6 @@
 import { Kysely } from 'kysely'
 import path from 'node:path'
-import { performance } from 'node:perf_hooks'
+// import { performance } from 'node:perf_hooks' // Use Date.now() instead
 import { Subject, bufferTime, concatMap, from } from 'rxjs'
 
 import { Schema } from './db-schema'
@@ -25,27 +25,39 @@ export async function startLogger(db: Kysely<Schema>) {
     await logger?.initFileLogger(repoRootDir())
   }
 
-  const subj = new Subject<{ message: string; level: string }>()
+  const subj = new Subject<{ msg: string; type: string }>()
+  subj.subscribe({
+    next: () => console.log('NEXT'),
+  })
 
   subj
     .pipe(
       bufferTime(750),
       concatMap((msgs) => {
+        if (msgs.length < 1) {
+          return from([])
+        }
+
         const toInsert = msgs.map((msg) => {
-          const lvl =
-            msg.level === 'error' ? 30 : msg.level === 'warn' ? 20 : 10
+          const lvl = msg.type === 'error' ? 30 : msg.type === 'warn' ? 20 : 10
 
           return {
-            message: msg.message,
+            message: msg.msg,
             level: lvl,
-            createdAt: performance.now(),
+            createdAt: Date.now(), // Use absolute timestamp
           }
         })
 
         return from(db.insertInto('logs').values(toInsert).execute())
       })
     )
-    .subscribe()
+    .subscribe({
+      error: (err) => {
+        console.error('Error inserting logs into database:', err)
+      },
+    })
+
+  logger?.initSubjLogger(subj)
 }
 
 export function disableLogging() {

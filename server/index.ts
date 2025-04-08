@@ -19,7 +19,7 @@ import { EvalHomeAssistantApi, createLLMDriver } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
-import { disableLogging, startLogger } from './logging'
+import { disableLogging, i, startLogger } from './logging'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import serveStatic from './serve-static-bun'
 import { isProdMode, repoRootDir } from './utils'
@@ -68,9 +68,9 @@ async function serveCommand(options: {
   )
 
   if (isProdMode) {
-    console.log('Running in Production Mode')
+    i('Running in Production Mode')
   } else {
-    console.log('Running in development server-only mode')
+    i('Running in development server-only mode')
   }
 
   // Setup graceful shutdown handler

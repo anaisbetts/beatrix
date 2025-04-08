@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs'
+import { Observer } from 'rxjs'
 
 import Dater from './date.ts'
 import { cyan, exists, green, red, stripAnsi, yellow } from './deps.ts'
@@ -24,6 +25,7 @@ export default class Logger {
   private rotate = false
   private dir?: string
   private filename?: string
+  private sink: Observer<{ msg: string; type: string }> | null = null
 
   #debug = this.debug
   #info = this.info
@@ -59,7 +61,8 @@ export default class Logger {
       await this.#write({
         dir: this.dir,
         type: Types.DEBUG,
-        msg: fileMsg,
+        msg: fileMsg.bytes,
+        str: fileMsg.str,
       })
     }
   }
@@ -75,7 +78,8 @@ export default class Logger {
       await this.#write({
         dir: this.dir,
         type: Types.INFO,
-        msg: fileMsg,
+        msg: fileMsg.bytes,
+        str: fileMsg.str,
       })
     }
   }
@@ -92,7 +96,8 @@ export default class Logger {
       await this.#write({
         dir: this.dir,
         type: Types.LOG,
-        msg: fileMsg,
+        msg: fileMsg.bytes,
+        str: fileMsg.str,
       })
     }
   }
@@ -109,7 +114,8 @@ export default class Logger {
       await this.#write({
         dir: this.dir,
         type: Types.WARN,
-        msg: fileMsg,
+        msg: fileMsg.bytes,
+        str: fileMsg.str,
       })
     }
   }
@@ -130,7 +136,8 @@ export default class Logger {
       await this.#write({
         dir: this.dir,
         type: Types.ERROR,
-        msg: fileMsg,
+        msg: fileMsg.bytes,
+        str: fileMsg.str,
       })
     }
   }
@@ -139,21 +146,29 @@ export default class Logger {
     dir,
     type,
     msg,
-  }: LoggerWriteOptions & { msg: Uint8Array }): Promise<void> {
+    str,
+  }: LoggerWriteOptions & { msg: Uint8Array; str: string }): Promise<void> {
     const date = this.getDate()
     const filename = this.filename || (this.rotate === true ? `${date}` : 'app')
 
     const path = `${dir}/${filename}.log`
+    this.sink?.next({ msg: str, type })
     return this.writer!.write({ path, msg, type })
   }
 
-  private formatForFile(...args: unknown[]): Uint8Array {
+  private formatForFile(...args: unknown[]) {
     const msg = args
       .map((arg) =>
         typeof arg === 'string' ? arg : inspect(arg, { colors: false })
       )
       .join(' ')
-    return this.encoder.encode(stripAnsi(msg) + eol)
+
+    const s = stripAnsi(msg) + eol
+    return { bytes: this.encoder.encode(s), str: s }
+  }
+
+  async initSubjLogger(sink: Observer<{ msg: string; type: string }>) {
+    this.sink = sink
   }
 
   /**

@@ -11,6 +11,7 @@ export async function startLogger() {
   await logger?.initFileLogger('./logs', {
     rotate: true,
     maxBackupCount: 10,
+    maxBytes: 32 * 1048576,
   })
 
   logger?.enableFile()

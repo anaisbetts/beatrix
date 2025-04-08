@@ -77,9 +77,6 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   ) {
     this.automationList = []
     this.scheduledTriggers = []
-    i(
-      `Initializing automation runtime. Automation directory: ${automationDirectory ?? 'Not specified'}`
-    )
 
     this.reparseAutomations = this.automationDirectory
       ? merge(

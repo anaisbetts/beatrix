@@ -22,6 +22,7 @@ import {
   Automation,
   CronSignal,
   RelativeTimeSignal,
+  SignalHandlerInfo,
   StateRegexSignal,
 } from '../../shared/types'
 import { Schema, Signal } from '../db-schema'
@@ -281,13 +282,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   }
 }
 
-interface SignalHandler {
+interface SignalHandler extends SignalHandlerInfo {
   readonly signal: Signal
-  readonly automation: Automation
-
   readonly signalObservable: Observable<SignalledAutomation>
-  readonly friendlySignalDescription: string
-  readonly isValid: boolean
 }
 
 class CronSignalHandler implements SignalHandler {

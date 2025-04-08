@@ -45,6 +45,12 @@ export interface SignalEntry {
   data: string
 }
 
+export interface SignalHandlerInfo {
+  readonly automation: Automation
+  readonly friendlySignalDescription: string
+  readonly isValid: boolean
+}
+
 export interface CallServiceLogEntry {
   createdAt: Date
   service: string

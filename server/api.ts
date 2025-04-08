@@ -12,9 +12,11 @@ import {
 
 import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/prompt'
 import {
+  Automation,
   AutomationLogEntry,
   ModelDriverType,
   ScenarioResult,
+  SignalHandlerInfo,
 } from '../shared/types'
 import { pick } from '../shared/utility'
 import { fetchAutomationLogs } from './db'
@@ -60,6 +62,25 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         this.runtime.db,
         this.runtime.automationList,
         beforeTimestamp
+      )
+    )
+  }
+
+  getAutomations(): Observable<Automation[]> {
+    return of(this.runtime.automationList)
+  }
+
+  getScheduledSignals(): Observable<SignalHandlerInfo[]> {
+    return of(
+      // NB: If we don't do this, we will end up trying to serialize an Observable
+      // which obvs won't work
+      this.runtime.scheduledSignals.map((x) =>
+        pick(x, [
+          'automation',
+          'friendlySignalDescription',
+          'isValid',
+          'signal',
+        ])
       )
     )
   }

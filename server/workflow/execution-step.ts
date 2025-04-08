@@ -101,14 +101,14 @@ Follow these steps to execute this automation intelligently:
 
 3. If action is needed:
    - Decide which Home Assistant services to call
-   - Execute them in the appropriate sequence
+   - Execute them in the appropriate sequence via the appropriate tools. You must actually call tools to take actions!
    - Consider dependencies between actions
    - Avoid conflicting or redundant actions
    - Ensure all safety conditions are met
 
 4. Explain your reasoning and actions clearly
 
-5. If difficulties were encountered and it would be useful for future executions, use the save-observation tool to save observations or discoveries.
+5. If difficulties were encountered, **OPTIONALLY** use the save-observation tool to save observations or discoveries.
 </instructions>
 
 Based on the above information, please determine if this automation should take action right now, and if so, what actions to take. Think step by step about the context of the trigger, the current state of the home, and the intent of the automation.

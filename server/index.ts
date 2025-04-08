@@ -54,7 +54,7 @@ async function serveCommand(options: {
     conn,
     createDefaultLLMProvider(),
     db,
-    path.resolve(options.notebook, 'automations')
+    path.resolve(options.notebook)
   )
 
   console.log(

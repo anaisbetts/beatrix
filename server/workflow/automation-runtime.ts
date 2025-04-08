@@ -10,7 +10,6 @@ import {
   from,
   map,
   merge,
-  of,
   share,
   startWith,
   switchMap,
@@ -190,7 +189,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   }
 
   private async handlersForDatabaseSignals(): Promise<SignalHandler[]> {
-    const triggerHandlers: SignalHandler[] = []
+    const signalHandlers: SignalHandler[] = []
 
     i('Loading signals from database')
     const signals = await this.db.selectFrom('signals').selectAll().execute()
@@ -235,24 +234,24 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         switch (signal.type) {
           case 'cron':
             d('Creating CronSignalHandler for signal ID %s', signal.id)
-            triggerHandlers.push(new CronSignalHandler(signal, automation))
+            signalHandlers.push(new CronSignalHandler(signal, automation))
             break
           case 'offset':
             d('Creating RelativeTimeSignalHandler for signal ID %s', signal.id)
-            triggerHandlers.push(
+            signalHandlers.push(
               new RelativeTimeSignalHandler(signal, automation)
             )
             break
           case 'time':
             d('Creating AbsoluteTimeSignalHandler for signal ID %s', signal.id)
-            triggerHandlers.push(
+            signalHandlers.push(
               new AbsoluteTimeSignalHandler(signal, automation)
             )
             break
           case 'state':
             d('Creating StateRegexSignalHandler for signal ID %s', signal.id)
             try {
-              triggerHandlers.push(
+              signalHandlers.push(
                 new StateRegexSignalHandler(signal, automation, this)
               )
             } catch (error) {
@@ -279,9 +278,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     }
 
     i(
-      `Finished processing signals. Active trigger handlers: ${triggerHandlers.length}`
+      `Finished processing signals. Active trigger handlers: ${signalHandlers.length}`
     )
-    return triggerHandlers
+    return signalHandlers
   }
 }
 

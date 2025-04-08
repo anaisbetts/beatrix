@@ -141,8 +141,8 @@ export default class Logger {
     msg,
   }: LoggerWriteOptions & { msg: Uint8Array }): Promise<void> {
     const date = this.getDate()
-    const filename =
-      this.filename || (this.rotate === true ? `${date}_${type}` : type)
+    const filename = this.filename || (this.rotate === true ? `${date}` : 'app')
+
     const path = `${dir}/${filename}.log`
     return this.writer!.write({ path, msg, type })
   }

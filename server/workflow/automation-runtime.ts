@@ -164,6 +164,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         i(
           `Executing automation ${automation.fileName} (${automation.hash}), triggered by signal ID ${signal.id} (${signal.type})`
         )
+
         return from(
           runExecutionForAutomation(this, automation, signal.id)
         ).pipe(
@@ -192,7 +193,12 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     const signalHandlers: SignalHandler[] = []
 
     i('Loading signals from database')
-    const signals = await this.db.selectFrom('signals').selectAll().execute()
+    const signals = await this.db
+      .selectFrom('signals')
+      .selectAll()
+      .where('isDead', '!=', true)
+      .execute()
+
     i(`Loaded ${signals.length} signals from database`)
 
     for (const signal of signals) {
@@ -211,9 +217,13 @@ export class LiveAutomationRuntime implements AutomationRuntime {
           `Automation hash ${signal.automationHash} from signal ID ${signal.id} not found in current automation list. Deleting signal.`
         )
 
+        // NB: it could be the case that even though a particular automation no
+        // longer exists, an automation log still references it. In order to not
+        // break that, we mark it dead instead.
         await this.db
-          .deleteFrom('signals')
+          .updateTable('signals')
           .where('id', '=', signal.id) // Use ID for deletion
+          .set({ isDead: true })
           .execute()
 
         i(

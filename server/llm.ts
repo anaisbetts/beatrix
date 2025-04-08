@@ -8,6 +8,7 @@ import { Observable } from 'rxjs'
 import { Automation } from '../shared/types'
 import { AnthropicLargeLanguageProvider } from './anthropic'
 import { createHomeAssistantServer } from './mcp/home-assistant'
+import { createMemoryServer } from './mcp/memory'
 import { createNotifyServer } from './mcp/notify'
 import { createSchedulerServer } from './mcp/scheduler'
 import { OllamaLargeLanguageProvider } from './ollama'
@@ -61,6 +62,10 @@ export function createBuiltinServers(
 
   if (automationForScheduling) {
     ret.push(createSchedulerServer(runtime.db, automationForScheduling.hash))
+  }
+
+  if (runtime.notebookDirectory) {
+    ret.push(createMemoryServer(runtime.notebookDirectory))
   }
 
   return ret

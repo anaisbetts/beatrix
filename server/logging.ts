@@ -1,6 +1,5 @@
-import { Kysely } from 'kysely'
+import { Kysely, sql } from 'kysely'
 import path from 'node:path'
-// import { performance } from 'node:perf_hooks' // Use Date.now() instead
 import { Subject, bufferTime, concatMap, from } from 'rxjs'
 
 import { Schema } from './db-schema'
@@ -26,10 +25,6 @@ export async function startLogger(db: Kysely<Schema>) {
   }
 
   const subj = new Subject<{ msg: string; type: string }>()
-  subj.subscribe({
-    next: () => console.log('NEXT'),
-  })
-
   subj
     .pipe(
       bufferTime(750),
@@ -58,6 +53,26 @@ export async function startLogger(db: Kysely<Schema>) {
     })
 
   logger?.initSubjLogger(subj)
+  const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
+
+  try {
+    await cleanupOldLogs(db, TWO_WEEKS_MS)
+  } catch (err) {
+    console.error('Error cleaning up old logs:', err)
+  }
+}
+
+/**
+ * Deletes log entries older than the specified age
+ */
+async function cleanupOldLogs(
+  db: Kysely<Schema>,
+  maxAgeMs: number
+): Promise<void> {
+  const cutoffTimestamp = Date.now() - maxAgeMs
+  await db.deleteFrom('logs').where('createdAt', '<', cutoffTimestamp).execute()
+
+  await sql`VACUUM`.execute(db)
 }
 
 export function disableLogging() {

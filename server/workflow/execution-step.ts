@@ -34,7 +34,12 @@ export async function runExecutionForAutomation(
   const msgs = await lastValueFrom(
     runtime.llm
       .executePromptWithTools(
-        prompt(signal.type, signal.data, automation.contents),
+        prompt(
+          signal.type,
+          signal.data,
+          automation.contents,
+          signal.executionNotes ?? ''
+        ),
         tools
       )
       .pipe(toArray())

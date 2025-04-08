@@ -12,3 +12,11 @@ export function repoRootDir() {
     return path.dirname(process.execPath)
   }
 }
+
+export function getDataDir() {
+  if (process.env.DATA_DIR) {
+    return path.resolve(process.env.DATA_DIR)
+  } else {
+    return repoRootDir()
+  }
+}

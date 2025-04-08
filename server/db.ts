@@ -15,12 +15,12 @@ import {
 } from '../shared/types'
 import { Schema } from './db-schema'
 import { migrator } from './migrations/this-sucks'
-import { repoRootDir } from './utils'
+import { getDataDir } from './utils'
 
 const d = debug('b:db')
 
 export async function createDatabaseViaEnv() {
-  const dbPath = path.join(process.env.DATA_DIR ?? repoRootDir(), 'app.db')
+  const dbPath = path.join(getDataDir(), 'app.db')
   return await _createDatabase(dbPath)
 }
 

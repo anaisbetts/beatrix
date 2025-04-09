@@ -12,14 +12,12 @@ import { e } from './logging'
 
 const d = debug('b:llm')
 
-// ---- Helper Types ----
 interface ToolResultWithEstimate {
   tool_call_id: string
   role: 'tool'
   content: string
   tokenEstimate: number
 }
-// ---- End Helper Types ----
 
 // Reserve tokens for model responses
 const RESPONSE_TOKEN_RESERVE = 4000
@@ -375,7 +373,6 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
   }
 }
 
-// Helper function to convert OpenAI message format to Anthropic format
 function convertOpenAIMessageToAnthropic(
   message: OpenAI.ChatCompletionMessage
 ): MessageParam {
@@ -421,7 +418,6 @@ function convertOpenAIMessageToAnthropic(
   }
 }
 
-// Add this function at the end of the file, near the existing convertOpenAIMessageToAnthropic function
 function convertAnthropicMessageToOpenAI(
   message: MessageParam
 ): OpenAI.ChatCompletionMessageParam {

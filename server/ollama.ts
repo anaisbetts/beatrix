@@ -22,118 +22,7 @@ const MAX_ITERATIONS = 10 // Safety limit for iterations
 // Timeout configuration (in milliseconds)
 const TOOL_EXECUTION_TIMEOUT = 60 * 1000
 
-// ---- Conversion Functions (moved to top) ----
-
-function convertOllamaMessageToAnthropic(
-  msg: Message
-): Anthropic.Messages.MessageParam {
-  if (msg.role === 'tool') {
-    // Tool messages in Ollama -> tool_result content blocks in Anthropic
-    let parsedContent
-    try {
-      parsedContent = JSON.parse(msg.content)
-    } catch {
-      // If parsing fails, use the raw string content
-      parsedContent = msg.content
-    }
-
-    // Find the corresponding tool_call message to get the ID
-    // NB: This relies on message order and might be fragile.
-    // A better approach might involve tracking tool call IDs.
-    // For now, we assume the preceding assistant message contains the call.
-    // We don't have access to the message history here easily,
-    // so we'll fabricate a plausible-looking ID. A real system might
-    // need to pass the ID through.
-    const toolUseId = `toolu_${Date.now()}` // Fabricated ID
-
-    return {
-      role: 'user', // Anthropic expects tool results in a user message
-      content: [
-        {
-          type: 'tool_result',
-          tool_use_id: toolUseId, // Need the ID from the tool_call message
-          content: parsedContent,
-        },
-      ],
-    }
-  } else if (msg.role === 'assistant' && msg.tool_calls) {
-    // Assistant message with tool calls
-    const contentBlocks: ContentBlockParam[] = []
-    if (msg.content) {
-      contentBlocks.push({ type: 'text', text: msg.content })
-    }
-
-    msg.tool_calls.forEach((call) => {
-      contentBlocks.push({
-        type: 'tool_use',
-        id: `toolu_${call.function.name}_${Date.now()}`, // Fabricate ID
-        name: call.function.name,
-        input: call.function.arguments,
-      })
-    })
-
-    return {
-      role: 'assistant',
-      content: contentBlocks,
-    }
-  } else {
-    // Standard user or assistant message without tools
-    return {
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    }
-  }
-}
-
-function convertAnthropicMessageToOllama(msg: MessageParam): Message {
-  if (msg.role === 'user' && Array.isArray(msg.content)) {
-    // Check if this user message contains tool results
-    const toolResultBlock = msg.content.find(
-      (block) => block.type === 'tool_result'
-    )
-    if (toolResultBlock && toolResultBlock.type === 'tool_result') {
-      // This assumes only one tool result per user message, which matches
-      // how we process Ollama tool responses currently.
-      return {
-        role: 'tool',
-        content: JSON.stringify(toolResultBlock.content),
-        // tool_call_id: toolResultBlock.tool_use_id, // Ollama Message doesn't have tool_call_id
-      }
-    }
-  }
-
-  // Handle standard messages or assistant messages with tool_use
-  let contentString = ''
-  if (typeof msg.content === 'string') {
-    contentString = msg.content
-  } else if (Array.isArray(msg.content)) {
-    // Combine text blocks and represent tool_use blocks if needed (though Ollama expects calls from assistant)
-    contentString = msg.content
-      .map((block) => {
-        if (block.type === 'text') {
-          return block.text
-        } else if (block.type === 'tool_use') {
-          // Representing tool use in Ollama input is less direct.
-          // We might stringify it or just include the intent.
-          // For now, let's focus on the text parts for the user message.
-          return `[Requesting tool: ${block.name}]`
-        }
-        return ''
-      })
-      .join('\n')
-  }
-
-  return {
-    role: msg.role,
-    content: contentString,
-    // tool_calls are handled separately when generating the assistant response
-  }
-}
-
-// ---- End Conversion Functions ----
-
 export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
-  // Timeout configuration (in milliseconds)
   static OLLAMA_API_TIMEOUT = 5 * 60 * 1000
 
   private ollama: Ollama
@@ -339,5 +228,110 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
         }
       }
     }
+  }
+}
+
+function convertOllamaMessageToAnthropic(
+  msg: Message
+): Anthropic.Messages.MessageParam {
+  if (msg.role === 'tool') {
+    // Tool messages in Ollama -> tool_result content blocks in Anthropic
+    let parsedContent
+    try {
+      parsedContent = JSON.parse(msg.content)
+    } catch {
+      // If parsing fails, use the raw string content
+      parsedContent = msg.content
+    }
+
+    // Find the corresponding tool_call message to get the ID
+    // NB: This relies on message order and might be fragile.
+    // A better approach might involve tracking tool call IDs.
+    // For now, we assume the preceding assistant message contains the call.
+    // We don't have access to the message history here easily,
+    // so we'll fabricate a plausible-looking ID. A real system might
+    // need to pass the ID through.
+    const toolUseId = `toolu_${Date.now()}` // Fabricated ID
+
+    return {
+      role: 'user', // Anthropic expects tool results in a user message
+      content: [
+        {
+          type: 'tool_result',
+          tool_use_id: toolUseId, // Need the ID from the tool_call message
+          content: parsedContent,
+        },
+      ],
+    }
+  } else if (msg.role === 'assistant' && msg.tool_calls) {
+    // Assistant message with tool calls
+    const contentBlocks: ContentBlockParam[] = []
+    if (msg.content) {
+      contentBlocks.push({ type: 'text', text: msg.content })
+    }
+
+    msg.tool_calls.forEach((call) => {
+      contentBlocks.push({
+        type: 'tool_use',
+        id: `toolu_${call.function.name}_${Date.now()}`, // Fabricate ID
+        name: call.function.name,
+        input: call.function.arguments,
+      })
+    })
+
+    return {
+      role: 'assistant',
+      content: contentBlocks,
+    }
+  } else {
+    // Standard user or assistant message without tools
+    return {
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+    }
+  }
+}
+
+function convertAnthropicMessageToOllama(msg: MessageParam): Message {
+  if (msg.role === 'user' && Array.isArray(msg.content)) {
+    // Check if this user message contains tool results
+    const toolResultBlock = msg.content.find(
+      (block) => block.type === 'tool_result'
+    )
+    if (toolResultBlock && toolResultBlock.type === 'tool_result') {
+      // This assumes only one tool result per user message, which matches
+      // how we process Ollama tool responses currently.
+      return {
+        role: 'tool',
+        content: JSON.stringify(toolResultBlock.content),
+        // tool_call_id: toolResultBlock.tool_use_id, // Ollama Message doesn't have tool_call_id
+      }
+    }
+  }
+
+  // Handle standard messages or assistant messages with tool_use
+  let contentString = ''
+  if (typeof msg.content === 'string') {
+    contentString = msg.content
+  } else if (Array.isArray(msg.content)) {
+    // Combine text blocks and represent tool_use blocks if needed (though Ollama expects calls from assistant)
+    contentString = msg.content
+      .map((block) => {
+        if (block.type === 'text') {
+          return block.text
+        } else if (block.type === 'tool_use') {
+          // Representing tool use in Ollama input is less direct.
+          // We might stringify it or just include the intent.
+          // For now, let's focus on the text parts for the user message.
+          return `[Requesting tool: ${block.name}]`
+        }
+        return ''
+      })
+      .join('\n')
+  }
+
+  return {
+    role: msg.role,
+    content: contentString,
   }
 }

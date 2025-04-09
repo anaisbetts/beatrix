@@ -32,6 +32,7 @@ export function createDefaultLLMProvider(
   model?: string
 ): LargeLanguageProvider {
   const providerName = driver ?? config.llm
+  let effectiveModel = model // Use the override model if provided
 
   if (!providerName) {
     throw new Error(
@@ -47,7 +48,11 @@ export function createDefaultLLMProvider(
         )
       }
 
-      return new AnthropicLargeLanguageProvider(config.anthropicApiKey)
+      effectiveModel ??= config.anthropicModel // Fallback to config model
+      return new AnthropicLargeLanguageProvider(
+        config.anthropicApiKey,
+        effectiveModel
+      )
     case 'ollama':
       if (!config.ollamaHost) {
         throw new Error(
@@ -55,7 +60,8 @@ export function createDefaultLLMProvider(
         )
       }
 
-      return new OllamaLargeLanguageProvider(config.ollamaHost)
+      effectiveModel ??= config.ollamaModel // Fallback to config model
+      return new OllamaLargeLanguageProvider(config.ollamaHost, effectiveModel)
     default:
       // Assume it's an OpenAI-compatible provider name
       const openAIProviderConfig = config.openAIProviders?.find(
@@ -67,9 +73,13 @@ export function createDefaultLLMProvider(
         )
       }
 
+      // Fallback to model from the specific provider config
+      effectiveModel ??= openAIProviderConfig.model
+
       return new OpenAILargeLanguageProvider({
         apiKey: openAIProviderConfig.apiKey,
         baseURL: openAIProviderConfig.baseURL,
+        model: effectiveModel, // Pass the determined model
       })
   }
 }

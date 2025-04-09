@@ -12,6 +12,7 @@ export interface OpenAIProviderConfig {
   providerName?: string // Name for this provider configuration, the default is 'openai'
   baseURL?: string
   apiKey?: string
+  model?: string
 }
 
 // Main application configuration interface
@@ -22,7 +23,11 @@ export interface AppConfig {
   llm?: string // either 'anthropic', 'ollama', or a provider name in openAIProviders
 
   anthropicApiKey?: string
+  anthropicModel?: string
+
   ollamaHost?: string
+  ollamaModel?: string
+
   openAIProviders?: OpenAIProviderConfig[] // Array for multiple OpenAI configs
 }
 
@@ -60,7 +65,9 @@ export async function loadConfig(filePath: string): Promise<AppConfig> {
 
     // Map nested fields safely
     config.anthropicApiKey = parsedToml.anthropic?.key
+    config.anthropicModel = parsedToml.anthropic?.model
     config.ollamaHost = parsedToml.ollama?.host
+    config.ollamaModel = parsedToml.ollama?.model
 
     // Transform the OpenAI configuration
     config.openAIProviders = []
@@ -73,6 +80,10 @@ export async function loadConfig(filePath: string): Promise<AppConfig> {
             config.openAIProviders.push({
               providerName: 'openai', // Default name
               apiKey: providerData,
+              model:
+                typeof parsedToml.openai.model === 'string'
+                  ? parsedToml.openai.model
+                  : undefined,
             })
           } else if (
             typeof providerData === 'object' &&
@@ -83,6 +94,7 @@ export async function loadConfig(filePath: string): Promise<AppConfig> {
               providerName: key,
               baseURL: providerData.base_url,
               apiKey: providerData.key,
+              model: providerData.model,
             })
           }
         }
@@ -126,9 +138,15 @@ export async function saveConfig(
     }
     if (config.anthropicApiKey) {
       tomlStructure.anthropic = { key: config.anthropicApiKey }
+      if (config.anthropicModel) {
+        tomlStructure.anthropic.model = config.anthropicModel
+      }
     }
     if (config.ollamaHost) {
       tomlStructure.ollama = { host: config.ollamaHost }
+      if (config.ollamaModel) {
+        tomlStructure.ollama.model = config.ollamaModel
+      }
     }
 
     // Handle OpenAI providers
@@ -140,6 +158,9 @@ export async function saveConfig(
           if (provider.apiKey) {
             tomlStructure.openai.key = provider.apiKey
           }
+          if (provider.model) {
+            tomlStructure.openai.model = provider.model
+          }
           // Note: A default provider might also have a base_url, handle if needed
         } else if (provider.providerName) {
           // Named provider [openai.providerName]
@@ -149,6 +170,9 @@ export async function saveConfig(
           }
           if (provider.apiKey) {
             providerSection.key = provider.apiKey
+          }
+          if (provider.model) {
+            providerSection.model = provider.model
           }
           // Only add the section if it has content
           if (Object.keys(providerSection).length > 0) {
@@ -179,10 +203,13 @@ export function migrateConfig(config: AppConfig) {
   config.haBaseUrl ??= process.env.HA_BASE_URL
   config.haToken ??= process.env.HA_TOKEN
   config.anthropicApiKey ??= process.env.ANTHROPIC_API_KEY
+  config.anthropicModel ??= process.env.ANTHROPIC_MODEL
   config.ollamaHost ??= process.env.OLLAMA_HOST
+  config.ollamaModel ??= process.env.OLLAMA_MODEL
 
   // Migrate the default OpenAI API key if it's missing
   const defaultOpenAIKey = process.env.OPENAI_API_KEY
+  const defaultOpenAIModel = process.env.OPENAI_MODEL
   if (defaultOpenAIKey) {
     // Ensure the providers array exists
     config.openAIProviders ??= []
@@ -195,11 +222,13 @@ export function migrateConfig(config: AppConfig) {
     if (defaultProvider) {
       // If default provider exists, update its key only if missing
       defaultProvider.apiKey ??= defaultOpenAIKey
+      defaultProvider.model ??= defaultOpenAIModel
     } else {
       // If default provider doesn't exist, add it
       config.openAIProviders.push({
         providerName: 'openai',
         apiKey: defaultOpenAIKey,
+        model: defaultOpenAIModel,
       })
     }
   }

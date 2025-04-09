@@ -1,26 +1,33 @@
 import toml from '@iarna/toml'
+import debug from 'debug'
 import fs from 'fs/promises'
 import path from 'path'
 
 import { getDataDir } from './utils'
 
+const d = debug('b:config')
+
 // Interface for a single OpenAI provider configuration
 export interface OpenAIProviderConfig {
-  providerName?: string // Name for this provider configuration
+  providerName?: string // Name for this provider configuration, the default is 'openai'
   baseURL?: string
   apiKey?: string
 }
 
 // Main application configuration interface
 export interface AppConfig {
+  haBaseUrl?: string
+  haToken?: string
+
+  llm?: string // either 'anthropic', 'ollama', or a provider name in openAIProviders
+
   anthropicApiKey?: string
   ollamaHost?: string
   openAIProviders?: OpenAIProviderConfig[] // Array for multiple OpenAI configs
-  haBaseUrl?: string
-  haToken?: string
 }
 
 export async function createConfigViaEnv() {
+  // Provide a default llm to satisfy the type, migration will fix it
   let config: AppConfig = {}
   let cfgPath = path.join(getDataDir(), 'config.toml')
 
@@ -42,12 +49,14 @@ export async function loadConfig(filePath: string): Promise<AppConfig> {
     // We might need to cast if types aren't perfectly aligned, but @iarna/toml has decent types.
     const parsedToml = toml.parse(fileContent) as any // Cast to any for easier access initially
 
-    // Initialize the AppConfig object
-    const config: AppConfig = {}
+    // Initialize the AppConfig object with a default llm to satisfy type
+    const config: AppConfig = { llm: 'openai' }
 
     // Map top-level fields
     config.haBaseUrl = parsedToml.ha_base_url
     config.haToken = parsedToml.ha_token
+    // Load the primary LLM provider choice
+    config.llm = parsedToml.llm
 
     // Map nested fields safely
     config.anthropicApiKey = parsedToml.anthropic?.key
@@ -84,9 +93,15 @@ export async function loadConfig(filePath: string): Promise<AppConfig> {
       config.openAIProviders = undefined
     }
 
+    // Validate the loaded LLM config if llm field exists
+    if (config.llm) {
+      validateLlmConfig(config, 'loadConfig')
+    }
+
     return config
   } catch (error) {
     console.error(`Error loading or parsing config file at ${filePath}:`, error)
+    // Return a default config structure on error to satisfy type, migration will handle env vars
     return {}
   }
 }
@@ -105,6 +120,9 @@ export async function saveConfig(
     }
     if (config.haToken) {
       tomlStructure.ha_token = config.haToken
+    }
+    if (config.llm) {
+      tomlStructure.llm = config.llm
     }
     if (config.anthropicApiKey) {
       tomlStructure.anthropic = { key: config.anthropicApiKey }
@@ -183,6 +201,61 @@ export function migrateConfig(config: AppConfig) {
         providerName: 'openai',
         apiKey: defaultOpenAIKey,
       })
+    }
+  }
+
+  // Migrate the llm field if it's not set
+  if (!config.llm) {
+    d(
+      'LLM provider ("llm") not specified, attempting to infer from configuration...'
+    )
+    if (config.anthropicApiKey) {
+      config.llm = 'anthropic'
+      d('Inferred LLM provider: anthropic (Anthropic API key found)')
+    } else if (
+      config.openAIProviders?.some(
+        (p) => p.providerName === 'openai' && p.apiKey
+      )
+    ) {
+      config.llm = 'openai'
+      d('Inferred LLM provider: openai (Default OpenAI provider key found)')
+    } else if (config.ollamaHost) {
+      config.llm = 'ollama'
+      d('Inferred LLM provider: ollama (Ollama host found)')
+    } else {
+      // Last resort default if nothing else is configured
+      config.llm = 'openai'
+      console.warn(
+        'Could not infer LLM provider from config or environment variables. Defaulting to "openai". Ensure configuration is correct.'
+      )
+      d('Could not infer LLM provider, defaulted to "openai"')
+    }
+  }
+
+  // Validate the final LLM configuration after migration
+  validateLlmConfig(config, 'migrateConfig')
+}
+
+// Helper function for validation
+function validateLlmConfig(config: AppConfig, context: string) {
+  d('[%s] Validating config for LLM: %s', context, config.llm)
+  if (config.llm === 'anthropic' && !config.anthropicApiKey) {
+    console.warn(
+      `[${context}] LLM is set to 'anthropic' but Anthropic API key is missing.`
+    )
+  } else if (config.llm === 'ollama' && !config.ollamaHost) {
+    console.warn(
+      `[${context}] LLM is set to 'ollama' but Ollama host is missing.`
+    )
+  } else if (config.llm !== 'anthropic' && config.llm !== 'ollama') {
+    // Check if it's a named OpenAI provider
+    const providerExists = config.openAIProviders?.some(
+      (p) => p.providerName === config.llm && p.apiKey
+    )
+    if (!providerExists) {
+      console.warn(
+        `[${context}] LLM is set to '${config.llm}', but no corresponding OpenAI provider with that name and an API key was found.`
+      )
     }
   }
 }

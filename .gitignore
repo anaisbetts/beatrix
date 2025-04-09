@@ -185,3 +185,4 @@ app.db
 tsconfig.tsbuildinfo
 
 notebook/
+config.toml

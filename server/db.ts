@@ -35,14 +35,8 @@ export async function createInMemoryDatabase() {
 }
 
 async function _createDatabase(dbPath?: string) {
-  const dbFile =
-    dbPath ??
-    (process.env.DATA_DIR
-      ? path.join(process.env.DATA_DIR, 'app.db')
-      : './app.db')
-
   const db = new Kysely<Schema>({
-    dialect: new BunSqliteDialect(dbPath ? { url: dbFile } : {}),
+    dialect: new BunSqliteDialect(dbPath ? { url: dbPath } : {}),
     log(ev) {
       d('db: %o', ev)
     },

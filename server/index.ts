@@ -121,6 +121,7 @@ async function mcpCommand(options: { testMode: boolean }) {
     testMode: options.testMode,
     megaServer,
   })
+
   await megaServer.server.connect(new StdioServerTransport())
 }
 

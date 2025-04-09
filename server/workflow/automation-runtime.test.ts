@@ -3,13 +3,20 @@ import { firstValueFrom, timeout } from 'rxjs'
 
 import { createInMemoryDatabase } from '../db'
 import { EvalHomeAssistantApi } from '../eval-framework'
-import { createDefaultLLMProvider } from '../llm'
+import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
 import { LiveAutomationRuntime } from './automation-runtime'
 
 describe('LiveAutomationRuntime', () => {
   it('reparseAutomations should emit immediately upon subscription', async () => {
     const api = new EvalHomeAssistantApi()
-    const llm = createDefaultLLMProvider()
+
+    let llm: LargeLanguageProvider
+    try {
+      llm = createDefaultLLMProvider()
+    } catch {
+      console.error('No LLM provider found, skipping test')
+      return
+    }
 
     // NB: We set the notebook dir so that reparseAutomations works
     // but we're not actually doing anything with it

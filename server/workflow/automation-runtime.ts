@@ -68,12 +68,20 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
 
-  static async createViaConfig(config: AppConfig, notebookDirectory?: string) {
+  static async createViaConfig(
+    config: AppConfig,
+    api?: HomeAssistantApi,
+    notebookDirectory?: string
+  ) {
     const llm = createDefaultLLMProvider(config)
     const db = await createDatabaseViaEnv()
-    const api = await LiveHomeAssistantApi.createViaConfig(config)
 
-    return new LiveAutomationRuntime(api, llm, db, notebookDirectory)
+    return new LiveAutomationRuntime(
+      api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
+      llm,
+      db,
+      notebookDirectory
+    )
   }
 
   constructor(

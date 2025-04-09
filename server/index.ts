@@ -14,8 +14,9 @@ import { ServerWebsocketApi, messagesToString } from '../shared/prompt'
 import { ScenarioResult } from '../shared/types'
 import { ServerMessage } from '../shared/ws-rpc'
 import { ServerWebsocketApiImpl } from './api'
+import { createConfigViaEnv } from './config'
 import { createDatabaseViaEnv } from './db'
-import { EvalHomeAssistantApi, createLLMDriver } from './eval-framework'
+import { EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
@@ -38,11 +39,12 @@ async function serveCommand(options: {
   testMode: boolean
   evalMode: boolean
 }) {
+  const config = await createConfigViaEnv()
   const port = options.port || process.env.PORT || DEFAULT_PORT
 
   const conn = options.evalMode
     ? new EvalHomeAssistantApi()
-    : await LiveHomeAssistantApi.createViaEnv()
+    : await LiveHomeAssistantApi.createViaConfig(config)
 
   const db = await createDatabaseViaEnv()
   await startLogger(db)
@@ -50,10 +52,10 @@ async function serveCommand(options: {
   await mkdir(path.join(options.notebook, 'automations'), {
     recursive: true,
   })
-  const runtime = new LiveAutomationRuntime(
+
+  const runtime = await LiveAutomationRuntime.createViaConfig(
+    config,
     conn,
-    createDefaultLLMProvider(),
-    db,
     path.resolve(options.notebook)
   )
 
@@ -63,7 +65,12 @@ async function serveCommand(options: {
 
   const subj: Subject<ServerMessage> = new Subject()
   handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(runtime, options.testMode, options.evalMode),
+    new ServerWebsocketApiImpl(
+      config,
+      runtime,
+      options.testMode,
+      options.evalMode
+    ),
     subj
   )
 
@@ -110,11 +117,8 @@ async function mcpCommand(options: { testMode: boolean }) {
   // spam any other console output
   disableLogging()
 
-  const runtime = new LiveAutomationRuntime(
-    await LiveHomeAssistantApi.createViaEnv(),
-    createDefaultLLMProvider(),
-    await createDatabaseViaEnv()
-  )
+  const config = await createConfigViaEnv()
+  const runtime = await LiveAutomationRuntime.createViaConfig(config)
 
   const megaServer = new McpServer({ name: 'beatrix', version: pkg.version })
   createBuiltinServers(runtime, null, {
@@ -148,7 +152,8 @@ async function evalCommand(options: {
 }) {
   const { model, driver } = options
 
-  const llm = createLLMDriver(model, driver)
+  const config = await createConfigViaEnv()
+  const llm = createDefaultLLMProvider(config, driver, model)
 
   console.log(`Running ${options.quick ? 'quick' : 'all'} evals...`)
   const results = []
@@ -183,7 +188,8 @@ async function evalCommand(options: {
 }
 
 async function dumpEventsCommand() {
-  const conn = await LiveHomeAssistantApi.createViaEnv()
+  const config = await createConfigViaEnv()
+  const conn = await LiveHomeAssistantApi.createViaConfig(config)
 
   console.error('Dumping non-noisy events...')
   conn

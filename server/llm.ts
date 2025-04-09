@@ -71,10 +71,8 @@ export function createBuiltinServers(
   return ret
 }
 
-export function connectServersToClient(client: Client, servers: Server[]) {
-  servers.forEach((server) => {
-    const [cli, srv] = InMemoryTransport.createLinkedPair()
-    void client.connect(cli)
-    void server.connect(srv)
-  })
+export function connectServerToClient(client: Client, server: Server) {
+  const [cli, srv] = InMemoryTransport.createLinkedPair()
+  void client.connect(cli)
+  void server.connect(srv)
 }

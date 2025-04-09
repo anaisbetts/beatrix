@@ -10,7 +10,7 @@ import { Observable, from } from 'rxjs'
 
 import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
-import { LargeLanguageProvider, connectServersToClient } from './llm'
+import { LargeLanguageProvider, connectServerToClient } from './llm'
 import { e } from './logging'
 
 const d = debug('b:llm')
@@ -74,27 +74,49 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
   ) {
     const anthropic = new Anthropic({ apiKey: this.apiKey })
 
-    const client = new Client({
-      name: pkg.name,
-      version: pkg.version,
+    // Create a client for each tool server and connect them
+    const clientServerPairs = toolServers.map((mcpServer, index) => {
+      const client = new Client({
+        name: `${pkg.name}-client-${index}`, // Unique client name based on index
+        version: pkg.version,
+      })
+
+      connectServerToClient(client, mcpServer.server)
+      return { server: mcpServer, client, index } // Pass index along
     })
 
-    connectServersToClient(
-      client,
-      toolServers.map((x) => x.server)
-    )
+    // Aggregate tools from all clients and map tool names to clients
+    const anthropicTools: Anthropic.Tool[] = []
+    const toolClientMap = new Map<string, Client>()
 
-    let anthropicTools: any[] = []
-    if (toolServers.length > 0) {
-      const toolList = await client.listTools()
+    if (clientServerPairs.length > 0) {
+      const toolLists = await Promise.all(
+        clientServerPairs.map(async ({ client }) => {
+          try {
+            return await client.listTools()
+          } catch (err) {
+            e('Error listing tools for a client:', err)
+            return { tools: [] } // Return empty list on error
+          }
+        })
+      )
 
-      anthropicTools = toolList.tools.map((tool) => {
-        return {
-          name: tool.name,
-          description: tool.description || '',
-          input_schema: tool.inputSchema,
-        }
+      clientServerPairs.forEach(({ client }, index) => {
+        const tools = toolLists[index].tools
+        tools.forEach((tool) => {
+          anthropicTools.push({
+            name: tool.name,
+            description: tool.description || '',
+            input_schema: tool.inputSchema,
+          })
+          toolClientMap.set(tool.name, client)
+        })
       })
+      d(
+        'Aggregated %d tools from %d clients',
+        anthropicTools.length,
+        clientServerPairs.length
+      )
     }
 
     const msgs: MessageParam[] = previousMessages ? [...previousMessages] : []
@@ -224,8 +246,21 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
         toolCalls,
         async (toolCall) => {
           d('Calling tool: %s', toolCall.name)
+
+          const client = toolClientMap.get(toolCall.name)
+          if (!client) {
+            e(`Error: Could not find client for tool '${toolCall.name}'`)
+            const errorMsg = `System error: Tool '${toolCall.name}' not found.`
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: toolCall.id,
+              content: errorMsg,
+              tokenEstimate: errorMsg.length / 4 + 10,
+            }
+          }
+
           try {
-            // Apply timeout to each tool call
+            // Apply timeout to each tool call using the correct client
             const toolResp = await withTimeout(
               client.callTool({
                 name: toolCall.name,

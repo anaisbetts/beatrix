@@ -7,10 +7,19 @@ import { Observable, from } from 'rxjs'
 
 import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
-import { LargeLanguageProvider, connectServersToClient } from './llm'
+import { LargeLanguageProvider, connectServerToClient } from './llm'
 import { e } from './logging'
 
 const d = debug('b:llm')
+
+// ---- Helper Types ----
+interface ToolResultWithEstimate {
+  tool_call_id: string
+  role: 'tool'
+  content: string
+  tokenEstimate: number
+}
+// ---- End Helper Types ----
 
 // Reserve tokens for model responses
 const RESPONSE_TOKEN_RESERVE = 4000
@@ -71,30 +80,52 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
     toolServers: McpServer[],
     previousMessages?: MessageParam[]
   ) {
-    const client = new Client({
-      name: pkg.name,
-      version: pkg.version,
+    // Create a client for each tool server and connect them
+    const clientServerPairs = toolServers.map((mcpServer, index) => {
+      const client = new Client({
+        name: `${pkg.name}-openai-client-${index}`, // Unique client name
+        version: pkg.version,
+      })
+      connectServerToClient(client, mcpServer.server)
+      return { server: mcpServer, client, index }
     })
 
-    connectServersToClient(
-      client,
-      toolServers.map((x) => x.server)
-    )
+    // Aggregate tools from all clients and map tool names to clients
+    const openaiTools: Array<OpenAI.ChatCompletionTool> = []
+    const toolClientMap = new Map<string, Client>()
 
-    let openaiTools: Array<OpenAI.ChatCompletionTool> = []
-    if (toolServers.length > 0) {
-      const toolList = await client.listTools()
+    if (clientServerPairs.length > 0) {
+      const toolLists = await Promise.all(
+        clientServerPairs.map(async ({ client }) => {
+          try {
+            return await client.listTools()
+          } catch (err) {
+            e('Error listing tools for an OpenAI client:', err)
+            return { tools: [] } // Return empty list on error
+          }
+        })
+      )
 
-      openaiTools = toolList.tools.map((tool) => {
-        return {
-          type: 'function',
-          function: {
-            name: tool.name,
-            description: tool.description || '',
-            parameters: tool.inputSchema as any,
-          },
-        }
+      clientServerPairs.forEach(({ client }, index) => {
+        const tools = toolLists[index].tools
+        tools.forEach((tool) => {
+          const openAITool: OpenAI.ChatCompletionTool = {
+            type: 'function' as const,
+            function: {
+              name: tool.name,
+              description: tool.description || '',
+              parameters: tool.inputSchema as any,
+            },
+          }
+          openaiTools.push(openAITool)
+          toolClientMap.set(tool.name, client)
+        })
       })
+      d(
+        'Aggregated %d OpenAI tools from %d clients',
+        openaiTools.length,
+        clientServerPairs.length
+      )
     }
 
     // Convert previous Anthropic messages to OpenAI format
@@ -224,56 +255,67 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
       const toolCalls = assistantMessage.tool_calls
       d('Processing %d tool calls in parallel', toolCalls.length)
 
-      // Estimate token usage for tool calls - this is approximate
+      // Estimate token usage for tool calls - approximate
       const estimatedToolCallTokens = toolCalls.reduce((sum, call) => {
-        // Rough estimate: 10 tokens per tool name + overhead + input size
-        const inputSize = JSON.stringify(call.function.arguments).length / 4 // ~4 chars per token
-        return sum + 20 + inputSize
+        const inputSize = JSON.stringify(call.function.arguments).length / 4
+        return sum + 20 + inputSize // Rough estimate per call
       }, 0)
       usedTokens += estimatedToolCallTokens
 
-      // Execute tool calls in parallel with timeouts
+      // Execute tool calls in parallel with timeouts, using the correct client
       const toolResultsMap = await asyncMap(
         toolCalls,
         async (toolCall) => {
-          d('Calling tool: %s', toolCall.function.name)
+          // Find the specific client for this tool
+          const client = toolClientMap.get(toolCall.function.name)
+          if (!client) {
+            e(
+              `Error: Could not find client for OpenAI tool '${toolCall.function.name}'`
+            )
+            const errorMsg = `System error: Tool '${toolCall.function.name}' not found.`
+            return {
+              tool_call_id: toolCall.id,
+              role: 'tool' as const,
+              content: errorMsg,
+              tokenEstimate: errorMsg.length / 4 + 10, // Estimate tokens for the error message
+            }
+          }
+
+          d('Calling OpenAI tool: %s', toolCall.function.name)
           try {
-            // Apply timeout to each tool call
+            // Apply timeout to each tool call using the correct client
             const toolResp = await withTimeout(
               client.callTool({
                 name: toolCall.function.name,
-                arguments:
-                  typeof toolCall.function.arguments === 'string'
-                    ? (JSON.parse(toolCall.function.arguments) as Record<
-                        string,
-                        any
-                      >)
-                    : (toolCall.function.arguments as Record<string, any>),
+                arguments: JSON.parse(toolCall.function.arguments),
               }),
               TOOL_EXECUTION_TIMEOUT,
               `Tool execution '${toolCall.function.name}' timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
             )
 
-            const resultContent = toolResp.content as string
+            const resultContent = JSON.stringify(toolResp.content)
             return {
               tool_call_id: toolCall.id,
-              content: resultContent ?? '',
+              role: 'tool' as const,
+              content: resultContent ?? [],
               // Return token estimation for accounting
-              tokenEstimate: resultContent ? resultContent.length / 4 + 10 : 10,
+              tokenEstimate:
+                (resultContent ? resultContent.length / 4 : 0) + 10,
             }
           } catch (err) {
             // Handle both timeout errors and other execution errors
             let errorMsg = ''
             if (err instanceof TimeoutError) {
-              e('Tool execution timed out:', err.message)
+              e(`Tool execution timed out: ${toolCall.function.name}`)
               errorMsg = `Tool '${toolCall.function.name}' execution timed out after ${TOOL_EXECUTION_TIMEOUT}ms`
             } else {
-              e('Error executing tool:', err)
+              e(`Error executing tool ${toolCall.function.name}:`, err)
               errorMsg = `Error executing tool '${toolCall.function.name}': ${err instanceof Error ? err.message : String(err)}`
             }
 
             return {
               tool_call_id: toolCall.id,
+              role: 'tool' as const,
               content: errorMsg,
               tokenEstimate: errorMsg.length / 4 + 10,
             }
@@ -282,37 +324,34 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
         10 // Allow up to 10 concurrent tool executions
       )
 
-      // Add tool results to messages
+      // Convert Map results to array and update token usage
       let totalToolTokens = 0
-
-      // For OpenAI, we need to add each tool result as a separate message
       toolResultsMap.forEach((result) => {
         msgs.push({
-          role: 'tool',
           tool_call_id: result.tool_call_id,
+          role: result.role,
           content: result.content,
         })
-
         totalToolTokens += result.tokenEstimate
       })
 
       usedTokens += totalToolTokens
       d(
-        'Completed %d parallel tool calls, estimated %d tokens',
+        'Completed %d parallel OpenAI tool calls, estimated %d tokens',
         toolCalls.length,
         totalToolTokens
       )
 
-      // Create an Anthropic-compatible message from the tool results
-      const toolResults = Array.from(toolResultsMap).map(([, result]) => ({
-        type: 'tool_result' as const,
-        tool_use_id: result.tool_call_id,
-        content: result.content,
-      }))
-
+      // Yield the tool results message in Anthropic format
       const toolResultsMessage: MessageParam = {
-        role: 'user',
-        content: toolResults,
+        role: 'user', // Anthropic expects tool results in a user message
+        content: Array.from(toolResultsMap.values()).map(
+          (result: ToolResultWithEstimate) => ({
+            type: 'tool_result',
+            tool_use_id: result.tool_call_id,
+            content: result.content, // Keep content as string for Anthropic
+          })
+        ),
       }
       yield toolResultsMessage
 

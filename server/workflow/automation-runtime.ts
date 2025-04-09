@@ -77,22 +77,21 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     this.notebookDirectory = notebookDirectory
 
     this.reparseAutomations = this.notebookDirectory
-      ? merge(
-          createBufferedDirectoryMonitor(
-            {
-              path: getAutomationDirectory(this),
-              recursive: true,
-            },
-            2000
-          ).pipe(
-            tap(() =>
-              i(
-                `Detected change in automation directory: ${this.notebookDirectory}`
-              )
-            ),
-            map(() => {})
-          )
-        ).pipe(startWith())
+      ? createBufferedDirectoryMonitor(
+          {
+            path: getAutomationDirectory(this),
+            recursive: true,
+          },
+          2000
+        ).pipe(
+          tap(() =>
+            i(
+              `Detected change in automation directory: ${this.notebookDirectory}`
+            )
+          ),
+          map(() => {}),
+          startWith(undefined)
+        )
       : NEVER
 
     this.scannedAutomationDir = this.notebookDirectory

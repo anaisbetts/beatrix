@@ -38,31 +38,6 @@ type LlmEvalResponse = {
   suggestions: string
 }
 
-export function createLLMDriver(model: string, driver: string) {
-  if (driver === 'anthropic') {
-    return new AnthropicLargeLanguageProvider(
-      process.env.ANTHROPIC_API_KEY!,
-      model
-    )
-  } else if (driver === 'ollama') {
-    if (!process.env.OLLAMA_HOST) {
-      throw new Error('OLLAMA_HOST is required for Ollama driver')
-    }
-
-    return new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST, model)
-  } else if (driver === 'openai') {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is required for OpenAI driver')
-    }
-
-    return new OpenAILargeLanguageProvider(model)
-  }
-
-  throw new Error(
-    "Invalid driver specified. Use 'anthropic', 'ollama', or 'openai'."
-  )
-}
-
 export async function runScenario(
   llm: LargeLanguageProvider,
   prompt: string,

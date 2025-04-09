@@ -27,9 +27,11 @@ export interface LargeLanguageProvider {
 }
 
 export function createDefaultLLMProvider(
-  config: AppConfig
+  config: AppConfig,
+  driver?: string,
+  model?: string
 ): LargeLanguageProvider {
-  const providerName = config.llm
+  const providerName = driver ?? config.llm
 
   if (!providerName) {
     throw new Error(
@@ -44,6 +46,7 @@ export function createDefaultLLMProvider(
           "LLM provider set to 'anthropic' but ANTHROPIC_API_KEY is missing."
         )
       }
+
       return new AnthropicLargeLanguageProvider(config.anthropicApiKey)
     case 'ollama':
       if (!config.ollamaHost) {
@@ -51,6 +54,7 @@ export function createDefaultLLMProvider(
           "LLM provider set to 'ollama' but OLLAMA_HOST is missing."
         )
       }
+
       return new OllamaLargeLanguageProvider(config.ollamaHost)
     default:
       // Assume it's an OpenAI-compatible provider name

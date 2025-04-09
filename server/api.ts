@@ -102,7 +102,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     driver: string,
     previousConversationId?: number
   ): Observable<MessageParamWithExtras> {
-    const llm = createDefaultLLMProvider(model, driver)
+    const llm = createDefaultLLMProvider(this.config, driver, model)
     const rqRuntime = new LiveAutomationRuntime(
       this.runtime.api,
       llm,
@@ -193,11 +193,11 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   runEvals(
     model: string,
-    driver: 'ollama' | 'anthropic' | 'openai',
+    driver: string,
     type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult> {
-    const llm = createLLMDriver(model, driver)
+    const llm = createDefaultLLMProvider(this.config, driver, model)
 
     const counter = generate({
       initialState: 0,
@@ -206,7 +206,6 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     })
 
     const runEvals = type === 'all' ? runAllEvals : runQuickEvals
-
     return from(counter.pipe(concatMap(() => runEvals(llm))))
   }
 }

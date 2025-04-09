@@ -4,7 +4,6 @@ import { Observable } from 'rxjs'
 import {
   Automation,
   AutomationLogEntry,
-  ModelDriverType,
   ScenarioResult,
   SignalHandlerInfo,
 } from './types'
@@ -17,18 +16,18 @@ export interface ServerWebsocketApi {
   handlePromptRequest(
     prompt: string,
     model: string,
-    driver: ModelDriverType,
+    driver: string,
     previousConversationId?: number
   ): Observable<MessageParamWithExtras>
 
   runEvals(
     model: string,
-    driver: ModelDriverType,
+    driver: string,
     type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult>
 
-  getModelListForDriver(driver: ModelDriverType): Observable<string[]>
+  getModelListForDriver(driver: string): Observable<string[]>
   getDriverList(): Observable<string[]>
 
   getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]>

@@ -24,8 +24,6 @@ import {
 } from './lib/ha-ws-api'
 import { LargeLanguageProvider } from './llm'
 import { e } from './logging'
-import { OllamaLargeLanguageProvider } from './ollama'
-import { OpenAILargeLanguageProvider } from './openai'
 import { LiveAutomationRuntime } from './workflow/automation-runtime'
 
 const d = debug('b:eval')

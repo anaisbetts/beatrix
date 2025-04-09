@@ -14,14 +14,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-import { ModelDriverType } from '../../shared/types'
 import { ChatMessage } from '../components/chat-message'
 import { useWebSocket } from '../components/ws-provider'
 
 export default function Chat() {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<MessageParam[]>([])
-  const [driver, setDriver] = useState<ModelDriverType>('anthropic')
+  const [driver, setDriver] = useState<string>('anthropic')
   const [model, setModel] = useState<string>('')
   const [currentConversationId, setCurrentConversationId] = useState<
     number | undefined
@@ -138,7 +137,7 @@ export default function Chat() {
       <Select
         value={driver}
         onValueChange={(value) => {
-          setDriver(value as ModelDriverType)
+          setDriver(value)
           // Reset conversation when changing drivers
           resetChat()
         }}

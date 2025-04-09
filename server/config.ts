@@ -1,5 +1,8 @@
 import toml from '@iarna/toml'
 import fs from 'fs/promises'
+import path from 'path'
+
+import { getDataDir } from './utils'
 
 // Interface for a single OpenAI provider configuration
 export interface OpenAIProviderConfig {
@@ -15,6 +18,20 @@ export interface AppConfig {
   openAIProviders?: OpenAIProviderConfig[] // Array for multiple OpenAI configs
   haBaseUrl?: string
   haToken?: string
+}
+
+export async function createConfigViaEnv() {
+  let config: AppConfig = {}
+  let cfgPath = path.join(getDataDir(), 'config.toml')
+
+  if (await fs.exists(cfgPath)) {
+    config = await loadConfig(cfgPath)
+  }
+
+  migrateConfig(config)
+  await saveConfig(config, cfgPath)
+
+  return config
 }
 
 // Function to load and parse configuration from a TOML file

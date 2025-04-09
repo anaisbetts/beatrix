@@ -16,10 +16,12 @@ import {
 } from 'rxjs'
 
 import { Automation } from '../../shared/types'
+import { AppConfig } from '../config'
+import { createDatabaseViaEnv } from '../db'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
-import { HomeAssistantApi } from '../lib/ha-ws-api'
-import { LargeLanguageProvider } from '../llm'
+import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
+import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
 import { e, i } from '../logging'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
@@ -65,6 +67,14 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
+
+  static async createViaConfig(config: AppConfig, notebookDirectory?: string) {
+    const llm = createDefaultLLMProvider(config)
+    const db = await createDatabaseViaEnv()
+    const api = await LiveHomeAssistantApi.createViaConfig(config)
+
+    return new LiveAutomationRuntime(api, llm, db, notebookDirectory)
+  }
 
   constructor(
     readonly api: HomeAssistantApi,

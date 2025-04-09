@@ -44,17 +44,23 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
   private model: string
   private client: OpenAI
 
-  public constructor(model?: string, maxTokens?: number) {
+  public constructor(opts: {
+    apiKey: string
+    baseURL?: string
+    model?: string
+    maxTokens?: number
+  }) {
+    const { apiKey, baseURL, model, maxTokens } = opts
     this.model = model ?? 'gpt-4-turbo'
     this.maxTokens =
       maxTokens ??
       OpenAILargeLanguageProvider.MODEL_TOKEN_LIMITS[this.model] ??
       OpenAILargeLanguageProvider.MODEL_TOKEN_LIMITS.default
 
-    d('Using OpenAI with %s', process.env.OPENAI_BASE_URL)
+    d('Using OpenAI with %s', baseURL)
     this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL,
+      apiKey: apiKey,
+      baseURL: baseURL,
     })
   }
 

@@ -7,6 +7,7 @@ import { Observable } from 'rxjs'
 
 import { Automation } from '../shared/types'
 import { AnthropicLargeLanguageProvider } from './anthropic'
+import { AppConfig } from './config'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { createMemoryServer } from './mcp/memory'
 import { createNotifyServer } from './mcp/notify'
@@ -25,25 +26,48 @@ export interface LargeLanguageProvider {
   getModelList(): Promise<string[]>
 }
 
-export function createDefaultLLMProvider() {
-  let llm: LargeLanguageProvider
+export function createDefaultLLMProvider(
+  config: AppConfig
+): LargeLanguageProvider {
+  const providerName = config.llm
 
-  if (process.env.ANTHROPIC_API_KEY) {
-    console.error('Found Anthropic API key, using Anthropic as provider')
-    llm = new AnthropicLargeLanguageProvider(process.env.ANTHROPIC_API_KEY)
-  } else if (process.env.OPENAI_API_KEY) {
-    console.error('Found OpenAI API key, using OpenAI as provider')
-    llm = new OpenAILargeLanguageProvider()
-  } else if (process.env.OLLAMA_HOST) {
-    console.error('Found Ollama host, using Ollama as provider')
-    llm = new OllamaLargeLanguageProvider(process.env.OLLAMA_HOST)
-  } else {
+  if (!providerName) {
     throw new Error(
-      "Can't find valid LLM provider. Set either ANTHROPIC_API_KEY, OPENAI_API_KEY, or OLLAMA_HOST"
+      'LLM provider name (config.llm) is not configured. Please check your config file or environment variables.'
     )
   }
 
-  return llm
+  switch (providerName) {
+    case 'anthropic':
+      if (!config.anthropicApiKey) {
+        throw new Error(
+          "LLM provider set to 'anthropic' but ANTHROPIC_API_KEY is missing."
+        )
+      }
+      return new AnthropicLargeLanguageProvider(config.anthropicApiKey)
+    case 'ollama':
+      if (!config.ollamaHost) {
+        throw new Error(
+          "LLM provider set to 'ollama' but OLLAMA_HOST is missing."
+        )
+      }
+      return new OllamaLargeLanguageProvider(config.ollamaHost)
+    default:
+      // Assume it's an OpenAI-compatible provider name
+      const openAIProviderConfig = config.openAIProviders?.find(
+        (p) => p.providerName === providerName
+      )
+      if (!openAIProviderConfig || !openAIProviderConfig.apiKey) {
+        throw new Error(
+          `LLM provider set to '${providerName}' but no corresponding OpenAI provider configuration with an API key was found.`
+        )
+      }
+
+      return new OpenAILargeLanguageProvider({
+        apiKey: openAIProviderConfig.apiKey,
+        baseURL: openAIProviderConfig.baseURL,
+      })
+  }
 }
 
 export function createBuiltinServers(

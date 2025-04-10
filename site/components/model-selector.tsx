@@ -29,7 +29,7 @@ export function ModelSelector({
   model,
   onModelChange,
   className = 'flex items-center gap-2',
-  triggerClassName = 'w-[180px]',
+  triggerClassName = 'w-64',
   disabled = false,
   onOpenChange,
 }: ModelSelectorProps) {

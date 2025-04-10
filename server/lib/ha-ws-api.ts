@@ -21,7 +21,7 @@ import {
 } from 'rxjs'
 
 import { SerialSubscription } from '../../shared/serial-subscription'
-import { AppConfig } from '../config'
+import { AppConfig } from '../../shared/types'
 
 const d = debug('b:ws')
 

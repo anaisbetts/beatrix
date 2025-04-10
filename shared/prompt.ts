@@ -1,6 +1,7 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
 
+import { AppConfig } from './types'
 import {
   Automation,
   AutomationLogEntry,
@@ -34,6 +35,9 @@ export interface ServerWebsocketApi {
 
   getAutomations(): Observable<Automation[]>
   getScheduledSignals(): Observable<SignalHandlerInfo[]>
+
+  getConfig(): Observable<AppConfig>
+  setConfig(config: AppConfig): Observable<void>
 }
 
 export function messagesToString(

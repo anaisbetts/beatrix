@@ -80,4 +80,27 @@ export type GradeResult = {
   score: number
   possibleScore: number
   graderInfo: string
+} // Interface for a single OpenAI provider configuration
+
+// Main application configuration interface
+export interface AppConfig {
+  haBaseUrl?: string
+  haToken?: string
+
+  llm?: string // either 'anthropic', 'ollama', or a provider name in openAIProviders
+
+  anthropicApiKey?: string
+  anthropicModel?: string
+
+  ollamaHost?: string
+  ollamaModel?: string
+
+  openAIProviders?: OpenAIProviderConfig[] // Array for multiple OpenAI configs
+}
+
+export interface OpenAIProviderConfig {
+  providerName?: string // Name for this provider configuration, the default is 'openai'
+  baseURL?: string
+  apiKey?: string
+  model?: string
 }

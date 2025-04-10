@@ -18,8 +18,8 @@ import {
   ScenarioResult,
   SignalHandlerInfo,
 } from '../shared/types'
+import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
-import { AppConfig } from './config'
 import { fetchAutomationLogs } from './db'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { runAllEvals, runQuickEvals } from './run-evals'
@@ -94,6 +94,14 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         return ret
       })
     )
+  }
+
+  getConfig(): Observable<AppConfig> {
+    return of(this.config)
+  }
+
+  setConfig(config: AppConfig): Observable<void> {
+    return from(this.runtime.saveConfigAndReload(config))
   }
 
   handlePromptRequest(

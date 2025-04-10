@@ -2,12 +2,9 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import fs from 'fs/promises'
 import path from 'path'
 
-import {
-  AppConfig,
-  OpenAIProviderConfig,
-  loadConfig,
-  saveConfig,
-} from './config'
+import { OpenAIProviderConfig } from '../shared/types'
+import { AppConfig } from '../shared/types'
+import { loadConfig, saveConfig } from './config'
 
 // Define a reusable path for the temp file
 const tempConfigPath = path.resolve(__dirname, '../mocks/temp.config.test.toml')

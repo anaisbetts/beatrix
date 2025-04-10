@@ -1,6 +1,6 @@
-import { useCommand } from '@anaisbetts/commands'
+import { useCommand, usePromise } from '@anaisbetts/commands'
 import { Check, Save } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
 import { Button } from '@/components/ui/button'
@@ -23,14 +23,11 @@ export default function Config() {
   }, [api])
 
   // Fetch config on component mount
-  useEffect(() => {
-    if (api) {
-      fetchConfig().then((result) => {
-        if (result) {
-          setConfig(result)
-        }
-      })
-    }
+  usePromise(async () => {
+    if (!api) return
+
+    const result = await fetchConfig()
+    if (result) setConfig(result)
   }, [api, fetchConfig])
 
   // Handle form submission
@@ -119,38 +116,15 @@ export default function Config() {
     )
   }
 
-  // Save button component
-  const SaveButton = () => (
-    <Button
-      type="button"
-      onClick={() => saveConfig()}
-      disabled={saveResult.isPending() || isSaved}
-      className="min-w-28"
-    >
-      {saveResult.isPending() ? (
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-          <span>Saving...</span>
-        </div>
-      ) : isSaved ? (
-        <div className="flex items-center gap-2">
-          <Check className="h-4 w-4 text-green-500" />
-          <span>Saved!</span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2">
-          <Save className="h-4 w-4" />
-          <span>Save Configuration</span>
-        </div>
-      )}
-    </Button>
-  )
-
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
         <h2 className="text-lg font-semibold">Configuration</h2>
-        <SaveButton />
+        <SaveButton
+          saveResult={saveResult}
+          onClick={() => saveConfig()}
+          isSaved={isSaved}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -386,9 +360,65 @@ export default function Config() {
             pending: () => null,
             null: () => null,
           })}
-          <SaveButton />
+          <SaveButton
+            saveResult={saveResult}
+            onClick={() => saveConfig()}
+            isSaved={isSaved}
+          />
         </div>
       </div>
     </div>
+  )
+}
+
+interface SaveButtonProps {
+  saveResult: ReturnType<typeof useCommand>[1]
+  onClick: () => void
+  isSaved: boolean
+}
+
+function SaveButton({ saveResult, onClick, isSaved }: SaveButtonProps) {
+  const buttonContent = saveResult.mapOrElse({
+    pending: () => (
+      <div className="flex items-center gap-2">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+        <span>Saving...</span>
+      </div>
+    ),
+    ok: () =>
+      isSaved ? (
+        <div className="flex items-center gap-2">
+          <Check className="h-4 w-4 text-green-500" />
+          <span>Saved!</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Save className="h-4 w-4" />
+          <span>Save Configuration</span>
+        </div>
+      ),
+    err: () => (
+      <div className="flex items-center gap-2">
+        <Save className="h-4 w-4" />
+        <span>Save Configuration</span>
+      </div>
+    ),
+    null: () => (
+      <div className="flex items-center gap-2">
+        <Save className="h-4 w-4" />
+        <span>Save Configuration</span>
+      </div>
+    ),
+  })
+
+  return (
+    <Button
+      type="button"
+      onClick={onClick}
+      disabled={saveResult.isPending() || isSaved}
+      className="min-w-28"
+    >
+      {buttonContent}
+    </Button>
   )
 }

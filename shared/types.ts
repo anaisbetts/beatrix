@@ -1,7 +1,5 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
-import { OpenAIProviderConfig } from './types'
-
 export type SignalType = 'cron' | 'state' | 'event' | 'offset' | 'time'
 
 export type AutomationType = 'manual' | 'determine-signal' | 'execute-signal'

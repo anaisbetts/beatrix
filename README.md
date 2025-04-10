@@ -86,10 +86,17 @@ You must provide the configuration details for the LLM provider specified in the
 - **OpenAI**: Set the API key under the `[openai]` section. You can optionally provide a `base_url` for Azure or other OpenAI-compatible APIs. You can also define multiple named OpenAI configurations (e.g., `[openai.scaleway]`) if you use different providers.
 - **Ollama**: Set the host URL under the `[ollama]` section. Ensure your Ollama model supports function calling.
 
-### Optional Fields
+## What AI should I use though?
 
-- `data_dir`: Path to the directory for database storage.
-- `port`: Port number for the Beatrix server.
+#### The short version:
+
+- "I want the best experience, I don't mind spending $$" <== Use Anthropic's Sonnet 2.7
+- "I want a pretty good experience, but not spend as much $$" <== Use Gemini 2.5 Pro via the OpenAI driver
+- "I want to use Ollama" <== Use Qwen 2.5, the biggest model you
+
+#### I don't believe you!
+
+In that case, use the Model Evaluations page! Model evaluations will test a model against a list of typical queries and grade its result. Note that you will _have_ to set up an Anthropic account because we use Sonnet 2.7 to grade results, and this _will_ cost you money in real-life (though if you run Quick tests, it will be on the order of cents)
 
 ## Running (development mode)
 

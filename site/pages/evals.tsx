@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 
 import { GradeResult, ScenarioResult } from '../../shared/types'
+import { ModelSelector } from '../components/model-selector'
 import { useWebSocket } from '../components/ws-provider'
 
 export default function Evals() {
@@ -28,15 +29,6 @@ export default function Evals() {
     if (!api) return []
     return await firstValueFrom(api.getDriverList())
   }, [api])
-
-  const modelList = usePromise(async () => {
-    if (!api) return []
-    const models = await firstValueFrom(api.getModelListForDriver(driver))
-    if (models.length > 0 && !model) {
-      setModel(models[0])
-    }
-    return models
-  }, [api, driver])
 
   const [runEvals, evalCommand, reset] = useCommand(async () => {
     if (!api) throw new Error('Not connected!')
@@ -128,32 +120,6 @@ export default function Evals() {
     null: () => <div className="text-sm italic">Select a driver</div>,
   })
 
-  const modelSelector = modelList.mapOrElse({
-    ok: (models) => (
-      <Select value={model} onValueChange={setModel}>
-        <SelectTrigger className="w-[180px]">
-          <SelectValue placeholder="Select model" />
-        </SelectTrigger>
-        <SelectContent>
-          {models.map((m) => (
-            <SelectItem key={m} value={m}>
-              {m}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    ),
-    err: () => (
-      <div className="text-sm text-red-500">Failed to load models</div>
-    ),
-    pending: () => (
-      <div className="flex h-10 w-[180px] items-center justify-center">
-        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-      </div>
-    ),
-    null: () => <div className="text-sm italic">Select a driver</div>,
-  })
-
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
@@ -171,7 +137,12 @@ export default function Evals() {
 
         <div className="flex flex-col">
           <label className="mb-1 text-sm">Model</label>
-          {modelSelector}
+          <ModelSelector
+            driver={driver}
+            model={model}
+            onModelChange={setModel}
+            disabled={evalCommand.isPending()}
+          />
         </div>
 
         <div className="flex flex-col">

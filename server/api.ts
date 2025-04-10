@@ -96,6 +96,15 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     )
   }
 
+  getConfig(): Observable<AppConfig> {
+    return of(this.config)
+  }
+
+  setConfig(config: AppConfig): Observable<void> {
+    // XXX: Implement this later, we need to reload the config
+    return of(undefined)
+  }
+
   handlePromptRequest(
     prompt: string,
     model: string,

@@ -13,6 +13,7 @@ import {
   startWith,
   switchMap,
   tap,
+  throttleTime,
 } from 'rxjs'
 
 import { Automation } from '../../shared/types'
@@ -101,14 +102,15 @@ export class LiveAutomationRuntime implements AutomationRuntime {
             path: getAutomationDirectory(this),
             recursive: true,
           },
-          2000
+          30 * 1000
         ).pipe(
           tap(() =>
             i(
               `Detected change in automation directory: ${this.notebookDirectory}`
             )
           ),
-          map(() => {})
+          map(() => {}),
+          throttleTime(30 * 1000)
         )
       : NEVER
 

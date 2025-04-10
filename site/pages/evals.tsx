@@ -13,16 +13,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-import {
-  GradeResult,
-  ModelDriverType,
-  ScenarioResult,
-} from '../../shared/types'
+import { GradeResult, ScenarioResult } from '../../shared/types'
 import { useWebSocket } from '../components/ws-provider'
 
 export default function Evals() {
   const [model, setModel] = useState('')
-  const [driver, setDriver] = useState<ModelDriverType>('anthropic')
+  const [driver, setDriver] = useState<string>('anthropic')
   const [count, setCount] = useState(1)
   const [evalType, setEvalType] = useState<'all' | 'quick'>('all')
   const [results, setResults] = useState<ScenarioResult[]>([])
@@ -108,10 +104,7 @@ export default function Evals() {
 
   const driverSelector = driverList.mapOrElse({
     ok: (drivers) => (
-      <Select
-        value={driver}
-        onValueChange={(value) => setDriver(value as ModelDriverType)}
-      >
+      <Select value={driver} onValueChange={(value) => setDriver(value)}>
         <SelectTrigger className="w-[140px]">
           <SelectValue placeholder="Select driver" />
         </SelectTrigger>

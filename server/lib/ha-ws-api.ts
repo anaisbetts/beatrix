@@ -21,6 +21,7 @@ import {
 } from 'rxjs'
 
 import { SerialSubscription } from '../../shared/serial-subscription'
+import { AppConfig } from '../config'
 
 const d = debug('b:ws')
 
@@ -92,11 +93,8 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     private testMode: boolean = false
   ) {}
 
-  static async createViaEnv() {
-    const auth = createLongLivedTokenAuth(
-      process.env.HA_BASE_URL!,
-      process.env.HA_TOKEN!
-    )
+  static async createViaConfig(config: AppConfig) {
+    const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
     const connection = await createConnection({ auth })
     const ret = new LiveHomeAssistantApi(connection)

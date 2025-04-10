@@ -16,11 +16,14 @@ import {
 } from 'rxjs'
 
 import { Automation } from '../../shared/types'
+import { AppConfig } from '../config'
+import { createDatabaseViaEnv } from '../db'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
-import { HomeAssistantApi } from '../lib/ha-ws-api'
-import { LargeLanguageProvider } from '../llm'
+import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
+import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
 import { e, i } from '../logging'
+import { isProdMode } from '../paths'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
 import { rescheduleAutomations } from './scheduler-step'
@@ -66,6 +69,22 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
 
+  static async createViaConfig(
+    config: AppConfig,
+    api?: HomeAssistantApi,
+    notebookDirectory?: string
+  ) {
+    const llm = createDefaultLLMProvider(config)
+    const db = await createDatabaseViaEnv()
+
+    return new LiveAutomationRuntime(
+      api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
+      llm,
+      db,
+      notebookDirectory
+    )
+  }
+
   constructor(
     readonly api: HomeAssistantApi,
     readonly llm: LargeLanguageProvider,
@@ -89,10 +108,20 @@ export class LiveAutomationRuntime implements AutomationRuntime {
               `Detected change in automation directory: ${this.notebookDirectory}`
             )
           ),
-          map(() => {}),
-          startWith(undefined)
+          map(() => {})
         )
       : NEVER
+
+    if (isProdMode) {
+      // Kick off a scan on startup
+      this.reparseAutomations = this.reparseAutomations.pipe(
+        startWith(undefined)
+      )
+    } else {
+      console.error(
+        'Running in dev mode, skipping initial automations folder scan. Change a file to kick it off'
+      )
+    }
 
     this.scannedAutomationDir = this.notebookDirectory
       ? defer(() => this.reparseAutomations).pipe(

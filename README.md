@@ -12,7 +12,7 @@ Sorry, it's not there!
 
 ## 🚫🚫 This software is Pre-Alpha in-progress 🚫🚫
 
-Right now there is only a demo chat that can let you test out the MCP tools, but the core functionality is still being worked on. Any feedback for ideas / code improvements are definitely welcome!
+This software is _brand-new_ and is missing many features! Issues and other feedback is welcomed
 
 ## To Install (Docker Compose)
 
@@ -21,68 +21,84 @@ services:
   beatrix:
     image: ghcr.io/anaisbetts/beatrix:latest
     restart: unless-stopped
-    environment:
-      # Required for Home Assistant connection
-      - HA_BASE_URL=${HA_BASE_URL}
-      - HA_TOKEN=${HA_TOKEN}
-
-      # Choose one LLM provider:
-      # Option 1: Use Anthropic Claude
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-
-      # Option 2: Use OpenAI
-      # - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # - OPENAI_BASE_URL=${OPENAI_BASE_URL}  # Optional: for Azure or other OpenAI-compatible APIs
-
-      # Option 3: Use Ollama (uncomment and set)
-      # - OLLAMA_HOST=http://ollama:11434
-      # - Note: When using Ollama, you must use a model that supports function calling/tool use (like Qwen or Mixtral)
-
-      # Optional: Override the default data directory
-      # - DATA_DIR=/path/to/custom/data
     volumes:
-      # Mount a persistent volume for the database
+      - ./notebook:/notebook
       - beatrix_data:/data
 
 volumes:
   beatrix_data:
 ```
 
-## Environment Variables
+## Configuration (`config.toml`)
 
-### Required
+Beatrix is configured using a TOML file named `config.toml`. Place this file in your notebook directory (or in development, in the root of the project)
 
-| Variable      | Description                            |
-| ------------- | -------------------------------------- |
-| `HA_BASE_URL` | URL to your Home Assistant instance    |
-| `HA_TOKEN`    | Home Assistant long-lived access token |
+```toml
+# Required: Home Assistant Connection Details
+ha_base_url = "YOUR_HA_INSTANCE_URL" # e.g., "http://homeassistant.local:8123"
+ha_token = "YOUR_HA_LONG_LIVED_ACCESS_TOKEN"
 
-### LLM Configuration (choose one)
+# Required: Choose ONE LLM provider by specifying its name
+# Options: "anthropic", "openai", "ollama", "scaleway" etc
+llm = "anthropic"
 
-You must configure either Anthropic Claude, OpenAI, or Ollama by setting one of these sets of variables:
+[anthropic]
+key = "YOUR_ANTHROPIC_API_KEY"
+model = "claude-3-7-sonnet-20250219"   # Optional, defaults to latest Sonnet
 
-| Variable            | Description                                                                                                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key                                                                                                                                                          |
-| `OPENAI_API_KEY`    | Your OpenAI API key                                                                                                                                                             |
-| `OPENAI_BASE_URL`   | (Optional) Custom base URL for OpenAI API (e.g., for Azure OpenAI or other compatible endpoints)                                                                                |
-| `OLLAMA_HOST`       | URL to your Ollama instance (e.g., `http://localhost:11434`). **Note**: When using Ollama, you must use a model that supports function calling/tool use (like Qwen or Mixtral). |
+# Settings for Ollama
+# Note that Ollama will only work with models that understand Tool Calling
+# (i.e. it shows up on https://ollama.com/search?c=tools)
 
-### Optional
+[ollama]
+host = "URL_TO_YOUR_OLLAMA_INSTANCE" # e.g., "http://localhost:11434"
+model = "qwen2.5:16"
 
-| Variable   | Description                                                                                             |
-| ---------- | ------------------------------------------------------------------------------------------------------- |
-| `DATA_DIR` | Directory for database storage. Defaults to `/data` in Docker and the current directory in development. |
-| `PORT`     | Server port. Defaults to 5432                                                                           |
+[openai]
+key = "YOUR_OPENAI_API_KEY"
+# Optional: Base URL for Azure or other compatible APIs
+# base_url = "YOUR_OPENAI_COMPATIBLE_BASE_URL"
+
+# Example for a custom OpenAI provider (e.g. Scaleway)
+# You can define multiple [openai.*] sections
+[openai.scaleway]
+base_url = "SCALEWAY_API_ENDPOINT"
+key = "SCALEWAY_API_KEY"
+model = 'llama-3.3-70b-instruct'
+
+[openai.google]
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+key = "GOOGLE_API_KEY"
+model = 'gemini-2.5-pro-exp-03-25'
+```
+
+### Required Fields
+
+- `ha_base_url`: URL to your Home Assistant instance.
+- `ha_token`: Home Assistant long-lived access token.
+- `llm`: The primary LLM provider to use (`"anthropic"`, `"openai"`, or `"ollama"`).
+
+### LLM Configuration
+
+You must provide the configuration details for the LLM provider specified in the `llm` field.
+
+- **Anthropic**: Set the API key under the `[anthropic]` section.
+- **OpenAI**: Set the API key under the `[openai]` section. You can optionally provide a `base_url` for Azure or other OpenAI-compatible APIs. You can also define multiple named OpenAI configurations (e.g., `[openai.scaleway]`) if you use different providers.
+- **Ollama**: Set the host URL under the `[ollama]` section. Ensure your Ollama model supports function calling.
+
+### Optional Fields
+
+- `data_dir`: Path to the directory for database storage.
+- `port`: Port number for the Beatrix server.
 
 ## Running (development mode)
 
 ```bash
-cp .env.example .env && vim .env  ## Fill this in
+cp config.example.toml config.toml && vim config.toml ## Fill this in
 bun install
 bun dev
 
-### Shit ain't workin' good?
+### Ain't workin' good?
 bun dev:debug
 ```
 

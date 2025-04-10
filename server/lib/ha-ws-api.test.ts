@@ -1,6 +1,7 @@
 import { describe, expect, it, jest } from 'bun:test'
 import { Connection } from 'home-assistant-js-websocket'
 
+import { createConfigViaEnv } from '../config'
 import { LiveHomeAssistantApi } from './ha-ws-api'
 
 describe('LiveHomeAssistantApi', () => {
@@ -8,7 +9,14 @@ describe('LiveHomeAssistantApi', () => {
     it('can fetch the services list', async () => {
       // This test uses a real Home Assistant connection
       // Should be skipped or mocked for CI environments
-      const api = await LiveHomeAssistantApi.createViaEnv()
+      if (process.env.CI) {
+        return
+      }
+
+      // XXX: Normally hard-coding this is Bad but we know that this
+      // is only used in development
+      const config = await createConfigViaEnv('./notebook')
+      const api = await LiveHomeAssistantApi.createViaConfig(config)
       const svcs = await api.fetchServices()
 
       console.log('Services:', svcs.notify)

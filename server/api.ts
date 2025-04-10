@@ -15,14 +15,13 @@ import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/prompt'
 import {
   Automation,
   AutomationLogEntry,
-  ModelDriverType,
   ScenarioResult,
   SignalHandlerInfo,
 } from '../shared/types'
 import { pick } from '../shared/utility'
+import { AppConfig } from './config'
 import { fetchAutomationLogs } from './db'
-import { createLLMDriver } from './eval-framework'
-import { createBuiltinServers } from './llm'
+import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import {
   AutomationRuntime,
@@ -31,6 +30,7 @@ import {
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
+    private config: AppConfig,
     private runtime: AutomationRuntime,
     private testMode: boolean,
     private evalMode: boolean
@@ -38,22 +38,24 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   getDriverList(): Observable<string[]> {
     const list = []
-    if (process.env.ANTHROPIC_API_KEY) {
+    if (this.config.anthropicApiKey) {
       list.push('anthropic')
     }
-    if (process.env.OLLAMA_HOST) {
+    if (this.config.ollamaHost) {
       list.push('ollama')
     }
-    if (process.env.OPENAI_API_KEY) {
-      list.push('openai')
+
+    if (this.config.openAIProviders && this.config.openAIProviders.length > 0) {
+      list.push(
+        ...this.config.openAIProviders.map((x) => x.providerName ?? 'openai')
+      )
     }
 
     return of(list)
   }
 
-  getModelListForDriver(driver: ModelDriverType): Observable<string[]> {
-    const llm = createLLMDriver('', driver)
-
+  getModelListForDriver(driver: string): Observable<string[]> {
+    const llm = createDefaultLLMProvider(this.config, driver)
     return from(llm.getModelList())
   }
 
@@ -100,7 +102,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     driver: string,
     previousConversationId?: number
   ): Observable<MessageParamWithExtras> {
-    const llm = createLLMDriver(model, driver)
+    const llm = createDefaultLLMProvider(this.config, driver, model)
     const rqRuntime = new LiveAutomationRuntime(
       this.runtime.api,
       llm,
@@ -191,11 +193,11 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   runEvals(
     model: string,
-    driver: 'ollama' | 'anthropic' | 'openai',
+    driver: string,
     type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult> {
-    const llm = createLLMDriver(model, driver)
+    const llm = createDefaultLLMProvider(this.config, driver, model)
 
     const counter = generate({
       initialState: 0,
@@ -204,7 +206,6 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     })
 
     const runEvals = type === 'all' ? runAllEvals : runQuickEvals
-
     return from(counter.pipe(concatMap(() => runEvals(llm))))
   }
 }

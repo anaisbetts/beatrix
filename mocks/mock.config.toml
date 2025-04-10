@@ -1,0 +1,19 @@
+ha_base_url = "https://foo"
+ha_token = "token"
+
+[anthropic]
+key = "wiefjef"
+
+[ollama]
+host = "weofijwef"
+
+[openai]
+key = "woefj"
+
+[openai.google]
+base_url = "https://efoiwejf"
+key = "woefj"
+
+[openai.scaleway]
+base_url = "https://efoiwejf"
+key = "woefj" 

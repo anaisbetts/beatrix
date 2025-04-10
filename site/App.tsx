@@ -1,7 +1,8 @@
-import { Beaker, Calendar, MessageSquare, Scroll } from 'lucide-react'
+import { Beaker, Calendar, MessageSquare, Scroll, Settings } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import Chat from '@/pages/chat'
+import Config from '@/pages/config'
 import Evals from '@/pages/evals'
 import Logs from '@/pages/logs'
 import PendingAutomations from '@/pages/pending'
@@ -83,6 +84,14 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="#" onClick={() => nav('config')}>
+                    <Settings size={18} />
+                    <span className="ms-1">Configuration</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -105,6 +114,8 @@ export default function Home() {
         return <PendingAutomations />
       case 'evals':
         return <Evals />
+      case 'config':
+        return <Config />
       default:
         throw new Error('u blew it')
     }

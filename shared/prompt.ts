@@ -1,7 +1,7 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
 
-import { AppConfig } from '../server/config'
+import { AppConfig } from './types'
 import {
   Automation,
   AutomationLogEntry,

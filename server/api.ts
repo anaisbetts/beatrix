@@ -18,8 +18,8 @@ import {
   ScenarioResult,
   SignalHandlerInfo,
 } from '../shared/types'
+import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
-import { AppConfig } from './config'
 import { fetchAutomationLogs } from './db'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { runAllEvals, runQuickEvals } from './run-evals'

@@ -17,7 +17,7 @@ import {
 } from 'rxjs'
 
 import { Automation } from '../../shared/types'
-import { AppConfig } from '../config'
+import { AppConfig } from '../../shared/types'
 import { createDatabaseViaEnv } from '../db'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'

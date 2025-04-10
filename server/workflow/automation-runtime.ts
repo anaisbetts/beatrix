@@ -16,15 +16,17 @@ import {
   throttleTime,
 } from 'rxjs'
 
+import { SerialSubscription } from '../../shared/serial-subscription'
 import { Automation } from '../../shared/types'
 import { AppConfig } from '../../shared/types'
+import { saveConfig } from '../config'
 import { createDatabaseViaEnv } from '../db'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
 import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
 import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
 import { e, i } from '../logging'
-import { isProdMode } from '../paths'
+import { getConfigFilePath, isProdMode } from '../paths'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations } from './parser'
 import { rescheduleAutomations } from './scheduler-step'
@@ -57,6 +59,8 @@ export interface AutomationRuntime {
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
+
+  saveConfigAndReload(config: AppConfig): Promise<void>
 }
 
 export class LiveAutomationRuntime implements AutomationRuntime {
@@ -69,6 +73,8 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
+
+  pipelineSub = new SerialSubscription()
 
   static async createViaConfig(
     config: AppConfig,
@@ -202,12 +208,23 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 
   start() {
     i('Starting automation runtime event processing')
-    const subscription = this.automationExecuted.subscribe({
-      error: (err) => e('Error in automation execution pipeline:', err),
-      complete: () => d('Automation execution pipeline completed'),
+
+    this.pipelineSub.current = this.automationExecuted.subscribe({
+      error: (err) =>
+        e(
+          'Error in automation execution pipeline, this should never happen!',
+          err
+        ),
     })
-    d('Automation execution pipeline subscribed')
-    return subscription
+
+    return this.pipelineSub
+  }
+
+  async saveConfigAndReload(config: AppConfig): Promise<void> {
+    i('Saving new configuration and restarting')
+    await saveConfig(config, getConfigFilePath(this.notebookDirectory!))
+
+    this.start()
   }
 
   private async handlersForDatabaseSignals(): Promise<SignalHandler[]> {

@@ -19,7 +19,7 @@ This software is _brand-new_ and is missing many features! Issues and other feed
 ```yaml
 services:
   beatrix:
-    image: ghcr.io/anaisbetts/beatrix:latest
+    image: ghcr.io/beatrix-ha/beatrix:latest
     restart: unless-stopped
     volumes:
       - ./notebook:/notebook

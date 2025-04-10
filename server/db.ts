@@ -15,7 +15,7 @@ import {
 } from '../shared/types'
 import { Schema } from './db-schema'
 import { migrator } from './migrations/this-sucks'
-import { getDataDir } from './utils'
+import { getDataDir } from './paths'
 
 const d = debug('b:db')
 

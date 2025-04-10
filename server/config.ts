@@ -1,9 +1,8 @@
 import toml from '@iarna/toml'
 import debug from 'debug'
 import fs from 'fs/promises'
-import path from 'path'
 
-import { getDataDir } from './utils'
+import { getConfigFilePath } from './paths'
 
 const d = debug('b:config')
 
@@ -31,10 +30,10 @@ export interface AppConfig {
   openAIProviders?: OpenAIProviderConfig[] // Array for multiple OpenAI configs
 }
 
-export async function createConfigViaEnv() {
+export async function createConfigViaEnv(notebookDirectory: string) {
   // Provide a default llm to satisfy the type, migration will fix it
   let config: AppConfig = {}
-  let cfgPath = path.join(getDataDir(), 'config.toml')
+  let cfgPath = getConfigFilePath(notebookDirectory)
 
   if (await fs.exists(cfgPath)) {
     config = await loadConfig(cfgPath)

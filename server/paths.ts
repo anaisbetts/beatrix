@@ -24,3 +24,11 @@ export function getDataDir() {
     return repoRootDir()
   }
 }
+
+export function getConfigFilePath(notebookDirectory: string) {
+  if (isProdMode) {
+    return path.join(notebookDirectory, 'config.toml')
+  } else {
+    return path.join(repoRootDir(), 'config.toml')
+  }
+}

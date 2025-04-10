@@ -4,7 +4,7 @@ import { Subject, bufferTime, concatMap, from } from 'rxjs'
 
 import { Schema } from './db-schema'
 import Logger from './logger/logger'
-import { getDataDir, isProdMode, repoRootDir } from './utils'
+import { getDataDir, isProdMode, repoRootDir } from './paths'
 
 let logger: Logger | null = new Logger()
 logger.enableConsole()

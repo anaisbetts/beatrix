@@ -21,9 +21,9 @@ import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, i, startLogger } from './logging'
+import { isProdMode, repoRootDir } from './paths'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import serveStatic from './serve-static-bun'
-import { isProdMode, repoRootDir } from './utils'
 import {
   AutomationRuntime,
   LiveAutomationRuntime,
@@ -39,8 +39,8 @@ async function serveCommand(options: {
   testMode: boolean
   evalMode: boolean
 }) {
-  const config = await createConfigViaEnv()
   const port = options.port || process.env.PORT || DEFAULT_PORT
+  const config = await createConfigViaEnv(options.notebook)
 
   const conn = options.evalMode
     ? new EvalHomeAssistantApi()
@@ -112,12 +112,12 @@ async function serveCommand(options: {
   })
 }
 
-async function mcpCommand(options: { testMode: boolean }) {
+async function mcpCommand(options: { testMode: boolean; notebook: string }) {
   // Because MCP relies on stdio for transport, it is important that we don't
   // spam any other console output
   disableLogging()
 
-  const config = await createConfigViaEnv()
+  const config = await createConfigViaEnv(options.notebook)
   const runtime = await LiveAutomationRuntime.createViaConfig(config)
 
   const megaServer = new McpServer({ name: 'beatrix', version: pkg.version })
@@ -144,6 +144,7 @@ function printResult(result: ScenarioResult) {
 }
 
 async function evalCommand(options: {
+  notebook: string
   model: string
   driver: string
   verbose: boolean
@@ -152,7 +153,7 @@ async function evalCommand(options: {
 }) {
   const { model, driver } = options
 
-  const config = await createConfigViaEnv()
+  const config = await createConfigViaEnv(options.notebook)
   const llm = createDefaultLLMProvider(config, driver, model)
 
   console.log(`Running ${options.quick ? 'quick' : 'all'} evals...`)
@@ -188,7 +189,7 @@ async function evalCommand(options: {
 }
 
 async function dumpEventsCommand() {
-  const config = await createConfigViaEnv()
+  const config = await createConfigViaEnv('.')
   const conn = await LiveHomeAssistantApi.createViaConfig(config)
 
   console.error('Dumping non-noisy events...')
@@ -220,7 +221,8 @@ async function main() {
     .option('-p, --port <port>', 'port to run server on')
     .option(
       '-n, --notebook <dir>',
-      'the directory to load automations and prompts from'
+      'the directory to load automations and prompts from',
+      './notebook'
     )
     .option(
       '-t, --test-mode',
@@ -242,6 +244,11 @@ async function main() {
       'enable read-only mode that simulates write operations',
       false
     )
+    .option(
+      '-n, --notebook <dir>',
+      'the directory to load automations and prompts from',
+      './notebook'
+    )
     .action(mcpCommand)
 
   program
@@ -256,6 +263,11 @@ async function main() {
     .option('-n, --num <num>', 'Number of repetitions to run', '1')
     .option('-v, --verbose', 'Enable verbose output', false)
     .option('-q, --quick', 'Run quick evals instead of full evaluations', false)
+    .option(
+      '--notebook <dir>',
+      'the directory to load automations and prompts from',
+      './notebook'
+    )
     .action(evalCommand)
 
   if (debugMode) {

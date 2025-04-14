@@ -1,6 +1,7 @@
 import debug from 'debug'
 import { Kysely } from 'kysely'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { unlink } from 'node:fs/promises'
 import path from 'node:path'
 import {
   NEVER,
@@ -25,7 +26,7 @@ import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
 import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
 import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
-import { e, i } from '../logging'
+import { e, i, w } from '../logging'
 import { getConfigFilePath, isProdMode } from '../paths'
 import { runExecutionForAutomation } from './execution-step'
 import { parseAllAutomations, serializeAutomations } from './parser'
@@ -231,11 +232,21 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   }
 
   async removeCue(automation: Automation): Promise<void> {
+    const file = this.cueList.find((x) => automation.hash === x.hash)?.fileName
+
     const toWrite = this.cueList.filter(
       (x) => x.fileName === automation.fileName && x.hash !== automation.hash
     )
 
-    await serializeAutomations(toWrite)
+    // NB: This is a bit Weird because it is possible (likely even!) that we
+    // will go from one automation => zero automations for a file. When that
+    // happens, we'll just delete it rather than leaving a weird file
+    if (toWrite.length > 0) {
+      await serializeAutomations(toWrite)
+    } else {
+      w(`Cue file ${file} is empty, deleting!`)
+      await unlink(file!)
+    }
   }
 
   async saveConfigAndReload(config: AppConfig): Promise<void> {

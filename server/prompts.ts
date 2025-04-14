@@ -32,7 +32,6 @@ export async function getSystemPrompt(
 }
 
 const telegramTypeHint = `
-The user is conversing with the agent via Telegram - this means that while all
-the important information should still be included, you should keep responses
-terse / brief
-`
+The user is conversing with the agent via Telegram or another chat client - this
+means that while all the important information should still be included, you
+should keep responses terse / brief`

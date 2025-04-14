@@ -18,13 +18,13 @@ export async function getSystemPrompt(
 
       try {
         if (runtime.notebookDirectory && (await exists(userSysPromptPath))) {
-          userSysPrompt = await readFile(userSysPromptPath, 'utf8')
+          userSysPrompt = (await readFile(userSysPromptPath, 'utf8')) + '\n'
         }
       } catch (err: any) {
         e(`Failed to read custom system prompt ${userSysPromptPath}`, err)
       }
 
-      return `${userSysPrompt}\n${telegramTypeHint}`
+      return `<system>${userSysPrompt}${telegramTypeHint}</system>`
     default:
       // Debug chats should have no system prompt
       return ''

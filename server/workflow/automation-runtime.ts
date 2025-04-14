@@ -206,7 +206,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
               `Finished execution for automation ${automation.fileName} (${automation.hash})`
             )
 
-            if (automation.isCue) {
+            if (automation.isCue && this.notebookDirectory) {
               i(`Removing automation ${automation.hash} because it is a Cue`)
               return this.removeCue(automation)
             }
@@ -242,7 +242,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     // will go from one automation => zero automations for a file. When that
     // happens, we'll just delete it rather than leaving a weird file
     if (toWrite.length > 0) {
-      await serializeAutomations(toWrite)
+      await serializeAutomations(this.notebookDirectory!, toWrite)
     } else {
       w(`Cue file ${file} is empty, deleting!`)
       await unlink(file!)

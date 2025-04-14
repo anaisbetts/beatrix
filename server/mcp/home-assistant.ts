@@ -5,7 +5,7 @@ import { firstValueFrom, toArray } from 'rxjs'
 import { z } from 'zod'
 
 import pkg from '../../package.json'
-import { messagesToString } from '../../shared/prompt'
+import { messagesToString } from '../../shared/api'
 import { w } from '../logging'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 import { createCallServiceServer } from './call-service'

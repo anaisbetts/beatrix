@@ -11,7 +11,7 @@ import {
   toArray,
 } from 'rxjs'
 
-import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/prompt'
+import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/api'
 import {
   Automation,
   AutomationLogEntry,
@@ -22,6 +22,7 @@ import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
 import { fetchAutomationLogs } from './db'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
+import { getSystemPrompt } from './prompts'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import {
   AutomationRuntime,
@@ -106,9 +107,10 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   handlePromptRequest(
     prompt: string,
-    model: string,
-    driver: string,
-    previousConversationId?: number
+    model?: string,
+    driver?: string,
+    previousConversationId?: number,
+    typeHint?: string
   ): Observable<MessageParamWithExtras> {
     const llm = createDefaultLLMProvider(this.config, driver, model)
     const rqRuntime = new LiveAutomationRuntime(
@@ -142,9 +144,20 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         const msgs: MessageParam[] = prevMsgs.map((msg) =>
           pick(msg, ['content', 'role'])
         )
-        previousMessages = msgs
 
-        return llm.executePromptWithTools(prompt, tools, msgs)
+        previousMessages = msgs
+        if (prevMsgs.length > 0) {
+          // If we are in a continuing conversation, we don't include the system
+          // prompt
+          return llm.executePromptWithTools(prompt, tools, msgs)
+        } else {
+          return from(getSystemPrompt(this.runtime, typeHint ?? 'debug')).pipe(
+            mergeMap((sysPrompt) => {
+              const finalPromptText = `${sysPrompt}\n${prompt}`
+              return llm.executePromptWithTools(finalPromptText, tools, msgs)
+            })
+          )
+        }
       }),
       mergeMap((msg) => {
         // NB: We insert into the database twice so that the caller can get

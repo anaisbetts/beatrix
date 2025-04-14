@@ -64,3 +64,56 @@ export async function parseAllAutomations(
 ): Promise<Automation[]> {
   return firstValueFrom(from(parseAutomations(directoryPath)).pipe(toArray()))
 }
+
+/**
+ * Serializes automations back to their original files.
+ * Groups automations by filename and combines them with '---' separators.
+ */
+export async function serializeAutomations(
+  automations: Automation[]
+): Promise<void> {
+  // Group automations by filename
+  const automationsByFile = automations.reduce<Record<string, Automation[]>>(
+    (acc, automation) => {
+      const fileName = automation.fileName
+      if (!acc[fileName]) {
+        acc[fileName] = []
+      }
+      acc[fileName].push(automation)
+      return acc
+    },
+    {}
+  )
+
+  // Write each group to its corresponding file
+  for (const [fileName, fileAutomations] of Object.entries(automationsByFile)) {
+    // Sort automations if needed (optional, depends on your requirements)
+
+    // Combine automation contents with separator
+    const fileContent = fileAutomations
+      .map((automation) => automation.contents)
+      .join('\n\n---\n\n')
+
+    // Write back to the file
+    await fs.writeFile(fileName, fileContent, 'utf-8')
+
+    // Log at info level
+    i(
+      `Wrote ${fileAutomations.length} automations to file: ${path.basename(fileName)}`
+    )
+  }
+}
+
+/**
+ * Parses all automations from a directory and then serializes them back to their files.
+ * This can be useful for reformatting or normalizing automation files.
+ */
+export async function parseAndSerializeAutomations(
+  directoryPath: string
+): Promise<void> {
+  const automations = await parseAllAutomations(directoryPath)
+  await serializeAutomations(automations)
+  i(
+    `Processed ${automations.length} automations across ${new Set(automations.map((a) => a.fileName)).size} files`
+  )
+}

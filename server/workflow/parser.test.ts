@@ -1,8 +1,14 @@
 import { describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach } from 'bun:test'
+import * as fs from 'fs/promises'
 import * as path from 'path'
 
 import { Automation } from '../../shared/types'
-import { parseAutomations } from './parser'
+import {
+  parseAndSerializeAutomations,
+  parseAutomations,
+  serializeAutomations,
+} from './parser'
 
 describe('Workflow loop functions', () => {
   describe('parseAutomations', () => {
@@ -162,6 +168,96 @@ describe('Workflow loop functions', () => {
     })
   })
 
+  describe('serializeAutomations', () => {
+    const testDir = path.join(
+      import.meta.dir,
+      '..',
+      '..',
+      'mocks',
+      'automation-serialization'
+    )
+
+    // Create test directory before tests
+    beforeEach(async () => {
+      try {
+        await fs.mkdir(testDir, { recursive: true })
+      } catch (error) {
+        console.error(`Error creating test directory: ${error}`)
+      }
+    })
+
+    // Clean up test directory after tests
+    afterEach(async () => {
+      try {
+        const files = await fs.readdir(testDir)
+        for (const file of files) {
+          await fs.unlink(path.join(testDir, file))
+        }
+      } catch (error) {
+        console.error(`Error cleaning up test directory: ${error}`)
+      }
+    })
+
+    test('should serialize automations to files with the correct format', async () => {
+      // Create test automations
+      const testFile1 = path.join(testDir, 'test1.md')
+      const testFile2 = path.join(testDir, 'test2.md')
+
+      const automations: Automation[] = [
+        {
+          hash: '1',
+          contents: 'First automation in file 1',
+          fileName: testFile1,
+        },
+        {
+          hash: '2',
+          contents: 'Second automation in file 1',
+          fileName: testFile1,
+        },
+        {
+          hash: '3',
+          contents: 'Single automation in file 2',
+          fileName: testFile2,
+        },
+      ]
+
+      // Serialize the automations
+      await serializeAutomations(automations)
+
+      // Read the files back and verify content
+      const file1Content = await fs.readFile(testFile1, 'utf-8')
+      const file2Content = await fs.readFile(testFile2, 'utf-8')
+
+      // Check file1 has both automations with separator
+      expect(file1Content).toBe(
+        'First automation in file 1\n\n---\n\nSecond automation in file 1'
+      )
+
+      // Check file2 has single automation without separator
+      expect(file2Content).toBe('Single automation in file 2')
+
+      // Parse the files back to automations to verify round-trip
+      const parsedAutomations: Automation[] = []
+      for await (const automation of parseAutomations(testDir)) {
+        parsedAutomations.push(automation)
+      }
+
+      // Should have 3 automations after parsing
+      expect(parsedAutomations.length).toBe(3)
+
+      // Check content matches (ignoring hash which will be recalculated)
+      const parsedContents = parsedAutomations.map((a) => a.contents).sort()
+      const originalContents = automations.map((a) => a.contents).sort()
+
+      expect(parsedContents).toEqual(originalContents)
+    })
+
+    test('should handle empty array of automations', async () => {
+      await serializeAutomations([])
+      // Should not throw errors
+    })
+  })
+
   describe('parseAllAutomations', () => {
     test('should collect all automations into an array', async () => {
       const mockDir = path.join(
@@ -200,6 +296,60 @@ describe('Workflow loop functions', () => {
       const hashes = automations.map((a) => a.hash)
       const uniqueHashes = new Set(hashes)
       expect(uniqueHashes.size).toBe(automations.length)
+    })
+  })
+
+  describe('parseAndSerializeAutomations', () => {
+    const testDir = path.join(
+      import.meta.dir,
+      '..',
+      '..',
+      'mocks',
+      'automation-round-trip'
+    )
+
+    // Create test directory before tests
+    beforeEach(async () => {
+      try {
+        await fs.mkdir(testDir, { recursive: true })
+      } catch (error) {
+        console.error(`Error creating test directory: ${error}`)
+      }
+    })
+
+    // Clean up test directory after tests
+    afterEach(async () => {
+      try {
+        const files = await fs.readdir(testDir)
+        for (const file of files) {
+          await fs.unlink(path.join(testDir, file))
+        }
+      } catch (error) {
+        console.error(`Error cleaning up test directory: ${error}`)
+      }
+    })
+
+    test('should parse and serialize automations in a round-trip', async () => {
+      // Create initial test files
+      const testFile1 = path.join(testDir, 'test1.md')
+      const testFile2 = path.join(testDir, 'test2.md')
+
+      const file1Content = 'First automation\n\n---\n\nSecond automation'
+      const file2Content = 'Single automation'
+
+      await fs.writeFile(testFile1, file1Content, 'utf-8')
+      await fs.writeFile(testFile2, file2Content, 'utf-8')
+
+      // Run the round-trip process
+      await parseAndSerializeAutomations(testDir)
+
+      // Read the files back to verify content is preserved
+      const newFile1Content = await fs.readFile(testFile1, 'utf-8')
+      const newFile2Content = await fs.readFile(testFile2, 'utf-8')
+
+      // Check serialization maintained the same content
+      expect(newFile1Content).toBe(file1Content)
+      expect(newFile2Content).toBe(file2Content)
     })
   })
 })

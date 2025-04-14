@@ -7,7 +7,7 @@ import { NEVER, Observable, firstValueFrom, lastValueFrom, toArray } from 'rxjs'
 
 import mockServices from '../mocks/services.json'
 import mockStates from '../mocks/states.json'
-import { messagesToString } from '../shared/prompt'
+import { messagesToString } from '../shared/api'
 import { SerialSubscription } from '../shared/serial-subscription'
 import { GradeResult, ScenarioResult } from '../shared/types'
 import {

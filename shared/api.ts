@@ -16,8 +16,8 @@ export type MessageParamWithExtras = MessageParam & {
 export interface ServerWebsocketApi {
   handlePromptRequest(
     prompt: string,
-    model: string,
-    driver: string,
+    model?: string,
+    driver?: string,
     previousConversationId?: number
   ): Observable<MessageParamWithExtras>
 

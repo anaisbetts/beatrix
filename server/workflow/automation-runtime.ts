@@ -142,11 +142,14 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     this.scannedAutomationDir = this.notebookDirectory
       ? defer(() => this.reparseAutomations).pipe(
           switchMap((dir) => {
-            const isCue = dir == getCueDirectory(this)
+            const isCue = dir.startsWith(getCueDirectory(this))
+            const rootDir = isCue
+              ? getCueDirectory(this)
+              : getAutomationDirectory(this)
             i(`Reparsing automations from directory: ${this.notebookDirectory}`)
 
             return from(
-              parseAllAutomations(dir).then((automations) => {
+              parseAllAutomations(path.resolve(rootDir)).then((automations) => {
                 i(`Parsed ${automations.length} automations`)
 
                 if (isCue) {

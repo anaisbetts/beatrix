@@ -98,7 +98,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     return automations.map((x) =>
       automationFromString(
         x.contents,
-        x.fileName.replace(notebookDirectory + path.sep, '')
+        x.fileName.replace(notebookDirectory + path.sep, ''),
+        true
       )
     )
   }

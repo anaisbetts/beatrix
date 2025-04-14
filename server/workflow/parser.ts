@@ -49,7 +49,17 @@ export async function* parseAutomations(
   }
 }
 
-export function automationFromString(trimmedContent: string, filePath: string) {
+export function automationFromString(
+  trimmedContent: string,
+  filePath: string,
+  allowRelative = false
+) {
+  if (!path.isAbsolute(filePath) && !allowRelative) {
+    throw new Error(
+      `Invariant violation: automationFromString received a non-absolute path: ${filePath}`
+    )
+  }
+
   const hash = crypto.createHash('sha256').update(trimmedContent).digest('hex')
 
   return {

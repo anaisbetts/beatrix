@@ -56,7 +56,7 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
                 <SidebarMenuButton asChild>
                   <a href="#" onClick={() => nav('debug')}>
                     <MessageSquare size={18} />
-                    <span className="ms-1">Debug Chat</span>
+                    <span className="ms-1">Chat</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>

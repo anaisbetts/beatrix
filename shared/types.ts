@@ -8,6 +8,7 @@ export interface Automation {
   hash: string
   contents: string
   fileName: string
+  isCue?: boolean
 }
 
 export type StateRegexSignal = {

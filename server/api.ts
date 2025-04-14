@@ -106,8 +106,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   handlePromptRequest(
     prompt: string,
-    model: string,
-    driver: string,
+    model?: string,
+    driver?: string,
     previousConversationId?: number
   ): Observable<MessageParamWithExtras> {
     const llm = createDefaultLLMProvider(this.config, driver, model)

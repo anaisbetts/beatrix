@@ -1,6 +1,6 @@
 {
   "name": "beatrix",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "module": "./src/index.ts",
   "type": "module",
   "scripts": {

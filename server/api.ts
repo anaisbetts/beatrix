@@ -81,6 +81,15 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     )
   }
 
+  getCues(): Observable<Automation[]> {
+    return of(
+      this.filterAutomationPaths(
+        this.runtime.notebookDirectory ?? '',
+        this.runtime.cueList
+      )
+    )
+  }
+
   private filterAutomationPaths(
     notebookDirectory: string,
     automations: Automation[]

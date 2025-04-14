@@ -1,6 +1,7 @@
 import { exists, readFile } from 'node:fs/promises'
 import path from 'node:path'
 
+import { e } from './logging'
 import { AutomationRuntime } from './workflow/automation-runtime'
 
 export async function getSystemPrompt(
@@ -15,8 +16,12 @@ export async function getSystemPrompt(
         'system.md'
       )
 
-      if (runtime.notebookDirectory && (await exists(userSysPromptPath))) {
-        userSysPrompt = await readFile(userSysPromptPath, 'utf8')
+      try {
+        if (runtime.notebookDirectory && (await exists(userSysPromptPath))) {
+          userSysPrompt = await readFile(userSysPromptPath, 'utf8')
+        }
+      } catch (err: any) {
+        e(`Failed to read custom system prompt ${userSysPromptPath}`, err)
       }
 
       return `${userSysPrompt}\n${telegramTypeHint}`

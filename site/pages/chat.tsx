@@ -1,6 +1,6 @@
 import { useCommand, usePromise } from '@anaisbetts/commands'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import { Send } from 'lucide-react'
+import { Bug, Send } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { firstValueFrom, share, toArray } from 'rxjs'
 
@@ -13,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import { ChatMessage } from '../components/chat-message'
 import { ModelSelector } from '../components/model-selector'
@@ -26,6 +32,7 @@ export default function Chat() {
   const [currentConversationId, setCurrentConversationId] = useState<
     number | undefined
   >(undefined)
+  const [isDebugMode, setIsDebugMode] = useState<boolean>(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { api } = useWebSocket()
@@ -46,8 +53,15 @@ export default function Chat() {
     }
 
     const msgCall = api
-      .handlePromptRequest(input, model, driver, currentConversationId)
+      .handlePromptRequest(
+        input,
+        model,
+        driver,
+        currentConversationId,
+        isDebugMode ? 'debug' : 'chat'
+      )
       .pipe(share())
+
     const msgs: MessageParam[] = []
 
     msgCall.subscribe({
@@ -80,7 +94,7 @@ export default function Chat() {
       messages: result as MessageParam[],
       duration: performance.now() - before,
     }
-  }, [input, model, driver, api, currentConversationId])
+  }, [input, model, driver, api, currentConversationId, isDebugMode])
 
   // Focus the input field when the command completes
   useEffect(() => {
@@ -99,6 +113,7 @@ export default function Chat() {
     setMessages([])
     setInput('')
     setCurrentConversationId(undefined)
+    setIsDebugMode(false)
   }, [reset])
 
   const msgContent = useMemo(() => {
@@ -204,6 +219,26 @@ export default function Chat() {
             <Send size={18} />
             <span className="sr-only">Send message</span>
           </Button>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant={isDebugMode ? 'secondary' : 'outline'}
+                  size="icon"
+                  onClick={() => setIsDebugMode((prev) => !prev)}
+                  disabled={result.isPending() || !!currentConversationId}
+                >
+                  <Bug size={18} />
+                  <span className="sr-only">Toggle Debug Mode</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Debug - disable system prompt</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </form>
       </div>
     </div>

@@ -17,6 +17,7 @@ import {
   AutomationLogEntry,
   ScenarioResult,
   SignalHandlerInfo,
+  TypeHint,
 } from '../shared/types'
 import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
@@ -28,11 +29,13 @@ import {
   AutomationRuntime,
   LiveAutomationRuntime,
 } from './workflow/automation-runtime'
+import { automationFromString } from './workflow/parser'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
     private config: AppConfig,
     private runtime: AutomationRuntime,
+    private notebookDirectory: string,
     private testMode: boolean,
     private evalMode: boolean
   ) {}
@@ -71,7 +74,33 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   }
 
   getAutomations(): Observable<Automation[]> {
-    return of(this.runtime.automationList)
+    return of(
+      this.filterAutomationPaths(
+        this.runtime.notebookDirectory ?? '',
+        this.runtime.automationList
+      )
+    )
+  }
+
+  getCues(): Observable<Automation[]> {
+    return of(
+      this.filterAutomationPaths(
+        this.runtime.notebookDirectory ?? '',
+        this.runtime.cueList
+      )
+    )
+  }
+
+  private filterAutomationPaths(
+    notebookDirectory: string,
+    automations: Automation[]
+  ) {
+    return automations.map((x) =>
+      automationFromString(
+        x.contents,
+        x.fileName.replace(notebookDirectory + path.sep, '')
+      )
+    )
   }
 
   getScheduledSignals(): Observable<SignalHandlerInfo[]> {
@@ -110,17 +139,19 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     model?: string,
     driver?: string,
     previousConversationId?: number,
-    typeHint?: string
+    typeHint?: TypeHint
   ): Observable<MessageParamWithExtras> {
     const llm = createDefaultLLMProvider(this.config, driver, model)
     const rqRuntime = new LiveAutomationRuntime(
       this.runtime.api,
       llm,
-      this.runtime.db
+      this.runtime.db,
+      this.notebookDirectory
     )
 
     const tools = createBuiltinServers(rqRuntime, null, {
       testMode: this.testMode || this.evalMode,
+      includeCueServer: typeHint === 'chat',
     })
 
     const convo = previousConversationId

@@ -8,6 +8,7 @@ import { Observable } from 'rxjs'
 import { Automation } from '../shared/types'
 import { AppConfig } from '../shared/types'
 import { AnthropicLargeLanguageProvider } from './anthropic'
+import { createCueServer } from './mcp/cue'
 import { createHomeAssistantServer } from './mcp/home-assistant'
 import { createMemoryServer } from './mcp/memory'
 import { createNotifyServer } from './mcp/notify'
@@ -87,7 +88,11 @@ export function createDefaultLLMProvider(
 export function createBuiltinServers(
   runtime: AutomationRuntime,
   automationForScheduling: Automation | null,
-  opts?: { testMode?: boolean; megaServer?: McpServer }
+  opts?: {
+    testMode?: boolean
+    includeCueServer?: boolean
+    megaServer?: McpServer
+  }
 ) {
   const { testMode, megaServer } = opts ?? {}
   const ret = [
@@ -104,6 +109,10 @@ export function createBuiltinServers(
 
   if (runtime.notebookDirectory) {
     ret.push(createMemoryServer(getMemoryFile(runtime)))
+  }
+
+  if (opts?.includeCueServer && runtime.notebookDirectory) {
+    ret.push(createCueServer(runtime, { testMode: opts.testMode }))
   }
 
   return ret

@@ -1,7 +1,7 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { Observable } from 'rxjs'
 
-import { AppConfig } from './types'
+import { AppConfig, TypeHint } from './types'
 import {
   Automation,
   AutomationLogEntry,
@@ -18,7 +18,8 @@ export interface ServerWebsocketApi {
     prompt: string,
     model?: string,
     driver?: string,
-    previousConversationId?: number
+    previousConversationId?: number,
+    typeHint?: TypeHint
   ): Observable<MessageParamWithExtras>
 
   runEvals(
@@ -34,6 +35,7 @@ export interface ServerWebsocketApi {
   getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]>
 
   getAutomations(): Observable<Automation[]>
+  getCues(): Observable<Automation[]>
   getScheduledSignals(): Observable<SignalHandlerInfo[]>
 
   getConfig(): Observable<AppConfig>

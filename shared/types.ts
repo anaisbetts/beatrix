@@ -8,6 +8,8 @@ export type AutomationType =
   | 'determine-signal'
   | 'execute-signal'
 
+export type TypeHint = 'chat' | 'debug'
+
 export interface Automation {
   hash: string
   contents: string

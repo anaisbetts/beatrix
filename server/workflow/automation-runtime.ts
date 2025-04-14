@@ -147,7 +147,9 @@ export class LiveAutomationRuntime implements AutomationRuntime {
             return from(
               parseAllAutomations(dir).then((automations) => {
                 i(`Parsed ${automations.length} automations`)
+
                 if (isCue) {
+                  automations.forEach((x) => (x.isCue = true))
                   this.cueList = automations
                 } else {
                   this.automationList = automations
@@ -262,9 +264,10 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         signal.type,
         signal.automationHash
       )
-      const automation = this.automationList.find(
-        (x) => x.hash === signal.automationHash
-      )
+
+      const automation = this.automationList
+        .concat(this.cueList)
+        .find((x) => x.hash === signal.automationHash)
 
       if (!automation) {
         i(

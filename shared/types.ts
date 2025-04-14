@@ -2,7 +2,11 @@ import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 export type SignalType = 'cron' | 'state' | 'event' | 'offset' | 'time'
 
-export type AutomationType = 'manual' | 'determine-signal' | 'execute-signal'
+export type AutomationType =
+  | 'manual'
+  | 'chat'
+  | 'determine-signal'
+  | 'execute-signal'
 
 export interface Automation {
   hash: string

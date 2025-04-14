@@ -13,7 +13,7 @@ import {
 
 import { createRemoteClient } from '@/lib/ws-rpc'
 
-import { ServerWebsocketApi } from '../../shared/prompt'
+import { ServerWebsocketApi } from '../../shared/api'
 import { Asyncify, IpcResponse } from '../../shared/ws-rpc'
 
 type WebSocketContextType = {

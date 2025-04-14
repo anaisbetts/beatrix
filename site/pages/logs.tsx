@@ -213,6 +213,8 @@ function LogEntry({
     switch (log.type) {
       case 'manual':
         return <Badge variant="default">manual</Badge>
+      case 'chat':
+        return <Badge variant="default">chat</Badge>
       case 'determine-signal':
         return <Badge variant="secondary">determine-signal</Badge>
       case 'execute-signal':

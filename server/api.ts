@@ -11,7 +11,7 @@ import {
   toArray,
 } from 'rxjs'
 
-import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/prompt'
+import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/api'
 import {
   Automation,
   AutomationLogEntry,
@@ -108,7 +108,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     prompt: string,
     model?: string,
     driver?: string,
-    previousConversationId?: number
+    previousConversationId?: number,
+    typeHint?: string
   ): Observable<MessageParamWithExtras> {
     const llm = createDefaultLLMProvider(this.config, driver, model)
     const rqRuntime = new LiveAutomationRuntime(

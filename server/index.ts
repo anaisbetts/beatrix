@@ -10,7 +10,7 @@ import { Subject, filter } from 'rxjs'
 
 import packageJson from '../package.json'
 import pkg from '../package.json'
-import { ServerWebsocketApi, messagesToString } from '../shared/prompt'
+import { ServerWebsocketApi, messagesToString } from '../shared/api'
 import { ScenarioResult } from '../shared/types'
 import { ServerMessage } from '../shared/ws-rpc'
 import { ServerWebsocketApiImpl } from './api'

@@ -18,13 +18,13 @@ export async function getSystemPrompt(
 
       try {
         if (runtime.notebookDirectory && (await exists(userSysPromptPath))) {
-          userSysPrompt = await readFile(userSysPromptPath, 'utf8')
+          userSysPrompt = (await readFile(userSysPromptPath, 'utf8')) + '\n'
         }
       } catch (err: any) {
         e(`Failed to read custom system prompt ${userSysPromptPath}`, err)
       }
 
-      return `${userSysPrompt}\n${telegramTypeHint}`
+      return `<system>${userSysPrompt}${telegramTypeHint}</system>`
     default:
       // Debug chats should have no system prompt
       return ''
@@ -32,7 +32,6 @@ export async function getSystemPrompt(
 }
 
 const telegramTypeHint = `
-The user is conversing with the agent via Telegram - this means that while all
-the important information should still be included, you should keep responses
-terse / brief
-`
+The user is conversing with the agent via Telegram or another chat client - this
+means that while all the important information should still be included, you
+should keep responses terse / brief`

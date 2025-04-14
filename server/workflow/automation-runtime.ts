@@ -242,7 +242,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     // will go from one automation => zero automations for a file. When that
     // happens, we'll just delete it rather than leaving a weird file
     if (toWrite.length > 0) {
-      await serializeAutomations(this.notebookDirectory!, toWrite)
+      await serializeAutomations(toWrite)
     } else {
       w(`Cue file ${file} is empty, deleting!`)
       await unlink(file!)

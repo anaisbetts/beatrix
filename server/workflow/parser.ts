@@ -70,7 +70,6 @@ export async function parseAllAutomations(
  * Groups automations by filename and combines them with '---' separators.
  */
 export async function serializeAutomations(
-  notebookDirectory: string,
   automations: Automation[]
 ): Promise<void> {
   // Group automations by filename
@@ -96,11 +95,7 @@ export async function serializeAutomations(
       .join('\n\n---\n\n')
 
     // Write back to the file
-    await fs.writeFile(
-      path.join(notebookDirectory, fileName),
-      fileContent,
-      'utf-8'
-    )
+    await fs.writeFile(fileName, fileContent, 'utf-8')
 
     // Log at info level
     i(
@@ -117,7 +112,7 @@ export async function parseAndSerializeAutomations(
   directoryPath: string
 ): Promise<void> {
   const automations = await parseAllAutomations(directoryPath)
-  await serializeAutomations(directoryPath, automations)
+  await serializeAutomations(automations)
   i(
     `Processed ${automations.length} automations across ${new Set(automations.map((a) => a.fileName)).size} files`
   )

@@ -1,0 +1,22 @@
+## This goes in your notebook directory!
+
+ha_base_url = "YOUR_HOME_ASSISTANT_URL" # Example: "http://homeassistant.local:8123"
+ha_token = "YOUR_LONG_LIVED_ACCESS_TOKEN"
+llm = "anthropic" # Or "ollama", "openai"
+
+[anthropic]
+key = "YOUR_ANTHROPIC_API_KEY"
+
+[ollama]
+host = "YOUR_OLLAMA_HOST_URL" # Example: "http://localhost:11434"
+
+[openai]
+key = "YOUR_OPENAI_API_KEY"
+
+  [openai.scaleway]
+  base_url = "YOUR_SCALEWAY_BASE_URL" # Or remove if not using
+  key = "YOUR_SCALEWAY_API_KEY"
+
+  [openai.google]
+  base_url = "YOUR_GOOGLE_AI_BASE_URL" # Or remove if not using
+  key = "YOUR_GOOGLE_AI_API_KEY" 

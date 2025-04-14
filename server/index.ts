@@ -68,6 +68,7 @@ async function serveCommand(options: {
     new ServerWebsocketApiImpl(
       config,
       runtime,
+      path.resolve(options.notebook),
       options.testMode,
       options.evalMode
     ),

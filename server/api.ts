@@ -35,6 +35,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
     private config: AppConfig,
     private runtime: AutomationRuntime,
+    private notebookDirectory: string,
     private testMode: boolean,
     private evalMode: boolean
   ) {}
@@ -144,7 +145,8 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     const rqRuntime = new LiveAutomationRuntime(
       this.runtime.api,
       llm,
-      this.runtime.db
+      this.runtime.db,
+      this.notebookDirectory
     )
 
     const tools = createBuiltinServers(rqRuntime, null, {

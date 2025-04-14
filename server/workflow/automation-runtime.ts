@@ -28,7 +28,7 @@ import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
 import { e, i } from '../logging'
 import { getConfigFilePath, isProdMode } from '../paths'
 import { runExecutionForAutomation } from './execution-step'
-import { parseAllAutomations } from './parser'
+import { parseAllAutomations, serializeAutomations } from './parser'
 import { rescheduleAutomations } from './scheduler-step'
 import {
   AbsoluteTimeSignalHandler,
@@ -52,9 +52,10 @@ export interface AutomationRuntime {
   readonly notebookDirectory: string | undefined
 
   automationList: Automation[]
+  cueList: Automation[]
   scheduledSignals: SignalHandler[]
 
-  reparseAutomations: Observable<void>
+  reparseAutomations: Observable<string>
   scannedAutomationDir: Observable<Automation[]>
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
@@ -65,10 +66,11 @@ export interface AutomationRuntime {
 
 export class LiveAutomationRuntime implements AutomationRuntime {
   automationList: Automation[]
+  cueList: Automation[]
   scheduledSignals: SignalHandler[]
   notebookDirectory: string | undefined
 
-  reparseAutomations: Observable<void>
+  reparseAutomations: Observable<string>
   scannedAutomationDir: Observable<Automation[]>
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
@@ -99,31 +101,36 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     notebookDirectory?: string
   ) {
     this.automationList = []
+    this.cueList = []
     this.scheduledSignals = []
     this.notebookDirectory = notebookDirectory
 
+    const watchedDirectories = [
+      getAutomationDirectory(this),
+      getCueDirectory(this),
+    ].map((dir) =>
+      createBufferedDirectoryMonitor(
+        {
+          path: dir,
+          recursive: true,
+        },
+        10 * 1000
+      ).pipe(
+        map(() => {
+          i(`Detected change in automation directory: ${dir}`)
+          return dir
+        })
+      )
+    )
+
     this.reparseAutomations = this.notebookDirectory
-      ? createBufferedDirectoryMonitor(
-          {
-            path: getAutomationDirectory(this),
-            recursive: true,
-          },
-          30 * 1000
-        ).pipe(
-          tap(() =>
-            i(
-              `Detected change in automation directory: ${this.notebookDirectory}`
-            )
-          ),
-          map(() => {}),
-          throttleTime(30 * 1000)
-        )
+      ? merge(...watchedDirectories).pipe(throttleTime(30 * 1000))
       : NEVER
 
     if (isProdMode) {
       // Kick off a scan on startup
       this.reparseAutomations = this.reparseAutomations.pipe(
-        startWith(undefined)
+        startWith(getAutomationDirectory(this), getCueDirectory(this))
       )
     } else {
       console.error(
@@ -133,16 +140,21 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 
     this.scannedAutomationDir = this.notebookDirectory
       ? defer(() => this.reparseAutomations).pipe(
-          switchMap(() => {
+          switchMap((dir) => {
+            const isCue = dir == getCueDirectory(this)
             i(`Reparsing automations from directory: ${this.notebookDirectory}`)
+
             return from(
-              parseAllAutomations(getAutomationDirectory(this)).then(
-                (automations) => {
-                  i(`Parsed ${automations.length} automations`)
+              parseAllAutomations(dir).then((automations) => {
+                i(`Parsed ${automations.length} automations`)
+                if (isCue) {
+                  this.cueList = automations
+                } else {
                   this.automationList = automations
-                  return automations
                 }
-              )
+
+                return automations
+              })
             )
           }),
           share() // Share the result of parsing
@@ -154,6 +166,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     ).pipe(
       switchMap((automations) => {
         i(`Scheduling triggers for ${automations.length} automations`)
+
         return from(rescheduleAutomations(this, automations)).pipe(
           tap(() => i('Finished scheduling triggers'))
         )
@@ -166,24 +179,16 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         d('Setting up Signals based on database')
         return from(this.handlersForDatabaseSignals())
       }),
-      tap({
-        next: (handlers) => {
-          i(`Created ${handlers.length} Signal handlers from database`)
-          this.scheduledSignals = handlers
-        },
-      }),
       switchMap((handlers) => {
+        i(`Created ${handlers.length} Signal handlers from database`)
+        this.scheduledSignals = handlers
+
         if (handlers.length === 0) {
           return NEVER
         }
         return merge(...handlers.map((handler) => handler.signalObservable))
       }),
-      tap(({ signal, automation }) =>
-        i(
-          `Signal ID ${signal.id} (${signal.type}) fired for automation: ${automation.fileName} (${automation.hash})`
-        )
-      ),
-      share() // Share the fired signals
+      share()
     )
 
     this.automationExecuted = defer(() => this.signalFired).pipe(
@@ -193,13 +198,16 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         )
 
         return from(
-          runExecutionForAutomation(this, automation, signal.id)
-        ).pipe(
-          tap(() =>
+          runExecutionForAutomation(this, automation, signal.id).then(() => {
             i(
               `Finished execution for automation ${automation.fileName} (${automation.hash})`
             )
-          )
+
+            if (automation.isCue) {
+              i(`Removing automation ${automation.hash} because it is a Cue`)
+              return this.removeCue(automation)
+            }
+          })
         )
       }),
       share() // Share the execution result
@@ -218,6 +226,14 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     })
 
     return this.pipelineSub
+  }
+
+  async removeCue(automation: Automation): Promise<void> {
+    const toWrite = this.cueList.filter(
+      (x) => x.fileName === automation.fileName && x.hash !== automation.hash
+    )
+
+    await serializeAutomations(toWrite)
   }
 
   async saveConfigAndReload(config: AppConfig): Promise<void> {
@@ -338,6 +354,19 @@ export function getAutomationDirectory(runtime: AutomationRuntime) {
   }
 
   const ret = path.join(runtime.notebookDirectory, 'automations')
+  if (!existsSync(ret)) {
+    mkdirSync(ret, { recursive: true })
+  }
+
+  return ret
+}
+
+export function getCueDirectory(runtime: AutomationRuntime) {
+  if (!runtime.notebookDirectory) {
+    throw new Error('Automation directory is not set')
+  }
+
+  const ret = path.join(runtime.notebookDirectory, 'cues')
   if (!existsSync(ret)) {
     mkdirSync(ret, { recursive: true })
   }

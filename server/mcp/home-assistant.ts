@@ -32,19 +32,19 @@ export function createHomeAssistantServer(
     })
 
   server.tool(
-    'get-entities-by-prefix',
-    'List all Home Assistant entities that match a given prefix or array of prefixes',
+    'get-entities-by-domain',
+    'List all Home Assistant entities that match a given domain or array of domains',
     {
-      prefixes: z
+      domains: z
         .union([z.string(), z.array(z.string())])
         .describe(
-          'The entity prefix or array of prefixes to match (e.g. "light.", "switch.", "person.")'
+          'The entity domain or array of domains to match (e.g. "light", "switch", "person")'
         ),
     },
-    async ({ prefixes }) => {
+    async ({ domains }) => {
       try {
         const prefixMap = Object.fromEntries(
-          (Array.isArray(prefixes) ? prefixes : [prefixes]).map((k) => [
+          (Array.isArray(domains) ? domains : [domains]).map((k) => [
             k.replace('.', ''),
             true,
           ])

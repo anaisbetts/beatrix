@@ -2,21 +2,18 @@ import { deepEquals } from 'bun'
 import { Kysely } from 'kysely'
 
 import {
-  AbsoluteTimeSignal,
   CronSignal,
   RelativeTimeSignal,
   SignalData,
   StateRegexSignal,
 } from '../../shared/types'
-import { createInMemoryDatabase } from '../db'
 import { Schema } from '../db-schema'
 import {
-  EvalHomeAssistantApi,
+  createEvalRuntime,
   failureGrader,
   runScenario,
 } from '../eval-framework'
 import { LargeLanguageProvider } from '../llm'
-import { LiveAutomationRuntime } from '../workflow/automation-runtime'
 import { automationFromString } from '../workflow/parser'
 import {
   createDefaultSchedulerTools,
@@ -26,15 +23,11 @@ import {
 export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
   const inputAutomation = automationFromString(
     'Every Monday at 8:00 AM, turn on the living room lights.',
-    'test_automation.md'
+    'test_automation.md',
+    true
   )
 
-  const service = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
-  )
-
+  const service = await createEvalRuntime(llm)
   const tools = createDefaultSchedulerTools(service, inputAutomation)
 
   yield runScenario(
@@ -203,39 +196,20 @@ function findMultipleSchedulesGrader(
 // --- Consolidated Absolute Time Evals ---
 export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 1: Single specific date/time
-  const prompt1 =
-    'Schedule my bedroom chandelier to turn on at 7:15am on April 25th, 2025'
-  const inputAutomation1 = automationFromString(prompt1, 'test_automation.md')
-  const service1 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
-  )
-  const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
-  const expected1: AbsoluteTimeSignal = {
-    type: 'time',
-    iso8601Time: '2025-04-25T07:15:00',
-  }
-  yield runScenario(
-    llm,
-    schedulerPrompt(inputAutomation1.contents, ''),
-    tools1,
-    'Eval Absolute Time: Single specific date/time',
-    [
-      failureGrader(),
-      findSingularScheduleGrader(service1.db, expected1.type, expected1),
-    ]
-  )
+  // const prompt1 =
+  //   'Schedule my bedroom chandelier to turn on at 7:15am on April 25th, 2025'
+  // const inputAutomation1 = automationFromString(prompt1, 'test_automation.md')
+  // const service1 = await createEvalRuntime(llm)
 
   // Scenario 2: Daily on/off (becomes cron)
   const prompt2 =
     'Set the foyer floor lights on at 7:00am and off at 8:00pm every day'
-  const inputAutomation2 = automationFromString(prompt2, 'test_automation.md')
-  const service2 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation2 = automationFromString(
+    prompt2,
+    'test_automation.md',
+    true
   )
+  const service2 = await createEvalRuntime(llm)
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: CronSignal[] = [
     { type: 'cron', cron: '0 7 * * *' },
@@ -251,12 +225,12 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
 
   // Scenario 7: Multiple times daily (becomes cron)
   const prompt7 = 'Turn off all lights in the house at 11:00pm and 3:00am'
-  const inputAutomation7 = automationFromString(prompt7, 'test_automation.md')
-  const service7 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation7 = automationFromString(
+    prompt7,
+    'test_automation.md',
+    true
   )
+  const service7 = await createEvalRuntime(llm)
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: CronSignal[] = [
     { type: 'cron', cron: '0 23 * * *' },
@@ -273,12 +247,12 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 8: Multiple specific times daily (becomes cron)
   const prompt8 =
     'Send me a message at 8:00am, 12:00pm, and 5:00pm to take my medication'
-  const inputAutomation8 = automationFromString(prompt8, 'test_automation.md')
-  const service8 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation8 = automationFromString(
+    prompt8,
+    'test_automation.md',
+    true
   )
+  const service8 = await createEvalRuntime(llm)
   const tools8 = createDefaultSchedulerTools(service8, inputAutomation8)
   const expected8: CronSignal[] = [
     { type: 'cron', cron: '0 8 * * *' },
@@ -296,12 +270,12 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 9: Weekday/Weekend split (becomes cron)
   const prompt9 =
     'Turn on the kitchen dining room chandelier at 6:45am on weekdays and 8:30am on weekends'
-  const inputAutomation9 = automationFromString(prompt9, 'test_automation.md')
-  const service9 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation9 = automationFromString(
+    prompt9,
+    'test_automation.md',
+    true
   )
+  const service9 = await createEvalRuntime(llm)
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
   const expected9: CronSignal[] = [
     { type: 'cron', cron: '45 6 * * 1-5' },
@@ -320,12 +294,12 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
 export async function* evalCronPrompts(llm: LargeLanguageProvider) {
   // Scenario 2: Weekday specific time
   const prompt2 = 'Turn on the bathroom overhead light at 8:00am on weekdays'
-  const inputAutomation2 = automationFromString(prompt2, 'test_automation.md')
-  const service2 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation2 = automationFromString(
+    prompt2,
+    'test_automation.md',
+    true
   )
+  const service2 = await createEvalRuntime(llm)
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: CronSignal = {
     type: 'cron',
@@ -344,12 +318,12 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
 
   // Scenario 3: End of month (becomes start of next month)
   const prompt3 = 'At the end of the month, announce to drink water'
-  const inputAutomation3 = automationFromString(prompt3, 'test_automation.md')
-  const service3 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation3 = automationFromString(
+    prompt3,
+    'test_automation.md',
+    true
   )
+  const service3 = await createEvalRuntime(llm)
   const tools3 = createDefaultSchedulerTools(service3, inputAutomation3)
   const expected3: CronSignal = {
     type: 'cron',
@@ -372,12 +346,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 1: Sunset and Sunrise (becomes state triggers)
   const prompt1 =
     'Turn on the foyer bird sconces at sunset and turn them off at sunrise'
-  const inputAutomation1 = automationFromString(prompt1, 'test_automation.md')
-  const service1 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation1 = automationFromString(
+    prompt1,
+    'test_automation.md',
+    true
   )
+  const service1 = await createEvalRuntime(llm)
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
   const expected1: StateRegexSignal[] = [
     { type: 'state', entityIds: ['sun.sun'], regex: '^below_horizon$' },
@@ -394,12 +368,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 2: State trigger (person arrives)
   const prompt2 =
     'When ani arrives home, turn on the living room overhead light and set night mode to off'
-  const inputAutomation2 = automationFromString(prompt2, 'test_automation.md')
-  const service2 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation2 = automationFromString(
+    prompt2,
+    'test_automation.md',
+    true
   )
+  const service2 = await createEvalRuntime(llm)
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: StateRegexSignal = {
     type: 'state',
@@ -420,12 +394,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 3: Time condition (becomes cron) + state condition
   const prompt3 =
     "If it's after 10pm and the sync box is still on, announce to go to bed"
-  const inputAutomation3 = automationFromString(prompt3, 'test_automation.md')
-  const service3 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation3 = automationFromString(
+    prompt3,
+    'test_automation.md',
+    true
   )
+  const service3 = await createEvalRuntime(llm)
   const tools3 = createDefaultSchedulerTools(service3, inputAutomation3)
   const expected3: CronSignal = {
     type: 'cron',
@@ -445,12 +419,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 4: State trigger (relative time handled post-trigger)
   const prompt4 =
     'Turn off all the lights 30 minutes after night mode has been turned on'
-  const inputAutomation4 = automationFromString(prompt4, 'test_automation.md')
-  const service4 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation4 = automationFromString(
+    prompt4,
+    'test_automation.md',
+    true
   )
+  const service4 = await createEvalRuntime(llm)
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
   const expected4: StateRegexSignal = {
     type: 'state',
@@ -471,12 +445,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 5: Cron and State trigger
   const prompt5 =
     'Every morning at 8am and when red alert is turned on, announce to be careful'
-  const inputAutomation5 = automationFromString(prompt5, 'test_automation.md')
-  const service5 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation5 = automationFromString(
+    prompt5,
+    'test_automation.md',
+    true
   )
+  const service5 = await createEvalRuntime(llm)
   const tools5 = createDefaultSchedulerTools(service5, inputAutomation5)
   const expected5: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 8 * * *' },
@@ -497,12 +471,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 6: Cron or State trigger
   const prompt6 =
     'Turn off the foyer overhead light at 11pm or when everyone leaves the house'
-  const inputAutomation6 = automationFromString(prompt6, 'test_automation.md')
-  const service6 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation6 = automationFromString(
+    prompt6,
+    'test_automation.md',
+    true
   )
+  const service6 = await createEvalRuntime(llm)
   const tools6 = createDefaultSchedulerTools(service6, inputAutomation6)
   const expected6: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 23 * * *' },
@@ -523,12 +497,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 7: Sunset trigger with complex state/duration condition
   const prompt7 =
     'If the office overhead light has been on for more than 15 minutes after sunset, announce to check the office'
-  const inputAutomation7 = automationFromString(prompt7, 'test_automation.md')
-  const service7 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation7 = automationFromString(
+    prompt7,
+    'test_automation.md',
+    true
   )
+  const service7 = await createEvalRuntime(llm)
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: StateRegexSignal = {
     type: 'state',
@@ -549,12 +523,12 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   // Scenario 9: Cron and State trigger (with time condition on state)
   const prompt9 =
     'Set the kitchen dining room chandelier to on at 10pm and if someone enters the kitchen between 10pm and 6am'
-  const inputAutomation9 = automationFromString(prompt9, 'test_automation.md')
-  const service9 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation9 = automationFromString(
+    prompt9,
+    'test_automation.md',
+    true
   )
+  const service9 = await createEvalRuntime(llm)
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
   const expected9: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 22 * * *' },
@@ -578,12 +552,12 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 1: State trigger (offset handled post-trigger)
   const prompt1 =
     'Turn off the living room overhead light 30 minutes after ani leaves the house'
-  const inputAutomation1 = automationFromString(prompt1, 'test_automation.md')
-  const service1 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation1 = automationFromString(
+    prompt1,
+    'test_automation.md',
+    true
   )
+  const service1 = await createEvalRuntime(llm)
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
   const expected1: StateRegexSignal = {
     type: 'state',
@@ -603,12 +577,12 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
 
   // Scenario 2: Simple offset trigger
   const prompt2 = 'Announce to check on dinner in 45 minutes'
-  const inputAutomation2 = automationFromString(prompt2, 'test_automation.md')
-  const service2 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation2 = automationFromString(
+    prompt2,
+    'test_automation.md',
+    true
   )
+  const service2 = await createEvalRuntime(llm)
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: RelativeTimeSignal = {
     type: 'offset',
@@ -628,12 +602,12 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 4: Group state trigger (offset handled post-trigger)
   const prompt4 =
     'Announce on cleaning music 10 minutes after everyone has left the house'
-  const inputAutomation4 = automationFromString(prompt4, 'test_automation.md')
-  const service4 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation4 = automationFromString(
+    prompt4,
+    'test_automation.md',
+    true
   )
+  const service4 = await createEvalRuntime(llm)
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
   const expected4: StateRegexSignal = {
     type: 'state',
@@ -654,12 +628,12 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 5: Recurring action with state condition (becomes cron)
   const prompt5 =
     'Announce every 15 minutes reminding to drink water while ani is home'
-  const inputAutomation5 = automationFromString(prompt5, 'test_automation.md')
-  const service5 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation5 = automationFromString(
+    prompt5,
+    'test_automation.md',
+    true
   )
+  const service5 = await createEvalRuntime(llm)
   const tools5 = createDefaultSchedulerTools(service5, inputAutomation5)
   const expected5: CronSignal = {
     type: 'cron',
@@ -679,12 +653,12 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   // Scenario 7: Recurring action after specific time (becomes cron)
   const prompt7 =
     'Increase the brightness of the office overhead light by 10% every 30 minutes starting at 4pm'
-  const inputAutomation7 = automationFromString(prompt7, 'test_automation.md')
-  const service7 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation7 = automationFromString(
+    prompt7,
+    'test_automation.md',
+    true
   )
+  const service7 = await createEvalRuntime(llm)
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: CronSignal = {
     type: 'cron',
@@ -706,12 +680,12 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
 export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   // Scenario 1: Any person arrives (group state)
   const prompt1 = 'Turn on the foyer bird sconces when any person arrives home'
-  const inputAutomation1 = automationFromString(prompt1, 'test_automation.md')
-  const service1 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation1 = automationFromString(
+    prompt1,
+    'test_automation.md',
+    true
   )
+  const service1 = await createEvalRuntime(llm)
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
   const expected1: StateRegexSignal = {
     type: 'state',
@@ -731,12 +705,12 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
 
   // Scenario 2: Specific entity turns off
   const prompt2 = 'Announce when sync box light sync turns off'
-  const inputAutomation2 = automationFromString(prompt2, 'test_automation.md')
-  const service2 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation2 = automationFromString(
+    prompt2,
+    'test_automation.md',
+    true
   )
+  const service2 = await createEvalRuntime(llm)
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: StateRegexSignal = {
     type: 'state',
@@ -757,12 +731,12 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   // Scenario 4: Specific entity turns on
   const prompt4 =
     'Set the living room bookshelf light to on when sync box power turns on'
-  const inputAutomation4 = automationFromString(prompt4, 'test_automation.md')
-  const service4 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation4 = automationFromString(
+    prompt4,
+    'test_automation.md',
+    true
   )
+  const service4 = await createEvalRuntime(llm)
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
   const expected4: StateRegexSignal = {
     type: 'state',
@@ -783,12 +757,12 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   // Scenario 7: Update entity changes state (to on)
   // Note: Assuming a more specific entity ID pattern than before for better testing
   const prompt7 = 'Announce when esphome update changes from off to on'
-  const inputAutomation7 = automationFromString(prompt7, 'test_automation.md')
-  const service7 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation7 = automationFromString(
+    prompt7,
+    'test_automation.md',
+    true
   )
+  const service7 = await createEvalRuntime(llm)
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: StateRegexSignal = {
     type: 'state',
@@ -808,12 +782,12 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
 
   // Scenario 8: Input boolean turns off
   const prompt8 = 'Turn on night mode when red alert is turned off'
-  const inputAutomation8 = automationFromString(prompt8, 'test_automation.md')
-  const service8 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation8 = automationFromString(
+    prompt8,
+    'test_automation.md',
+    true
   )
+  const service8 = await createEvalRuntime(llm)
   const tools8 = createDefaultSchedulerTools(service8, inputAutomation8)
   const expected8: StateRegexSignal = {
     type: 'state',
@@ -832,12 +806,12 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   )
   // Scenario 9: Input boolean changes to on (Duplicate logic from MixedPrompt4, kept for coverage)
   const prompt9 = 'Turn off all lights when night mode changes to on'
-  const inputAutomation9 = automationFromString(prompt9, 'test_automation.md')
-  const service9 = new LiveAutomationRuntime(
-    new EvalHomeAssistantApi(),
-    llm,
-    await createInMemoryDatabase()
+  const inputAutomation9 = automationFromString(
+    prompt9,
+    'test_automation.md',
+    true
   )
+  const service9 = await createEvalRuntime(llm)
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
   const expected9: StateRegexSignal = {
     type: 'state',

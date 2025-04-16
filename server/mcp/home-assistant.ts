@@ -7,6 +7,7 @@ import { z } from 'zod'
 import pkg from '../../package.json'
 import { messagesToString } from '../../shared/api'
 import { w } from '../logging'
+import { agenticReminders } from '../prompts'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 import { createCallServiceServer } from './call-service'
 
@@ -220,6 +221,8 @@ export const callServicePrompt = (
 # Home Assistant Entity Control Assistant
 
 You are an assistant specialized in controlling Home Assistant entities through natural language requests. Your goal is to translate user requests into the appropriate Home Assistant service calls using the MCP server tools available to you.
+
+${agenticReminders}
 
 ## Your Task
 

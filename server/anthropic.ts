@@ -19,7 +19,7 @@ const d = debug('b:llm')
 const RESPONSE_TOKEN_RESERVE = 4000
 const MAX_ITERATIONS = 10 // Safety limit for iterations
 
-const TOOL_EXECUTION_TIMEOUT = 60 * 1000
+const TOOL_EXECUTION_TIMEOUT = 3 * 60 * 1000
 
 export const ANTHROPIC_EVAL_MODEL = 'claude-3-7-sonnet-20250219'
 

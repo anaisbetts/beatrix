@@ -24,7 +24,7 @@ const RESPONSE_TOKEN_RESERVE = 4000
 const MAX_ITERATIONS = 10 // Safety limit for iterations
 
 // Timeout configuration (in milliseconds)
-const TOOL_EXECUTION_TIMEOUT = 60 * 1000
+const TOOL_EXECUTION_TIMEOUT = 3 * 60 * 1000
 
 export const OPENAI_EVAL_MODEL = 'gpt-4-turbo'
 

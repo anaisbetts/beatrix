@@ -20,7 +20,7 @@ const d = debug('b:llm')
 const MAX_ITERATIONS = 10 // Safety limit for iterations
 
 // Timeout configuration (in milliseconds)
-const TOOL_EXECUTION_TIMEOUT = 60 * 1000
+const TOOL_EXECUTION_TIMEOUT = 5 * 60 * 1000
 
 export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   static OLLAMA_API_TIMEOUT = 5 * 60 * 1000

@@ -137,6 +137,12 @@ export function createCallServiceServer(
         const states = await runtime.api.fetchStates()
         const stateInfo = entityIds.reduce(
           (acc, id) => {
+            if (!id) return acc
+            if (!states[id]) {
+              w(`Requested entity with id ${id} but it doesn't exist!`)
+              return acc
+            }
+
             acc[id] = {
               state: states[id].state,
               attributes: states[id].attributes,

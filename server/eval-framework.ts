@@ -3,6 +3,9 @@ import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
 import { HassEvent, HassServices } from 'home-assistant-js-websocket'
+import { mkdir } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { NEVER, Observable, firstValueFrom, lastValueFrom, toArray } from 'rxjs'
 
 import mockServices from '../mocks/services.json'
@@ -111,9 +114,11 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     d('Fetching states in eval mode')
     const states = mockStates as unknown as HassState[]
 
-    return Promise.resolve(
-      Object.fromEntries(states.map((x) => [x.entity_id, x]))
+    const ret = Object.fromEntries(
+      states.filter((x) => x.entity_id).map((x) => [x.entity_id, x])
     )
+
+    return Promise.resolve(ret)
   }
 
   eventsObservable(): Observable<HassEvent> {
@@ -180,10 +185,15 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
 }
 
 export async function createEvalRuntime(llm: LargeLanguageProvider) {
+  // Create a temporary notebook directory for eval mode
+  const tmpNotebookDir = path.join(os.tmpdir(), 'beatrix-eval-notebook')
+  await mkdir(tmpNotebookDir, { recursive: true })
+
   return new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
     llm,
-    await createInMemoryDatabase()
+    await createInMemoryDatabase(),
+    tmpNotebookDir
   )
 }
 

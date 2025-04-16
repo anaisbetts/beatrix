@@ -114,9 +114,11 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     d('Fetching states in eval mode')
     const states = mockStates as unknown as HassState[]
 
-    return Promise.resolve(
-      Object.fromEntries(states.map((x) => [x.entity_id, x]))
+    const ret = Object.fromEntries(
+      states.filter((x) => x.entity_id).map((x) => [x.entity_id, x])
     )
+
+    return Promise.resolve(ret)
   }
 
   eventsObservable(): Observable<HassEvent> {

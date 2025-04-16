@@ -86,7 +86,7 @@ export interface HomeAssistantApi extends SubscriptionLike {
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
   private eventsSub = new SerialSubscription()
-  private services: Promise<Record<string, HassState>> | undefined
+  private stateCache: Promise<Record<string, HassState>> | undefined
 
   constructor(
     private connection: Connection,
@@ -135,10 +135,10 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   }
 
   private async setupStateCache() {
-    this.services = this.fetchFullState()
+    this.stateCache = this.fetchFullState()
 
-    const state = await this.services
-    this.services = Promise.resolve(state)
+    const state = await this.stateCache
+    this.stateCache = Promise.resolve(state)
 
     this.eventsSub.current = this.eventsObservable()
       .pipe(filter((x) => x.event_type === 'state_changed'))
@@ -152,13 +152,13 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   }
 
   fetchStates(): Promise<Record<string, HassState>> {
-    if (this.services) {
+    if (this.stateCache) {
       // NB: We do the Object.assign here so that callers get a stable snapshot
       // rather than a constantly shifting live object
-      return this.services.then((x) => Object.assign({}, x))
+      return this.stateCache.then((x) => Object.assign({}, x))
     }
 
-    const ret = (this.services = this.fetchFullState())
+    const ret = (this.stateCache = this.fetchFullState())
     return ret
   }
 

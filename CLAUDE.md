@@ -7,7 +7,7 @@
 - Run tests: `bun test` (all tests)
 - Run single test: `bun test server/lib/file.test.ts`
 - Lint & typecheck: `bun lint` (eslint, tsc, prettier)
-- Fix linting: `bun fix`
+- Fix linting: `bun f`
 
 ## Code Style Guidelines
 

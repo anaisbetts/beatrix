@@ -1,4 +1,5 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import { DateTime } from 'luxon'
 import path from 'node:path'
 import {
   Observable,
@@ -69,7 +70,9 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       fetchAutomationLogs(
         this.runtime.db,
         this.runtime.automationList,
-        beforeTimestamp
+        DateTime.fromJSDate(beforeTimestamp ?? new Date()).setZone(
+          this.runtime.timezone
+        )
       )
     )
   }

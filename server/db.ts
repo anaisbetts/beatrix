@@ -2,6 +2,7 @@ import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import debug from 'debug'
 import { Kysely, Migrator, sql } from 'kysely'
 import { BunSqliteDialect } from 'kysely-bun-worker/normal'
+import { DateTime } from 'luxon'
 import * as path from 'node:path'
 
 import {
@@ -59,7 +60,7 @@ async function _createDatabase(dbPath?: string) {
 export async function fetchAutomationLogs(
   db: Kysely<Schema>,
   automations: Automation[],
-  beforeTimestamp?: Date,
+  beforeTimestamp?: DateTime,
   limit = 30
 ): Promise<AutomationLogEntry[]> {
   let q = db
@@ -68,11 +69,7 @@ export async function fetchAutomationLogs(
     .limit(limit)
 
   if (beforeTimestamp) {
-    q = q.where(
-      'a.createdAt',
-      '<',
-      `datetime(${dateToSqliteTimestamp(beforeTimestamp)})`
-    )
+    q = q.where('a.createdAt', '<', `datetime(${beforeTimestamp.toISO()!})`)
   }
 
   const rows = await q
@@ -99,7 +96,7 @@ export async function fetchAutomationLogs(
     }
 
     acc.get(x.automationLogId)?.push({
-      createdAt: parseSqliteTimestamp(x.createdAt),
+      createdAt: x.createdAt,
       service: x.service,
       target: x.target,
       data: x.data, // Keep as string as per type definition
@@ -172,47 +169,11 @@ export async function fetchAutomationLogs(
     // Create and return the AutomationLogEntry
     return {
       type: row.type,
-      createdAt: parseSqliteTimestamp(row.createdAt),
+      createdAt: row.createdAt,
       messages: messageLog,
       servicesCalled,
       automation: matchingAutomation || null,
       signaledBy,
     }
   })
-}
-
-export function parseSqliteTimestamp(timestampStr: string): Date {
-  const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
-  if (!regex.test(timestampStr)) {
-    throw new Error(
-      `Invalid timestamp format: ${timestampStr}. Expected format: YYYY-MM-DD HH:MM:SS`
-    )
-  }
-
-  // Split the timestamp string into date and time parts
-  const [datePart, timePart] = timestampStr.split(' ')
-  const [year, month, day] = datePart.split('-').map(Number)
-  const [hours, minutes, seconds] = timePart.split(':').map(Number)
-
-  // Create a new Date object (months are 0-indexed in JavaScript Date)
-  return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds))
-}
-export function dateToSqliteTimestamp(date: Date): string {
-  // Ensure we have a valid Date object
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    throw new Error('Invalid Date object provided to formatTimestamp')
-  }
-
-  // Format the date components with padding
-  const year = date.getUTCFullYear()
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0') // Months are 0-indexed
-  const day = String(date.getUTCDate()).padStart(2, '0')
-
-  // Format the time components with padding
-  const hours = String(date.getUTCHours()).padStart(2, '0')
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0')
-
-  // Combine into the final format
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }

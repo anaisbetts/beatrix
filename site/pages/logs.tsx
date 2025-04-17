@@ -31,13 +31,12 @@ export default function Logs() {
   const { api } = useWebSocket()
 
   // Define a command to fetch logs
-  const [fetchLogsCmd, fetchLogsResult, resetFetchLogs] =
-    useCommand(async () => {
-      if (!api) return []
-      const result = await firstValueFrom(api.getAutomationLogs())
-      setLogs(result)
-      return result
-    }, [api])
+  const [fetchLogsCmd, fetchLogsResult] = useCommand(async () => {
+    if (!api) return []
+    const result = await firstValueFrom(api.getAutomationLogs())
+    setLogs(result)
+    return result
+  }, [api])
 
   // Fetch logs on component mount if API is available
   useEffect(() => {

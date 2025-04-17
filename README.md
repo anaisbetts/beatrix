@@ -90,13 +90,19 @@ You must provide the configuration details for the LLM provider specified in the
 
 #### The short version:
 
-- "I want the best experience, I don't mind spending $$" <== Use Anthropic's Sonnet 2.7
-- "I want a pretty good experience, but not spend as much $$" <== Use Gemini 2.5 Pro via the OpenAI driver
-- "I want to use Ollama" <== Use Qwen 2.5, the biggest model you
+- "I want the best experience, I don't mind spending $$" <== Use GPT 4.1 or Claude 3.7 Sonnet
+- "I want a pretty good experience, but not spend as much $$" <== Use GPT 4.1 Mini or Gemini 2.5 Pro
+- "I want to use Ollama" <== Use qwen2.5:7b or qwen2.5:14b
+
+#### The medium length version
+
+![image](https://github.com/user-attachments/assets/361d310c-1b8c-426e-9e2d-1c02f8bd0b31)
+
+Note that this is the Quick test, with n=2. This is far from statistically valid, but it was what I could get done without spending a ton of money and time 
 
 #### I don't believe you!
 
-In that case, use the Model Evaluations page! Model evaluations will test a model against a list of typical queries and grade its result. Note that you will _have_ to set up an Anthropic account because we use Sonnet 2.7 to grade results, and this _will_ cost you money in real-life (though if you run Quick tests, it will be on the order of cents)
+In that case, use the Model Evaluations page! Model evaluations will test a model against a list of typical queries and grade its result. Note that you will _have_ to set up an Anthropic account because we use Sonnet 3.7 to grade results, and this _will_ cost you money in real-life (though if you run Quick tests, it will be on the order of cents)
 
 ## Running (development mode)
 

@@ -182,7 +182,7 @@ export function migrateConfig(config: AppConfig) {
   // Migrate simple string fields if they are missing in the config
   config.haBaseUrl ??= process.env.HA_BASE_URL
   config.haToken ??= process.env.HA_TOKEN
-  config.timezone ??= process.env.TIMEZONE
+  config.timezone ??= process.env.TIMEZONE ?? 'Etc/UTC'
   config.anthropicApiKey ??= process.env.ANTHROPIC_API_KEY
   config.anthropicModel ??= process.env.ANTHROPIC_MODEL
   config.ollamaHost ??= process.env.OLLAMA_HOST

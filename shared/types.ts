@@ -57,14 +57,14 @@ export interface SignalHandlerInfo {
 }
 
 export interface CallServiceLogEntry {
-  createdAt: Date
+  createdAt: string
   service: string
   data: string
   target: string
 }
 
 export interface AutomationLogEntry {
-  createdAt: Date
+  createdAt: string
   automation: Automation | null
   type: AutomationType
   messages: MessageParam[]

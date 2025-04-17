@@ -1,5 +1,6 @@
 import { useCommand } from '@anaisbetts/commands'
 import { ChevronDown, ChevronRight, RotateCw, Search } from 'lucide-react'
+import { DateTime } from 'luxon'
 import { useEffect, useMemo, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
@@ -31,13 +32,12 @@ export default function Logs() {
   const { api } = useWebSocket()
 
   // Define a command to fetch logs
-  const [fetchLogsCmd, fetchLogsResult, resetFetchLogs] =
-    useCommand(async () => {
-      if (!api) return []
-      const result = await firstValueFrom(api.getAutomationLogs())
-      setLogs(result)
-      return result
-    }, [api])
+  const [fetchLogsCmd, fetchLogsResult] = useCommand(async () => {
+    if (!api) return []
+    const result = await firstValueFrom(api.getAutomationLogs())
+    setLogs(result)
+    return result
+  }, [api])
 
   // Fetch logs on component mount if API is available
   useEffect(() => {
@@ -81,7 +81,8 @@ export default function Logs() {
       })
       .sort(
         (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          DateTime.fromISO(b.createdAt).toUnixInteger() -
+          DateTime.fromISO(a.createdAt).toUnixInteger()
       )
   }, [logs, searchText, selectedType])
 
@@ -149,7 +150,9 @@ export default function Logs() {
                   expandedItems.has(index) || filteredLogs.length === 1
                 }
                 onToggleExpand={() => toggleExpanded(index)}
-                formattedDate={log.createdAt.toLocaleString()}
+                formattedDate={DateTime.fromISO(log.createdAt).toLocaleString(
+                  DateTime.DATETIME_MED_WITH_SECONDS
+                )}
               />
             ))}
           </div>
@@ -278,7 +281,9 @@ function LogEntry({
                 <div key={i} className="ml-2 border-l-2 py-1 pl-3 text-sm">
                   <div>
                     <span className="font-medium">{service.service}</span> @{' '}
-                    {service.createdAt.toLocaleString()}
+                    {DateTime.fromISO(service.createdAt).toLocaleString(
+                      DateTime.DATETIME_MED_WITH_SECONDS
+                    )}
                   </div>
                   <div className="mt-1 font-mono text-xs">
                     {service.target} {service.data && `Data: ${service.data}`}

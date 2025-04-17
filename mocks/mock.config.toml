@@ -1,5 +1,6 @@
 ha_base_url = "https://foo"
 ha_token = "token"
+timezone = "America/Los_Angeles"
 
 [anthropic]
 key = "wiefjef"

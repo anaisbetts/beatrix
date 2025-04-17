@@ -94,6 +94,12 @@ export interface AppConfig {
   haBaseUrl?: string
   haToken?: string
 
+  /**
+   * IANA/Olsen timezone identifier (e.g., "America/New_York", "Europe/London")
+   * See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for valid values
+   */
+  timezone?: string
+
   llm?: string // either 'anthropic', 'ollama', or a provider name in openAIProviders
 
   anthropicApiKey?: string

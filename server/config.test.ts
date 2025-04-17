@@ -34,6 +34,7 @@ describe('loadConfig', () => {
     // Check top-level fields
     expect(config.haBaseUrl).toBe('https://foo')
     expect(config.haToken).toBe('token')
+    expect(config.timezone).toBe('America/Los_Angeles')
 
     // Check nested fields
     expect(config.anthropicApiKey).toBe('wiefjef')
@@ -95,6 +96,7 @@ describe('saveConfig', () => {
     const sampleConfig: AppConfig = {
       haBaseUrl: 'https://home.example.com',
       haToken: 'test-token-123',
+      timezone: 'Europe/London',
       anthropicApiKey: 'anthropic-key',
       ollamaHost: 'http://ollama.local:11434',
       openAIProviders: [
@@ -145,6 +147,7 @@ describe('saveConfig', () => {
     // Compare the rest of the fields using toEqual against the literal expected values
     expect(loadedConfig.haBaseUrl).toEqual('https://home.example.com')
     expect(loadedConfig.haToken).toEqual('test-token-123')
+    expect(loadedConfig.timezone).toEqual('Europe/London')
     expect(loadedConfig.anthropicApiKey).toEqual('anthropic-key')
     expect(loadedConfig.ollamaHost).toEqual('http://ollama.local:11434')
   })
@@ -160,6 +163,7 @@ describe('saveConfig', () => {
 
     expect(loadedConfig.haBaseUrl).toBe('https://partial.test')
     expect(loadedConfig.haToken).toBeUndefined()
+    expect(loadedConfig.timezone).toBeUndefined()
     expect(loadedConfig.anthropicApiKey).toBeUndefined()
     expect(loadedConfig.ollamaHost).toBeUndefined()
     expect(loadedConfig.openAIProviders).toBeDefined()

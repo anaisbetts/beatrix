@@ -2,6 +2,7 @@
 
 ha_base_url = "YOUR_HOME_ASSISTANT_URL" # Example: "http://homeassistant.local:8123"
 ha_token = "YOUR_LONG_LIVED_ACCESS_TOKEN"
+timezone = "America/New_York" # IANA timezone identifier - see https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 llm = "anthropic" # Or "ollama", "openai"
 
 [anthropic]

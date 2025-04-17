@@ -98,7 +98,7 @@ You must provide the configuration details for the LLM provider specified in the
 
 ![image](https://github.com/user-attachments/assets/361d310c-1b8c-426e-9e2d-1c02f8bd0b31)
 
-Note that this is the Quick test, with n=2. This is far from statistically valid, but it was what I could get done without spending a ton of money and time 
+Note that this is the Quick test, with n=2. This is far from statistically valid, but it was what I could get done without spending a ton of money and time
 
 #### I don't believe you!
 

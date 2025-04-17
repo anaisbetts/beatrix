@@ -1,26 +1,59 @@
 import { describe, expect, it, jest } from 'bun:test'
 import { Connection } from 'home-assistant-js-websocket'
 
-import { createConfigViaEnv } from '../config'
 import { LiveHomeAssistantApi } from './ha-ws-api'
 
 describe('LiveHomeAssistantApi', () => {
   describe('fetchServices method', () => {
     it('can fetch the services list', async () => {
-      // This test uses a real Home Assistant connection
-      // Should be skipped or mocked for CI environments
-      if (process.env.CI) {
-        return
+      // Create a mock response for the services
+      const mockServices = {
+        notify: {
+          mobile_app: {
+            name: 'mobile_app',
+            description: 'Sends a notification to the device',
+            fields: {
+              message: {
+                description: 'Message body of the notification',
+                example: 'The garage door has been open for 10 minutes.',
+              },
+              title: {
+                description: 'Title for the notification',
+                example: 'Your Garage Door',
+              },
+            },
+          },
+        },
+        light: {
+          turn_on: {
+            name: 'Turn on',
+            description: 'Turn on light',
+            fields: {},
+          },
+        },
       }
 
-      // XXX: Normally hard-coding this is Bad but we know that this
-      // is only used in development
-      const config = await createConfigViaEnv('./notebook')
-      const api = await LiveHomeAssistantApi.createViaConfig(config)
+      // Create mock connection
+      const mockSendMessagePromise = jest.fn().mockResolvedValue(mockServices)
+      const mockConnection = {
+        sendMessagePromise: mockSendMessagePromise,
+      } as unknown as Connection
+
+      // Create the API instance with the mock connection
+      const api = new LiveHomeAssistantApi(mockConnection)
+
+      // Call the method
       const svcs = await api.fetchServices()
 
-      console.log('Services:', svcs.notify)
+      // Verify the method sent the correct message
+      expect(mockSendMessagePromise).toHaveBeenCalledWith({
+        type: 'get_services',
+      })
+
+      // Verify the result
       expect(svcs).toBeDefined()
+      expect(svcs).toEqual(mockServices)
+      expect(svcs.notify).toBeDefined()
     })
   })
 

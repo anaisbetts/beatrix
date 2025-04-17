@@ -3,6 +3,7 @@ import fs from 'node:fs/promises'
 import { lastValueFrom, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
+import { formatDateForLLM } from '../lib/date-utils'
 import { i } from '../logging'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
@@ -45,7 +46,7 @@ export async function runSchedulerForAutomation(
   const msgs = await lastValueFrom(
     runtime.llm
       .executePromptWithTools(
-        schedulerPrompt(automation.contents, memory),
+        schedulerPrompt(runtime, automation.contents, memory),
         tools
       )
       .pipe(toArray())
@@ -71,7 +72,13 @@ export function createDefaultSchedulerTools(
   ]
 }
 
-export const schedulerPrompt = (automation: string, memory: string) => `
+export const schedulerPrompt = (
+  runtime: AutomationRuntime,
+  automation: string,
+  memory: string
+) => {
+  const timezone = runtime.config.timezone || 'Etc/UTC'
+  return `
 <task>
 You are an automation scheduling assistant for Home Assistant. Your job is to analyze the current automation instructions and determine the appropriate scheduling actions needed.
 
@@ -84,7 +91,7 @@ ${agenticReminders}
 ${automation}
 </automation_instructions>
 
-<current_date_time>${new Date().toISOString()}</current_date_time>
+<current_date_time>${formatDateForLLM(new Date(), timezone)}</current_date_time>
 
 <saved_memory>
 ${memory}
@@ -122,3 +129,4 @@ First, use the list-scheduled-triggers tool to see what's currently configured, 
 ${automation}
 </automation_instructions>
 `
+}

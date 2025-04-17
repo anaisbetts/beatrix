@@ -51,6 +51,7 @@ export interface AutomationRuntime {
   readonly llm: LargeLanguageProvider
   readonly db: Kysely<Schema>
   readonly notebookDirectory: string | undefined
+  readonly config: AppConfig
 
   automationList: Automation[]
   cueList: Automation[]
@@ -88,6 +89,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     const db = await createDatabaseViaEnv()
 
     return new LiveAutomationRuntime(
+      config,
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
       llm,
       db,
@@ -96,6 +98,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   }
 
   constructor(
+    readonly config: AppConfig,
     readonly api: HomeAssistantApi,
     readonly llm: LargeLanguageProvider,
     readonly db: Kysely<Schema>,

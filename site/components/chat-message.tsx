@@ -11,24 +11,10 @@ import { ChevronDown } from 'lucide-react'
 import type { Root } from 'mdast'
 import { JSX, useMemo, useState } from 'react'
 import { Remark } from 'react-remark'
-import remarkGfm from 'remark-gfm'
-import type { Plugin } from 'unified'
-import { visit } from 'unist-util-visit'
-
-// Add type import if needed, or use 'any' for simplicity
 
 import { cx } from '@/lib/utils'
 
 import { Button } from './ui/button'
-
-// Simple remark plugin to escape HTML angle brackets
-function escapeHtmlPlugin() {
-  return (tree: Root) => {
-    visit(tree, 'text', (node) => {
-      node.value = node.value.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    })
-  }
-}
 
 export function ChatMessage({
   msg,

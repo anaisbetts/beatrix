@@ -94,31 +94,35 @@ export default function Evals() {
     null: () => null,
   })
 
-  const driverSelector = driverList.mapOrElse({
-    ok: (drivers) => (
-      <Select value={driver} onValueChange={(value) => setDriver(value)}>
-        <SelectTrigger className="w-[140px]">
-          <SelectValue placeholder="Select driver" />
-        </SelectTrigger>
-        <SelectContent>
-          {drivers.map((d) => (
-            <SelectItem key={d} value={d}>
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    ),
-    err: () => (
-      <div className="text-sm text-red-500">Failed to load drivers</div>
-    ),
-    pending: () => (
-      <div className="flex h-10 w-[180px] items-center justify-center">
-        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-      </div>
-    ),
-    null: () => <div className="text-sm italic">Select a driver</div>,
-  })
+  const driverSelector = useMemo(
+    () =>
+      driverList.mapOrElse({
+        ok: (drivers) => (
+          <Select value={driver} onValueChange={(value) => setDriver(value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Select driver" />
+            </SelectTrigger>
+            <SelectContent>
+              {drivers.map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d.charAt(0).toUpperCase() + d.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ),
+        err: () => (
+          <div className="text-sm text-red-500">Failed to load drivers</div>
+        ),
+        pending: () => (
+          <div className="flex h-10 w-[180px] items-center justify-center">
+            <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+          </div>
+        ),
+        null: () => <div className="text-sm italic">Select a driver</div>,
+      }),
+    [driverList]
+  )
 
   return (
     <div className="flex h-full flex-col">

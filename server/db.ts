@@ -197,7 +197,6 @@ export function parseSqliteTimestamp(timestampStr: string): Date {
   // Create a new Date object (months are 0-indexed in JavaScript Date)
   return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds))
 }
-
 export function dateToSqliteTimestamp(date: Date): string {
   // Ensure we have a valid Date object
   if (!(date instanceof Date) || isNaN(date.getTime())) {

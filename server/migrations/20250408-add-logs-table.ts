@@ -5,7 +5,7 @@ import { Schema } from '../db-schema'
 export async function up(db: Kysely<Schema>): Promise<void> {
   await db.schema
     .createTable('logs')
-    .addColumn('createdAt', 'integer')
+    .addColumn('createdAt', 'varchar(30)')
     .addColumn('level', 'integer')
     .addColumn('message', 'text')
     .execute()

@@ -311,7 +311,8 @@ export async function fetchHAUserInformation(api: HomeAssistantApi) {
 
 export function observeStatesForEntities(
   conn: HomeAssistantApi,
-  ids: string[]
+  ids: string[],
+  actAsBehavior: boolean = true
 ): Observable<HassState> {
   const future = conn.eventsObservable().pipe(
     filter((ev) => ev.event_type === 'state_changed'),
@@ -325,6 +326,10 @@ export function observeStatesForEntities(
       }
     })
   )
+
+  if (!actAsBehavior) {
+    return future
+  }
 
   return concat(
     from(conn.fetchStates()).pipe(

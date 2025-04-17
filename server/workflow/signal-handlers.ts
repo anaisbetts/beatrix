@@ -229,7 +229,8 @@ export class StateRegexSignalHandler implements SignalHandler {
     // Only create the observable if the regex is valid
     this.signalObservable = observeStatesForEntities(
       this.runtime.api,
-      stateData.entityIds
+      stateData.entityIds,
+      false
     ).pipe(
       filter((state: HassState | undefined | null): state is HassState => {
         if (!state) {

@@ -7,6 +7,7 @@ import { z } from 'zod'
 import pkg from '../../package.json'
 import { messagesToString } from '../../shared/api'
 import { w } from '../logging'
+import { agenticReminders } from '../prompts'
 import { AutomationRuntime } from '../workflow/automation-runtime'
 import { createCallServiceServer } from './call-service'
 
@@ -31,19 +32,19 @@ export function createHomeAssistantServer(
     })
 
   server.tool(
-    'get-entities-by-prefix',
-    'List all Home Assistant entities that match a given prefix or array of prefixes',
+    'get-entities-by-domain',
+    'List all Home Assistant entities that match a given domain or array of domains',
     {
-      prefixes: z
+      domains: z
         .union([z.string(), z.array(z.string())])
         .describe(
-          'The entity prefix or array of prefixes to match (e.g. "light.", "switch.", "person.")'
+          'The entity domain or array of domains to match (e.g. "light", "switch", "person")'
         ),
     },
-    async ({ prefixes }) => {
+    async ({ domains }) => {
       try {
         const prefixMap = Object.fromEntries(
-          (Array.isArray(prefixes) ? prefixes : [prefixes]).map((k) => [
+          (Array.isArray(domains) ? domains : [domains]).map((k) => [
             k.replace('.', ''),
             true,
           ])
@@ -57,12 +58,12 @@ export function createHomeAssistantServer(
           (id) => prefixMap[id.replace(/\..*$/, '')]
         )
 
-        d('get-entities-by-prefix: %o', matchingStates)
+        d('get-entities-by-domain: %o', matchingStates)
         return {
           content: [{ type: 'text', text: JSON.stringify(matchingStates) }],
         }
       } catch (err: any) {
-        w('get-entities-by-prefix Error:', err)
+        w('get-entities-by-domain Error:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],
@@ -220,6 +221,8 @@ export const callServicePrompt = (
 # Home Assistant Entity Control Assistant
 
 You are an assistant specialized in controlling Home Assistant entities through natural language requests. Your goal is to translate user requests into the appropriate Home Assistant service calls using the MCP server tools available to you.
+
+${agenticReminders}
 
 ## Your Task
 

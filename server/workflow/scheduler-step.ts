@@ -6,6 +6,7 @@ import { Automation } from '../../shared/types'
 import { i } from '../logging'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
+import { agenticReminders } from '../prompts'
 import { AutomationRuntime, getMemoryFile } from './automation-runtime'
 
 export async function rescheduleAutomations(
@@ -77,6 +78,8 @@ You are an automation scheduling assistant for Home Assistant. Your job is to an
 Your primary responsibility is to ensure that automations run at the correct times or in response to the right triggers based on the instructions.
 </task>
 
+${agenticReminders}
+
 <automation_instructions>
 ${automation}
 </automation_instructions>
@@ -114,4 +117,8 @@ Please follow these steps:
 Based on the current date and time, and the automation instructions provided above, please analyze the current scheduling configuration and make any necessary adjustments.
 
 First, use the list-scheduled-triggers tool to see what's currently configured, then determine what changes (if any) are needed.
+
+<automation_instructions>
+${automation}
+</automation_instructions>
 `

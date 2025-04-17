@@ -20,4 +20,4 @@
 - Naming: camelCase for variables/functions, PascalCase for types/interfaces
 - Create reusable utility files for common functionality
 - Use environment variables for configuration (HA_BASE_URL, HA_TOKEN, etc.)
-- components/ui gets updated via the shadcn CLI tool
+- Add files to components/ui via the shadcn CLI tool

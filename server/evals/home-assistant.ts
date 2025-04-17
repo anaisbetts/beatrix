@@ -85,7 +85,7 @@ export async function* climateControlEval(llm: LargeLanguageProvider) {
       failureGrader(),
       gradeViaSearchForContent(
         'call-service',
-        'get-entities-by-prefix',
+        'get-entities-by-domain',
         'climate'
       ),
       gradeContentViaPrompt(

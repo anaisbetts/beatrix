@@ -4,6 +4,7 @@ import { lastValueFrom, toArray } from 'rxjs'
 import { Automation } from '../../shared/types'
 import { createBuiltinServers } from '../llm'
 import { i } from '../logging'
+import { agenticReminders } from '../prompts'
 import { AutomationRuntime } from './automation-runtime'
 
 const d = debug('b:execution-step')
@@ -66,8 +67,13 @@ const prompt = (
   executionNotes: string
 ) => `
 <task>
-You are an AI automation executor for Home Assistant. Your job is to execute appropriate actions based on the automation instructions when triggered. You have full context of the home environment and can make intelligent decisions about how to respond to events.
+You are an AI automation executor for Home Assistant. Your job is to execute
+appropriate actions based on the automation instructions when triggered. You
+have full context of the home environment and can make intelligent decisions
+about how to respond to events.
 </task>
+
+${agenticReminders}
 
 <execution_context>
 <current_datetime>${new Date().toISOString()}</current_datetime>
@@ -112,4 +118,8 @@ Follow these steps to execute this automation intelligently:
 </instructions>
 
 Based on the above information, please determine if this automation should take action right now, and if so, what actions to take. Think step by step about the context of the trigger, the current state of the home, and the intent of the automation.
+
+<automation>
+${automation}
+</automation>
 `

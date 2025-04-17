@@ -6,10 +6,19 @@ import { firstValueFrom } from 'rxjs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 
 import { AppConfig, OpenAIProviderConfig } from '../../shared/types'
 import { useWebSocket } from '../components/ws-provider'
+
+const timezones = Intl.supportedValuesOf('timeZone')
 
 export default function Config() {
   const { api } = useWebSocket()
@@ -44,6 +53,11 @@ export default function Config() {
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setConfig((prev) => ({ ...prev, [name]: value }))
+  }, [])
+
+  // Handle timezone change
+  const handleTimezoneChange = useCallback((value: string) => {
+    setConfig((prev) => ({ ...prev, timezone: value }))
   }, [])
 
   // Handle OpenAI provider changes
@@ -158,6 +172,30 @@ export default function Config() {
                 type="password"
                 placeholder="Long-Lived Access Token"
               />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="timezone" className="text-sm font-medium">
+                Timezone
+              </label>
+              <Select
+                value={config.timezone || ''}
+                onValueChange={handleTimezoneChange}
+              >
+                <SelectTrigger id="timezone" className="w-64">
+                  <SelectValue placeholder="Select timezone..." />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Select your local IANA timezone.
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -110,26 +110,26 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     this.scheduledSignals = []
     this.notebookDirectory = notebookDirectory
 
-    const watchedDirectories = [
-      getAutomationDirectory(this),
-      getCueDirectory(this),
-    ].map((dir) =>
-      createBufferedDirectoryMonitor(
-        {
-          path: dir,
-          recursive: true,
-        },
-        10 * 1000
-      ).pipe(
-        map(() => {
-          i(`Detected change in automation directory: ${dir}`)
-          return dir
-        })
+    const watchedDirectories = () =>
+      [getAutomationDirectory(this), getCueDirectory(this)].map((dir) =>
+        createBufferedDirectoryMonitor(
+          {
+            path: dir,
+            recursive: true,
+          },
+          10 * 1000
+        ).pipe(
+          map(() => {
+            i(`Detected change in automation directory: ${dir}`)
+            return dir
+          })
+        )
       )
-    )
 
     this.reparseAutomations = this.notebookDirectory
-      ? merge(...watchedDirectories).pipe(throttleTime(30 * 1000))
+      ? defer(() => merge(...watchedDirectories())).pipe(
+          throttleTime(30 * 1000)
+        )
       : NEVER
 
     if (isProdMode) {

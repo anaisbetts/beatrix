@@ -8,12 +8,27 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { ChevronDown } from 'lucide-react'
-import { JSX, useState } from 'react'
+import type { Root } from 'mdast'
+import { JSX, useMemo, useState } from 'react'
 import { Remark } from 'react-remark'
+import remarkGfm from 'remark-gfm'
+import type { Plugin } from 'unified'
+import { visit } from 'unist-util-visit'
+
+// Add type import if needed, or use 'any' for simplicity
 
 import { cx } from '@/lib/utils'
 
 import { Button } from './ui/button'
+
+// Simple remark plugin to escape HTML angle brackets
+function escapeHtmlPlugin() {
+  return (tree: Root) => {
+    visit(tree, 'text', (node) => {
+      node.value = node.value.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    })
+  }
+}
 
 export function ChatMessage({
   msg,
@@ -42,6 +57,11 @@ export function ChatMessage({
   )
 }
 
+export function TextContentBlock({ text }: { text: string }) {
+  const escaped = useMemo(() => crappyEscaper(text), [text])
+  return <Remark>{escaped}</Remark>
+}
+
 export function ContentBlock({
   msg,
   isLastMsg,
@@ -54,8 +74,7 @@ export function ContentBlock({
 
   switch (msg.type) {
     case 'text':
-      console.log('text!', msg.text)
-      content = <Remark>{msg.text ?? ''}</Remark>
+      content = <TextContentBlock text={msg.text ?? ''} />
       break
     case 'tool_use':
       const spinner = isLastMsg ? (
@@ -98,4 +117,19 @@ export function ContentBlock({
   }
 
   return <div className="overflow-auto">{content}</div>
+}
+
+const matchers: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+
+function crappyEscaper(text: string) {
+  return Object.keys(matchers).reduce(
+    (acc, k) => acc.replaceAll(k, matchers[k]),
+    text
+  )
 }

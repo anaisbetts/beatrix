@@ -60,7 +60,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   }
 
   getModelListForDriver(driver: string): Observable<string[]> {
-    const llm = createDefaultLLMProvider(this.config, driver)
+    const llm = createDefaultLLMProvider(this.config, driver.toLowerCase())
     return from(llm.getModelList())
   }
 

@@ -60,7 +60,7 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
     d('Using OpenAI with %s', baseURL)
     this.client = new OpenAI({
       apiKey: apiKey,
-      baseURL: baseURL,
+      baseURL: baseURL ?? 'https://api.openai.com/v1',
     })
   }
 

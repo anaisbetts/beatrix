@@ -1,4 +1,5 @@
 import { Kysely, sql } from 'kysely'
+import { DateTime } from 'luxon'
 import path from 'node:path'
 import { Subject, bufferTime, concatMap, from } from 'rxjs'
 
@@ -13,7 +14,7 @@ logger.enable('info')
 logger.enable('warn')
 logger.enable('error')
 
-export async function startLogger(db: Kysely<Schema>) {
+export async function startLogger(db: Kysely<Schema>, timezone: string) {
   if (isProdMode) {
     await logger?.initFileLogger(path.join(getDataDir(), 'logs'), {
       rotate: true,
@@ -24,7 +25,7 @@ export async function startLogger(db: Kysely<Schema>) {
     await logger?.initFileLogger(repoRootDir())
   }
 
-  const subj = new Subject<{ msg: string; type: string }>()
+  const subj = new Subject<{ msg: string; type: string; timestamp: DateTime }>()
   subj
     .pipe(
       bufferTime(750),
@@ -37,9 +38,9 @@ export async function startLogger(db: Kysely<Schema>) {
           const lvl = msg.type === 'error' ? 30 : msg.type === 'warn' ? 20 : 10
 
           return {
+            createdAt: msg.timestamp.setZone(timezone).toISO()!,
             message: msg.msg,
             level: lvl,
-            createdAt: Date.now(), // Use absolute timestamp
           }
         })
 
@@ -56,7 +57,7 @@ export async function startLogger(db: Kysely<Schema>) {
   const TWO_WEEKS_MS = 14 * 24 * 60 * 60 * 1000
 
   try {
-    await cleanupOldLogs(db, TWO_WEEKS_MS)
+    await cleanupOldLogs(db, timezone, TWO_WEEKS_MS)
   } catch (err) {
     console.error('Error cleaning up old logs:', err)
   }
@@ -67,9 +68,11 @@ export async function startLogger(db: Kysely<Schema>) {
  */
 async function cleanupOldLogs(
   db: Kysely<Schema>,
+  timezone: string,
   maxAgeMs: number
 ): Promise<void> {
-  const cutoffTimestamp = Date.now() - maxAgeMs
+  const now = DateTime.now().setZone(timezone)
+  const cutoffTimestamp = now.minus({ milliseconds: maxAgeMs }).toISO()!
   await db.deleteFrom('logs').where('createdAt', '<', cutoffTimestamp).execute()
 
   await sql`VACUUM`.execute(db)

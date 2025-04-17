@@ -28,6 +28,7 @@ import { runAllEvals, runQuickEvals } from './run-evals'
 import {
   AutomationRuntime,
   LiveAutomationRuntime,
+  now,
 } from './workflow/automation-runtime'
 import { automationFromString } from './workflow/parser'
 
@@ -59,7 +60,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   }
 
   getModelListForDriver(driver: string): Observable<string[]> {
-    const llm = createDefaultLLMProvider(this.config, driver)
+    const llm = createDefaultLLMProvider(this.config, driver.toLowerCase())
     return from(llm.getModelList())
   }
 
@@ -198,6 +199,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
           const insert = this.runtime.db
             .insertInto('automationLogs')
             .values({
+              createdAt: now(this.runtime).toISO()!,
               type: 'manual',
               messageLog: JSON.stringify([msg]),
             })

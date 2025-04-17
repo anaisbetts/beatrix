@@ -2,7 +2,7 @@ import { Generated, Insertable, Selectable } from 'kysely'
 
 import { AutomationType } from '../shared/types'
 
-export type Timestamp = string
+export type Timestamp = string // This is ALWAYS an iso8601 date with timezone
 
 export interface Schema {
   signals: SignalTable
@@ -12,14 +12,14 @@ export interface Schema {
 }
 
 export interface LogTable {
-  createdAt: number
+  createdAt: Timestamp
   level: number
   message: string
 }
 
 export interface SignalTable {
   id: Generated<number>
-  createdAt: Generated<Timestamp>
+  createdAt: Timestamp
   automationHash: string
   type: string
   data: string
@@ -29,7 +29,7 @@ export interface SignalTable {
 
 export interface CallServiceLogTable {
   id: Generated<number>
-  createdAt: Generated<Timestamp>
+  createdAt: Timestamp
   service: string
   data: string
   target: string
@@ -39,7 +39,7 @@ export interface CallServiceLogTable {
 export interface AutomationLogTable {
   id: Generated<number>
   type: AutomationType
-  createdAt: Generated<Timestamp>
+  createdAt: Timestamp
   messageLog: string
 
   automationHash?: string // if type = 'determine-signal', the automation that we read through

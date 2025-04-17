@@ -3,11 +3,12 @@ import fs from 'node:fs/promises'
 import { lastValueFrom, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
+import { formatDateForLLM } from '../lib/date-utils'
 import { i } from '../logging'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { agenticReminders } from '../prompts'
-import { AutomationRuntime, getMemoryFile } from './automation-runtime'
+import { AutomationRuntime, getMemoryFile, now } from './automation-runtime'
 
 export async function rescheduleAutomations(
   runtime: AutomationRuntime,
@@ -45,7 +46,7 @@ export async function runSchedulerForAutomation(
   const msgs = await lastValueFrom(
     runtime.llm
       .executePromptWithTools(
-        schedulerPrompt(automation.contents, memory),
+        schedulerPrompt(runtime, automation.contents, memory),
         tools
       )
       .pipe(toArray())
@@ -54,6 +55,7 @@ export async function runSchedulerForAutomation(
   await runtime.db
     .insertInto('automationLogs')
     .values({
+      createdAt: now(runtime).toISO()!,
       type: 'determine-signal',
       automationHash: automation.hash,
       messageLog: JSON.stringify(msgs),
@@ -67,11 +69,20 @@ export function createDefaultSchedulerTools(
 ): McpServer[] {
   return [
     createHomeAssistantServer(runtime, { schedulerMode: true }),
-    createSchedulerServer(runtime.db, automation.hash),
+    createSchedulerServer(
+      runtime.db,
+      automation.hash,
+      runtime.timezone || 'Etc/UTC'
+    ),
   ]
 }
 
-export const schedulerPrompt = (automation: string, memory: string) => `
+export const schedulerPrompt = (
+  runtime: AutomationRuntime,
+  automation: string,
+  memory: string
+) => {
+  return `
 <task>
 You are an automation scheduling assistant for Home Assistant. Your job is to analyze the current automation instructions and determine the appropriate scheduling actions needed.
 
@@ -84,7 +95,7 @@ ${agenticReminders}
 ${automation}
 </automation_instructions>
 
-<current_date_time>${new Date().toISOString()}</current_date_time>
+<current_date_time>${formatDateForLLM(now(runtime))}</current_date_time>
 
 <saved_memory>
 ${memory}
@@ -122,3 +133,4 @@ First, use the list-scheduled-triggers tool to see what's currently configured, 
 ${automation}
 </automation_instructions>
 `
+}

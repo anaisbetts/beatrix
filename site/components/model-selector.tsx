@@ -1,6 +1,7 @@
 import { usePromise } from '@anaisbetts/commands'
 import { Check, Copy } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import React from 'react'
 import { firstValueFrom } from 'rxjs'
 
 import { Button } from '@/components/ui/button'
@@ -57,67 +58,71 @@ export function ModelSelector({
     }
   }
 
-  return modelList.mapOrElse({
-    ok: (models) => (
-      <div className={className}>
-        <Select
-          value={model}
-          onValueChange={onModelChange}
-          disabled={disabled || models.length === 0}
-          onOpenChange={onOpenChange}
-        >
-          <SelectTrigger className={triggerClassName}>
-            <SelectValue placeholder="Select model" />
-          </SelectTrigger>
-          <SelectContent>
-            {models.length === 0 ? (
-              <SelectItem value="no-models" disabled>
-                No models available for {driver}
-              </SelectItem>
-            ) : (
-              models.map((m) => (
-                <SelectItem key={m} value={m}>
-                  {m}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleCopy}
-          disabled={!model || disabled || isCopied}
-          aria-label="Copy model name"
-        >
-          {isCopied ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
-    ),
-    err: () => (
-      <div
-        className={`flex h-10 items-center ${triggerClassName} text-sm text-red-500`}
-      >
-        Failed to load models
-      </div>
-    ),
-    pending: () => (
-      <div
-        className={`flex h-10 items-center justify-center ${triggerClassName}`}
-      >
-        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-      </div>
-    ),
-    null: () => (
-      <div
-        className={`flex h-10 items-center ${triggerClassName} text-sm italic`}
-      >
-        Select a driver
-      </div>
-    ),
-  })
+  return useMemo(
+    () =>
+      modelList.mapOrElse({
+        ok: (models) => (
+          <div className={className}>
+            <Select
+              value={model}
+              onValueChange={onModelChange}
+              disabled={disabled || models.length === 0}
+              onOpenChange={onOpenChange}
+            >
+              <SelectTrigger className={triggerClassName}>
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {models.length === 0 ? (
+                  <SelectItem value="no-models" disabled>
+                    No models available for {driver}
+                  </SelectItem>
+                ) : (
+                  models.map((m) => (
+                    <SelectItem key={m} value={m}>
+                      {m}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleCopy}
+              disabled={!model || disabled || isCopied}
+              aria-label="Copy model name"
+            >
+              {isCopied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        ),
+        err: () => (
+          <div
+            className={`flex h-10 items-center ${triggerClassName} text-sm text-red-500`}
+          >
+            Failed to load models
+          </div>
+        ),
+        pending: () => (
+          <div
+            className={`flex h-10 items-center justify-center ${triggerClassName}`}
+          >
+            <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+          </div>
+        ),
+        null: () => (
+          <div
+            className={`flex h-10 items-center ${triggerClassName} text-sm italic`}
+          >
+            Select a driver
+          </div>
+        ),
+      }),
+    [modelList]
+  )
 }

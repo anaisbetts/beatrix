@@ -36,6 +36,7 @@ export async function loadConfig(filePath: string): Promise<AppConfig> {
     // Map top-level fields
     config.haBaseUrl = parsedToml.ha_base_url
     config.haToken = parsedToml.ha_token
+    config.timezone = parsedToml.timezone
     // Load the primary LLM provider choice
     config.llm = parsedToml.llm
 
@@ -109,6 +110,9 @@ export async function saveConfig(
     if (config.haToken) {
       tomlStructure.ha_token = config.haToken
     }
+    if (config.timezone) {
+      tomlStructure.timezone = config.timezone
+    }
     if (config.llm) {
       tomlStructure.llm = config.llm
     }
@@ -178,6 +182,7 @@ export function migrateConfig(config: AppConfig) {
   // Migrate simple string fields if they are missing in the config
   config.haBaseUrl ??= process.env.HA_BASE_URL
   config.haToken ??= process.env.HA_TOKEN
+  config.timezone ??= process.env.TIMEZONE ?? 'Etc/UTC'
   config.anthropicApiKey ??= process.env.ANTHROPIC_API_KEY
   config.anthropicModel ??= process.env.ANTHROPIC_MODEL
   config.ollamaHost ??= process.env.OLLAMA_HOST
@@ -265,10 +270,49 @@ function validateLlmConfig(config: AppConfig, context: string) {
   }
 }
 
+/**
+ * Gets the current UTC offset in minutes for a given IANA/Olsen timezone
+ * @param timezone IANA timezone identifier (e.g., "America/New_York")
+ * @param date Optional date to get offset for (defaults to current time)
+ * @returns Offset in minutes (e.g., -240 for EDT, which is UTC-4:00)
+ */
+export function getTimezoneOffset(
+  timezone: string,
+  date: Date = new Date()
+): number {
+  // Use the raw formatter to get the UTC offset
+  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }))
+  const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }))
+
+  // Calculate the offset in minutes
+  return (utcDate.getTime() - tzDate.getTime()) / (60 * 1000)
+}
+
+/**
+ * Format an IANA timezone as "UTC+/-HH:MM" format
+ * @param timezone IANA timezone identifier
+ * @param date Optional date to get offset for (defaults to current time)
+ * @returns Formatted UTC offset string
+ */
+export function formatTimezoneAsUTC(
+  timezone: string,
+  date: Date = new Date()
+): string {
+  const offsetMinutes = getTimezoneOffset(timezone, date)
+  const absOffset = Math.abs(offsetMinutes)
+  const hours = Math.floor(absOffset / 60)
+  const minutes = absOffset % 60
+
+  // Format as UTC+/-HH:MM
+  const sign = offsetMinutes < 0 ? '+' : '-' // Note: offset is inverted (negative means ahead of UTC)
+  return `UTC${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+}
+
 /* example file
 
 ha_base_url = "https://foo"
 ha_token = "token"
+timezone = "America/Los_Angeles"
 
 [anthropic]
 key = "wiefjef"

@@ -36,6 +36,7 @@ describe('database', () => {
 
       // 1. Insert a test signal to verify the signals table has both columns from migrations
       const testSignal: NewSignal = {
+        createdAt: new Date().toISOString(),
         automationHash: 'test-hash-123',
         type: 'state', // From second migration
         data: '{"state": "on"}', // From second migration
@@ -65,6 +66,7 @@ describe('database', () => {
 
       // 3. Insert an automationLog referencing the signal to test foreign key relationships
       const testLog: NewAutomationLog = {
+        createdAt: new Date().toISOString(),
         type: 'execute-signal',
         messageLog: 'Test automation executed',
         automationHash: 'test-hash-123',

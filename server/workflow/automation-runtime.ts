@@ -1,5 +1,6 @@
 import debug from 'debug'
 import { Kysely } from 'kysely'
+import { DateTime } from 'luxon'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { unlink } from 'node:fs/promises'
 import path from 'node:path'
@@ -50,6 +51,7 @@ export interface AutomationRuntime {
   readonly api: HomeAssistantApi
   readonly llm: LargeLanguageProvider
   readonly db: Kysely<Schema>
+  readonly timezone: string // "America/Los_Angeles" etc
   readonly notebookDirectory: string | undefined
 
   automationList: Automation[]
@@ -91,6 +93,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
       llm,
       db,
+      config.timezone ?? 'Etc/UTC',
       notebookDirectory
     )
   }
@@ -99,6 +102,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     readonly api: HomeAssistantApi,
     readonly llm: LargeLanguageProvider,
     readonly db: Kysely<Schema>,
+    readonly timezone: string,
     notebookDirectory?: string
   ) {
     this.automationList = []
@@ -106,26 +110,26 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     this.scheduledSignals = []
     this.notebookDirectory = notebookDirectory
 
-    const watchedDirectories = [
-      getAutomationDirectory(this),
-      getCueDirectory(this),
-    ].map((dir) =>
-      createBufferedDirectoryMonitor(
-        {
-          path: dir,
-          recursive: true,
-        },
-        10 * 1000
-      ).pipe(
-        map(() => {
-          i(`Detected change in automation directory: ${dir}`)
-          return dir
-        })
+    const watchedDirectories = () =>
+      [getAutomationDirectory(this), getCueDirectory(this)].map((dir) =>
+        createBufferedDirectoryMonitor(
+          {
+            path: dir,
+            recursive: true,
+          },
+          10 * 1000
+        ).pipe(
+          map(() => {
+            i(`Detected change in automation directory: ${dir}`)
+            return dir
+          })
+        )
       )
-    )
 
     this.reparseAutomations = this.notebookDirectory
-      ? merge(...watchedDirectories).pipe(throttleTime(30 * 1000))
+      ? defer(() => merge(...watchedDirectories())).pipe(
+          throttleTime(30 * 1000)
+        )
       : NEVER
 
     if (isProdMode) {
@@ -354,7 +358,6 @@ export class LiveAutomationRuntime implements AutomationRuntime {
           signal.type,
           err
         )
-        // Optionally, delete the problematic signal or handle the error differently
       }
     }
 
@@ -402,4 +405,9 @@ export function getMemoryFile(runtime: AutomationRuntime) {
   }
 
   return ret
+}
+
+export function now(runtime: AutomationRuntime): DateTime {
+  const timezone = runtime.timezone || 'Etc/UTC'
+  return DateTime.now().setZone(timezone)
 }

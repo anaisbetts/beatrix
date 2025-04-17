@@ -8,7 +8,8 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { ChevronDown } from 'lucide-react'
-import { JSX, useState } from 'react'
+import type { Root } from 'mdast'
+import { JSX, useMemo, useState } from 'react'
 import { Remark } from 'react-remark'
 
 import { cx } from '@/lib/utils'
@@ -42,6 +43,11 @@ export function ChatMessage({
   )
 }
 
+export function TextContentBlock({ text }: { text: string }) {
+  const escaped = useMemo(() => crappyEscaper(text), [text])
+  return <Remark>{escaped}</Remark>
+}
+
 export function ContentBlock({
   msg,
   isLastMsg,
@@ -54,8 +60,7 @@ export function ContentBlock({
 
   switch (msg.type) {
     case 'text':
-      console.log('text!', msg.text)
-      content = <Remark>{msg.text ?? ''}</Remark>
+      content = <TextContentBlock text={msg.text ?? ''} />
       break
     case 'tool_use':
       const spinner = isLastMsg ? (
@@ -98,4 +103,19 @@ export function ContentBlock({
   }
 
   return <div className="overflow-auto">{content}</div>
+}
+
+const matchers: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}
+
+function crappyEscaper(text: string) {
+  return Object.keys(matchers).reduce(
+    (acc, k) => acc.replaceAll(k, matchers[k]),
+    text
+  )
 }

@@ -104,7 +104,13 @@ export function createBuiltinServers(
   ]
 
   if (automationForScheduling) {
-    ret.push(createSchedulerServer(runtime.db, automationForScheduling.hash))
+    ret.push(
+      createSchedulerServer(
+        runtime.db,
+        automationForScheduling.hash,
+        runtime.timezone
+      )
+    )
   }
 
   if (runtime.notebookDirectory) {

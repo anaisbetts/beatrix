@@ -2,10 +2,11 @@ import debug from 'debug'
 import { lastValueFrom, toArray } from 'rxjs'
 
 import { Automation } from '../../shared/types'
+import { formatDateForLLM } from '../lib/date-utils'
 import { createBuiltinServers } from '../llm'
 import { i } from '../logging'
 import { agenticReminders } from '../prompts'
-import { AutomationRuntime } from './automation-runtime'
+import { AutomationRuntime, now } from './automation-runtime'
 
 const d = debug('b:execution-step')
 
@@ -36,6 +37,7 @@ export async function runExecutionForAutomation(
     runtime.llm
       .executePromptWithTools(
         prompt(
+          runtime,
           signal.type,
           signal.data,
           automation.contents,
@@ -49,6 +51,7 @@ export async function runExecutionForAutomation(
   await runtime.db
     .insertInto('automationLogs')
     .values({
+      createdAt: now(runtime).toISO()!,
       type: 'execute-signal',
       signalId: signalId,
       messageLog: JSON.stringify(msgs),
@@ -61,6 +64,7 @@ export async function runExecutionForAutomation(
 }
 
 const prompt = (
+  runtime: AutomationRuntime,
   triggerType: string,
   triggerInfo: string,
   automation: string,
@@ -76,7 +80,7 @@ about how to respond to events.
 ${agenticReminders}
 
 <execution_context>
-<current_datetime>${new Date().toISOString()}</current_datetime>
+<current_datetime>${formatDateForLLM(now(runtime))}</current_datetime>
 <trigger_reason>${triggerType}</trigger_reason>
 <trigger_details>${triggerInfo}</trigger_details>
 </execution_context>

@@ -58,12 +58,12 @@ export function createHomeAssistantServer(
           (id) => prefixMap[id.replace(/\..*$/, '')]
         )
 
-        d('get-entities-by-prefix: %o', matchingStates)
+        d('get-entities-by-domain: %o', matchingStates)
         return {
           content: [{ type: 'text', text: JSON.stringify(matchingStates) }],
         }
       } catch (err: any) {
-        w('get-entities-by-prefix Error:', err)
+        w('get-entities-by-domain Error:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],

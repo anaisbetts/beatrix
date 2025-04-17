@@ -1,37 +1,17 @@
 import { DateTime } from 'luxon'
 
+import { w } from '../logging'
+
 /**
- * Formats a date in the "yyyy-mm-dd hh:mm:ss" format in the local timezone from AppConfig
- * This is the preferred format for communicating dates to LLMs as it's simple and human-readable
+ * Formats a Luxon DateTime object into the "yyyy-mm-dd hh:mm:ss" format.
+ * This is the preferred format for communicating dates to LLMs.
+ * The function respects the timezone set within the input DateTime object.
  *
- * @param date Date to format (defaults to now)
- * @param timezone IANA timezone string (e.g., "America/New_York")
- * @returns Formatted date string in the specified timezone
+ * @param dt Luxon DateTime object (should already be in the desired timezone)
+ * @returns Formatted date string (e.g., "2024-03-15 18:30:00")
  */
-export function formatDateForLLM(
-  date: Date = new Date(),
-  timezone: string
-): string {
-  // Format the date using Intl.DateTimeFormat for robust timezone handling
-  // Use en-CA which is YYYY-MM-DD, then combine with time from en-US (HH:MM:SS)
-  const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    timeZone: timezone,
-  })
-  const timeFormatter = new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-    timeZone: timezone,
-  })
-
-  const datePart = dateFormatter.format(date)
-  const timePart = timeFormatter.format(date)
-
-  return `${datePart} ${timePart}`
+export function formatDateForLLM(dt: DateTime): string {
+  return dt.toFormat('yyyy-MM-dd HH:mm:ss')
 }
 
 /**
@@ -42,7 +22,7 @@ export function formatDateForLLM(
  * @param timezone IANA timezone string (e.g., "America/New_York")
  * @returns Date object representing the corresponding UTC instant
  */
-export function parseDateFromLLM(dateStr: string, timezone: string): Date {
+export function parseDateFromLLM(dateStr: string, timezone: string): DateTime {
   const formatString = 'yyyy-MM-dd HH:mm:ss' // Luxon format string
 
   try {
@@ -50,7 +30,7 @@ export function parseDateFromLLM(dateStr: string, timezone: string): Date {
 
     if (!dt.isValid) {
       // Log the reason if available
-      console.error(
+      w(
         `Luxon parsing error for "${dateStr}" in zone "${timezone}": ${dt.invalidReason} - ${dt.invalidExplanation}`
       )
       throw new Error(
@@ -59,9 +39,9 @@ export function parseDateFromLLM(dateStr: string, timezone: string): Date {
     }
 
     // Convert the Luxon DateTime object to a standard JavaScript Date object (which is UTC)
-    return dt.toJSDate()
+    return dt
   } catch (err: any) {
-    console.error(
+    w(
       `Error parsing date string "${dateStr}" with timezone "${timezone}" using Luxon:`,
       err
     )
@@ -69,42 +49,4 @@ export function parseDateFromLLM(dateStr: string, timezone: string): Date {
       `Failed to parse date for timezone ${timezone}: ${err.message}`
     )
   }
-}
-
-/**
- * Converts a Date to a SQLite string format 'YYYY-MM-DD HH:MM:SS' in UTC.
- * Use this for database storage.
- *
- * @param date Date to format (defaults to now)
- * @returns SQLite UTC string format
- */
-export function dateToSqliteString(date: Date = new Date()): string {
-  const year = date.getUTCFullYear()
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0')
-  const day = date.getUTCDate().toString().padStart(2, '0')
-  const hours = date.getUTCHours().toString().padStart(2, '0')
-  const minutes = date.getUTCMinutes().toString().padStart(2, '0')
-  const seconds = date.getUTCSeconds().toString().padStart(2, '0')
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-}
-
-/**
- * Parse an ISO8601 string to a Date object
- *
- * @param isoString ISO8601 date string
- * @returns Date object
- */
-export function parseISO8601(isoString: string): Date {
-  return new Date(isoString)
-}
-
-/**
- * Converts a Date to an ISO8601 string, preserving timezone information
- * Use this for database storage and API communication
- *
- * @param date Date to format
- * @returns ISO8601 string with timezone information
- */
-export function dateToISO8601(date: Date = new Date()): string {
-  return date.toISOString()
 }

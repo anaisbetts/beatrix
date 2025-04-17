@@ -8,7 +8,7 @@ import { i } from '../logging'
 import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { agenticReminders } from '../prompts'
-import { AutomationRuntime, getMemoryFile } from './automation-runtime'
+import { AutomationRuntime, getMemoryFile, now } from './automation-runtime'
 
 export async function rescheduleAutomations(
   runtime: AutomationRuntime,
@@ -55,6 +55,7 @@ export async function runSchedulerForAutomation(
   await runtime.db
     .insertInto('automationLogs')
     .values({
+      createdAt: now(runtime).toISO()!,
       type: 'determine-signal',
       automationHash: automation.hash,
       messageLog: JSON.stringify(msgs),
@@ -71,7 +72,7 @@ export function createDefaultSchedulerTools(
     createSchedulerServer(
       runtime.db,
       automation.hash,
-      runtime.config.timezone || 'Etc/UTC'
+      runtime.timezone || 'Etc/UTC'
     ),
   ]
 }
@@ -81,7 +82,6 @@ export const schedulerPrompt = (
   automation: string,
   memory: string
 ) => {
-  const timezone = runtime.config.timezone || 'Etc/UTC'
   return `
 <task>
 You are an automation scheduling assistant for Home Assistant. Your job is to analyze the current automation instructions and determine the appropriate scheduling actions needed.
@@ -95,7 +95,7 @@ ${agenticReminders}
 ${automation}
 </automation_instructions>
 
-<current_date_time>${formatDateForLLM(new Date(), timezone)}</current_date_time>
+<current_date_time>${formatDateForLLM(now(runtime))}</current_date_time>
 
 <saved_memory>
 ${memory}

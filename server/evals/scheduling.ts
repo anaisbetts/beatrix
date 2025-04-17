@@ -32,7 +32,7 @@ export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
 
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation.contents, ''),
+    schedulerPrompt(service, inputAutomation.contents, ''),
     tools,
     'Evaled scheduler tools',
     [
@@ -217,7 +217,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation2.contents, ''),
+    schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval Absolute Time: Daily on/off (becomes cron)',
     [failureGrader(), findMultipleSchedulesGrader(service2.db, expected2)]
@@ -238,7 +238,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation7.contents, ''),
+    schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval Absolute Time: Multiple times daily (becomes cron)',
     [failureGrader(), findMultipleSchedulesGrader(service7.db, expected7)]
@@ -261,7 +261,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation8.contents, ''),
+    schedulerPrompt(service8, inputAutomation8.contents, ''),
     tools8,
     'Eval Absolute Time: Multiple specific times daily (becomes cron)',
     [failureGrader(), findMultipleSchedulesGrader(service8.db, expected8)]
@@ -283,7 +283,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation9.contents, ''),
+    schedulerPrompt(service9, inputAutomation9.contents, ''),
     tools9,
     'Eval Absolute Time: Weekday/Weekend split (becomes cron)',
     [failureGrader(), findMultipleSchedulesGrader(service9.db, expected9)]
@@ -307,7 +307,7 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation2.contents, ''),
+    schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval Cron: Weekday specific time',
     [
@@ -331,7 +331,7 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation3.contents, ''),
+    schedulerPrompt(service3, inputAutomation3.contents, ''),
     tools3,
     'Eval Cron: End of month (becomes start of next month)',
     [
@@ -359,7 +359,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation1.contents, ''),
+    schedulerPrompt(service1, inputAutomation1.contents, ''),
     tools1,
     'Eval Mixed: Sunset and Sunrise (becomes state triggers)',
     [failureGrader(), findMultipleSchedulesGrader(service1.db, expected1)]
@@ -382,7 +382,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation2.contents, ''),
+    schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval Mixed: State trigger (person arrives)',
     [
@@ -407,7 +407,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation3.contents, ''),
+    schedulerPrompt(service3, inputAutomation3.contents, ''),
     tools3,
     'Eval Mixed: Time condition (becomes cron) + state condition',
     [
@@ -433,7 +433,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation4.contents, ''),
+    schedulerPrompt(service4, inputAutomation4.contents, ''),
     tools4,
     'Eval Mixed: State trigger (relative time handled post-trigger)',
     [
@@ -462,7 +462,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation5.contents, ''),
+    schedulerPrompt(service5, inputAutomation5.contents, ''),
     tools5,
     'Eval Mixed: Cron and State trigger',
     [failureGrader(), findMultipleSchedulesGrader(service5.db, expected5)]
@@ -488,7 +488,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation6.contents, ''),
+    schedulerPrompt(service6, inputAutomation6.contents, ''),
     tools6,
     'Eval Mixed: Cron or State trigger',
     [failureGrader(), findMultipleSchedulesGrader(service6.db, expected6)]
@@ -511,7 +511,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation7.contents, ''),
+    schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval Mixed: Sunset trigger with complex state/duration condition',
     [
@@ -540,7 +540,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
   ]
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation9.contents, ''),
+    schedulerPrompt(service9, inputAutomation9.contents, ''),
     tools9,
     'Eval Mixed: Cron and State trigger (with time condition on state)',
     [failureGrader(), findMultipleSchedulesGrader(service9.db, expected9)]
@@ -566,7 +566,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation1.contents, ''),
+    schedulerPrompt(service1, inputAutomation1.contents, ''),
     tools1,
     'Eval Relative Time: State trigger (offset handled post-trigger)',
     [
@@ -590,7 +590,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation2.contents, ''),
+    schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval Relative Time: Simple offset trigger',
     [
@@ -616,7 +616,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation4.contents, ''),
+    schedulerPrompt(service4, inputAutomation4.contents, ''),
     tools4,
     'Eval Relative Time: Group state trigger (offset handled post-trigger)',
     [
@@ -641,7 +641,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation5.contents, ''),
+    schedulerPrompt(service5, inputAutomation5.contents, ''),
     tools5,
     'Eval Relative Time: Recurring action with state condition (becomes cron)',
     [
@@ -666,7 +666,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation7.contents, ''),
+    schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval Relative Time: Recurring action after specific time (becomes cron)',
     [
@@ -694,7 +694,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation1.contents, ''),
+    schedulerPrompt(service1, inputAutomation1.contents, ''),
     tools1,
     'Eval State Regex: Any person arrives (group state)',
     [
@@ -719,7 +719,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation2.contents, ''),
+    schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval State Regex: Specific entity turns off',
     [
@@ -745,7 +745,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation4.contents, ''),
+    schedulerPrompt(service4, inputAutomation4.contents, ''),
     tools4,
     'Eval State Regex: Specific entity turns on',
     [
@@ -771,7 +771,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation7.contents, ''),
+    schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval State Regex: Update entity changes state (to on)',
     [
@@ -796,7 +796,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation8.contents, ''),
+    schedulerPrompt(service8, inputAutomation8.contents, ''),
     tools8,
     'Eval State Regex: Input boolean turns off',
     [
@@ -820,7 +820,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
   }
   yield runScenario(
     llm,
-    schedulerPrompt(inputAutomation9.contents, ''),
+    schedulerPrompt(service9, inputAutomation9.contents, ''),
     tools9,
     'Eval State Regex: Input boolean changes to on',
     [

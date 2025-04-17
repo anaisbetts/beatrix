@@ -6,7 +6,7 @@ import { formatDateForLLM } from '../lib/date-utils'
 import { createBuiltinServers } from '../llm'
 import { i } from '../logging'
 import { agenticReminders } from '../prompts'
-import { AutomationRuntime } from './automation-runtime'
+import { AutomationRuntime, now } from './automation-runtime'
 
 const d = debug('b:execution-step')
 
@@ -51,6 +51,7 @@ export async function runExecutionForAutomation(
   await runtime.db
     .insertInto('automationLogs')
     .values({
+      createdAt: now(runtime).toISO()!,
       type: 'execute-signal',
       signalId: signalId,
       messageLog: JSON.stringify(msgs),
@@ -79,7 +80,7 @@ about how to respond to events.
 ${agenticReminders}
 
 <execution_context>
-<current_datetime>${formatDateForLLM(new Date(), runtime.config.timezone || 'Etc/UTC')}</current_datetime>
+<current_datetime>${formatDateForLLM(now(runtime))}</current_datetime>
 <trigger_reason>${triggerType}</trigger_reason>
 <trigger_details>${triggerInfo}</trigger_details>
 </execution_context>

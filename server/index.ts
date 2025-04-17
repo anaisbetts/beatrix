@@ -47,7 +47,7 @@ async function serveCommand(options: {
     : await LiveHomeAssistantApi.createViaConfig(config)
 
   const db = await createDatabaseViaEnv()
-  await startLogger(db)
+  await startLogger(db, config.timezone ?? 'Etc/UTC')
 
   await mkdir(path.join(options.notebook, 'automations'), {
     recursive: true,

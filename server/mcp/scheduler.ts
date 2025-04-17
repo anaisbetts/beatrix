@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
 import { Kysely } from 'kysely'
+import { DateTime } from 'luxon'
 import { z } from 'zod'
 
 import pkg from '../../package.json'
@@ -11,11 +12,7 @@ import {
   StateRegexSignal,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
-import {
-  dateToISO8601,
-  formatDateForLLM,
-  parseDateFromLLM,
-} from '../lib/date-utils'
+import { formatDateForLLM, parseDateFromLLM } from '../lib/date-utils'
 import { i, w } from '../logging'
 
 const d = debug('b:scheduler')
@@ -74,6 +71,7 @@ export function createSchedulerServer(
           .insertInto('signals')
           .values({
             automationHash,
+            createdAt: now(timezone).toISO()!,
             type: 'state',
             data: JSON.stringify(data),
             isDead: false,
@@ -95,7 +93,7 @@ export function createSchedulerServer(
     }
   )
 
-  const currentTimeFormatted = formatDateForLLM(new Date(), timezone)
+  const currentTimeFormatted = formatDateForLLM(now(timezone))
 
   server.tool(
     'create-cron-trigger',
@@ -126,6 +124,7 @@ export function createSchedulerServer(
         await db
           .insertInto('signals')
           .values({
+            createdAt: now(timezone).toISO()!,
             automationHash,
             type: 'cron',
             data: JSON.stringify(data),
@@ -241,6 +240,7 @@ export function createSchedulerServer(
         await db
           .insertInto('signals')
           .values({
+            createdAt: now(timezone).toISO()!,
             automationHash,
             type: 'offset',
             data: JSON.stringify(data),
@@ -289,16 +289,17 @@ export function createSchedulerServer(
         const values = times.map((localTimeStr) => {
           // Parse the local time string using the user's timezone
           const date = parseDateFromLLM(localTimeStr, timezone)
-          const iso8601Time = dateToISO8601(date) // Convert to ISO string for storage
+          const iso8601Time = date.toISO() // Convert to ISO string for storage
 
           // Construct the data part first
           const signalData: AbsoluteTimeSignal = {
             type: 'time',
-            iso8601Time: iso8601Time, // Use the parsed and converted time
+            iso8601Time: iso8601Time!, // Use the parsed and converted time
           }
 
           // Construct the full object for the database insert
           const dbValue = {
+            createdAt: now(timezone).toISO()!,
             automationHash,
             type: 'time' as const,
             isDead: false,
@@ -330,4 +331,8 @@ export function createSchedulerServer(
   )
 
   return server
+}
+
+export function now(timezone: string): DateTime {
+  return DateTime.now().setZone(timezone)
 }

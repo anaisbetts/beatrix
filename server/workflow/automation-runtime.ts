@@ -1,5 +1,6 @@
 import debug from 'debug'
 import { Kysely } from 'kysely'
+import { DateTime } from 'luxon'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { unlink } from 'node:fs/promises'
 import path from 'node:path'
@@ -50,8 +51,8 @@ export interface AutomationRuntime {
   readonly api: HomeAssistantApi
   readonly llm: LargeLanguageProvider
   readonly db: Kysely<Schema>
+  readonly timezone: string // "America/Los_Angeles" etc
   readonly notebookDirectory: string | undefined
-  readonly config: AppConfig
 
   automationList: Automation[]
   cueList: Automation[]
@@ -89,19 +90,19 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     const db = await createDatabaseViaEnv()
 
     return new LiveAutomationRuntime(
-      config,
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
       llm,
       db,
+      config.timezone ?? 'Etc/UTC',
       notebookDirectory
     )
   }
 
   constructor(
-    readonly config: AppConfig,
     readonly api: HomeAssistantApi,
     readonly llm: LargeLanguageProvider,
     readonly db: Kysely<Schema>,
+    readonly timezone: string,
     notebookDirectory?: string
   ) {
     this.automationList = []
@@ -357,7 +358,6 @@ export class LiveAutomationRuntime implements AutomationRuntime {
           signal.type,
           err
         )
-        // Optionally, delete the problematic signal or handle the error differently
       }
     }
 
@@ -405,4 +405,9 @@ export function getMemoryFile(runtime: AutomationRuntime) {
   }
 
   return ret
+}
+
+export function now(runtime: AutomationRuntime): DateTime {
+  const timezone = runtime.timezone || 'Etc/UTC'
+  return DateTime.now().setZone(timezone)
 }

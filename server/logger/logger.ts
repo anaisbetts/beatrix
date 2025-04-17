@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon'
 import { mkdirSync } from 'node:fs'
 import { Observer } from 'rxjs'
 
@@ -25,7 +26,11 @@ export default class Logger {
   private rotate = false
   private dir?: string
   private filename?: string
-  private sink: Observer<{ msg: string; type: string }> | null = null
+  private sink: Observer<{
+    msg: string
+    type: string
+    timestamp: DateTime
+  }> | null = null
 
   #debug = this.debug
   #info = this.info
@@ -164,7 +169,7 @@ export default class Logger {
     const filename = this.filename || (this.rotate === true ? `${date}` : 'app')
 
     const path = `${dir}/${filename}.log`
-    this.sink?.next({ msg: str, type })
+    this.sink?.next({ msg: str, type, timestamp: DateTime.now() })
     return this.writer!.write({ path, msg, type })
   }
 
@@ -179,7 +184,9 @@ export default class Logger {
     return { bytes: this.encoder.encode(s), str: s }
   }
 
-  initSubjLogger(sink: Observer<{ msg: string; type: string }>) {
+  initSubjLogger(
+    sink: Observer<{ msg: string; type: string; timestamp: DateTime }>
+  ) {
     this.sink = sink
   }
 

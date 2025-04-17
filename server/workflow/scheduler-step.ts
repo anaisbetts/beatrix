@@ -68,7 +68,11 @@ export function createDefaultSchedulerTools(
 ): McpServer[] {
   return [
     createHomeAssistantServer(runtime, { schedulerMode: true }),
-    createSchedulerServer(runtime.db, automation.hash),
+    createSchedulerServer(
+      runtime.db,
+      automation.hash,
+      runtime.config.timezone || 'Etc/UTC'
+    ),
   ]
 }
 

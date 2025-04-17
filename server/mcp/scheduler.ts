@@ -11,13 +11,19 @@ import {
   StateRegexSignal,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
+import {
+  dateToISO8601,
+  formatDateForLLM,
+  parseDateFromLLM,
+} from '../lib/date-utils'
 import { i, w } from '../logging'
 
 const d = debug('b:scheduler')
 
 export function createSchedulerServer(
   db: Kysely<Schema>,
-  automationHash: string
+  automationHash: string,
+  timezone: string
 ) {
   d('creating scheduler server for automation hash: %s', automationHash)
   const server = new McpServer({
@@ -89,11 +95,11 @@ export function createSchedulerServer(
     }
   )
 
-  const currentTimeAsString = new Date().toISOString()
+  const currentTimeFormatted = formatDateForLLM(new Date(), timezone)
 
   server.tool(
     'create-cron-trigger',
-    `Create a new trigger for an automation based on a cron schedule. The current time/date is ${currentTimeAsString}.`,
+    `Create a new trigger for an automation based on a cron schedule. The current local time is ${currentTimeFormatted}. Use this as a reference if needed for calculating cron schedules.`,
     {
       cron: z
         .string()
@@ -259,12 +265,12 @@ export function createSchedulerServer(
 
   server.tool(
     'create-absolute-time-trigger',
-    'Create a new trigger for an automation that fires at specified ISO 8601 date and time(s).',
+    'Create a new trigger for an automation that fires at a specific date and time.',
     {
       time: z
         .union([z.string(), z.array(z.string())])
         .describe(
-          'The ISO 8601 date and time(s) when the trigger should fire (e.g. "2025-04-01T18:30:00Z" or ["2025-04-02T08:00:00Z", "2025-04-03T17:30:00Z"])'
+          'The local date and time(s) when the trigger should fire, in "YYYY-MM-DD HH:MM:SS" format (e.g., "2025-04-01 18:30:00" or ["2025-04-02 08:00:00", "2025-04-03 17:30:00"]). This time will be interpreted according to the user\'s configured timezone.'
         ),
       execution_notes: z
         .string()
@@ -280,16 +286,27 @@ export function createSchedulerServer(
       )
 
       try {
-        const values = times.map((iso8601Time) => ({
-          automationHash,
-          type: 'time',
-          isDead: false,
-          data: JSON.stringify({
+        const values = times.map((localTimeStr) => {
+          // Parse the local time string using the user's timezone
+          const date = parseDateFromLLM(localTimeStr, timezone)
+          const iso8601Time = dateToISO8601(date) // Convert to ISO string for storage
+
+          // Construct the data part first
+          const signalData: AbsoluteTimeSignal = {
             type: 'time',
-            iso8601Time,
-          } as AbsoluteTimeSignal),
-          executionNotes: execution_notes ?? '',
-        }))
+            iso8601Time: iso8601Time, // Use the parsed and converted time
+          }
+
+          // Construct the full object for the database insert
+          const dbValue = {
+            automationHash,
+            type: 'time' as const,
+            isDead: false,
+            data: JSON.stringify(signalData),
+            executionNotes: execution_notes ?? '',
+          }
+          return dbValue
+        })
 
         await db.insertInto('signals').values(values).execute()
 

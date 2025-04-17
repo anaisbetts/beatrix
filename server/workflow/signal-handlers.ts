@@ -1,5 +1,6 @@
 import { Cron, parseCronExpression } from 'cron-schedule'
 import { TimerBasedCronScheduler as scheduler } from 'cron-schedule/schedulers/timer-based.js'
+import { DateTime } from 'luxon'
 import { NEVER, Observable, filter, map, share, timer } from 'rxjs'
 
 import {
@@ -105,23 +106,26 @@ export class RelativeTimeSignalHandler implements SignalHandler {
     public readonly automation: Automation
   ) {
     const relativeTimeData: RelativeTimeSignal = JSON.parse(signal.data)
-    const offsetInSeconds = relativeTimeData.offsetInSeconds
-    const fireTime = new Date(Date.now() + offsetInSeconds * 1000)
+    const fireTime = DateTime.now().plus({
+      seconds: relativeTimeData.offsetInSeconds,
+    })
 
     this.isValid = true
-    this.friendlySignalDescription = fireTime.toLocaleString()
+    this.friendlySignalDescription = fireTime.toLocaleString(
+      DateTime.DATETIME_SHORT_WITH_SECONDS
+    )
 
     d(
       'RelativeTimeSignalHandler created for signal %s, automation %s. Offset: %d seconds',
       signal.id,
       automation.hash,
-      offsetInSeconds
+      relativeTimeData.offsetInSeconds
     )
 
-    this.signalObservable = timer(offsetInSeconds * 1000).pipe(
+    this.signalObservable = timer(relativeTimeData.offsetInSeconds * 1000).pipe(
       map(() => {
         i(
-          `Relative time trigger fired for signal ${this.signal.id}, automation ${this.automation.hash} (offset: ${offsetInSeconds}s)`
+          `Relative time trigger fired for signal ${this.signal.id}, automation ${this.automation.hash} (offset: ${relativeTimeData.offsetInSeconds}s)`
         )
         return { signal: this.signal, automation: this.automation }
       })

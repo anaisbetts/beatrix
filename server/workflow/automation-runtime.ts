@@ -319,18 +319,20 @@ export class LiveAutomationRuntime implements AutomationRuntime {
         switch (signal.type) {
           case 'cron':
             d('Creating CronSignalHandler for signal ID %s', signal.id)
-            signalHandlers.push(new CronSignalHandler(signal, automation))
+            signalHandlers.push(
+              new CronSignalHandler(signal, automation, this.timezone)
+            )
             break
           case 'offset':
             d('Creating RelativeTimeSignalHandler for signal ID %s', signal.id)
             signalHandlers.push(
-              new RelativeTimeSignalHandler(signal, automation)
+              new RelativeTimeSignalHandler(signal, automation, this.timezone)
             )
             break
           case 'time':
             d('Creating AbsoluteTimeSignalHandler for signal ID %s', signal.id)
             signalHandlers.push(
-              new AbsoluteTimeSignalHandler(signal, automation)
+              new AbsoluteTimeSignalHandler(signal, automation, this.timezone)
             )
             break
           case 'state':

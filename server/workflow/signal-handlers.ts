@@ -28,7 +28,8 @@ export class CronSignalHandler implements SignalHandler {
 
   constructor(
     public readonly signal: Signal,
-    public readonly automation: Automation
+    public readonly automation: Automation,
+    timezone: string
   ) {
     const data: CronSignal = JSON.parse(signal.data)
     let cron: Cron | null = null // Declare outside try
@@ -38,9 +39,11 @@ export class CronSignalHandler implements SignalHandler {
 
     try {
       cron = parseCronExpression(data.cron) // Assign inside try
-      this.friendlySignalDescription = cron
-        .getNextDate(new Date())
-        .toLocaleString()
+
+      this.friendlySignalDescription = DateTime.fromJSDate(
+        cron.getNextDate(DateTime.now().setZone(timezone).toJSDate())
+      ).toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
+
       this.isValid = true // Set to valid only if parsing and date calculation succeed
 
       d(
@@ -103,10 +106,11 @@ export class RelativeTimeSignalHandler implements SignalHandler {
 
   constructor(
     public readonly signal: Signal,
-    public readonly automation: Automation
+    public readonly automation: Automation,
+    timezone: string
   ) {
     const relativeTimeData: RelativeTimeSignal = JSON.parse(signal.data)
-    const fireTime = DateTime.now().plus({
+    const fireTime = DateTime.now().setZone(timezone).plus({
       seconds: relativeTimeData.offsetInSeconds,
     })
 
@@ -139,7 +143,8 @@ export class AbsoluteTimeSignalHandler implements SignalHandler {
 
   constructor(
     public readonly signal: Signal,
-    public readonly automation: Automation
+    public readonly automation: Automation,
+    timezone: string
   ) {
     const absoluteTimeData: AbsoluteTimeSignal = JSON.parse(signal.data)
     const targetTime = new Date(absoluteTimeData.iso8601Time).getTime()
@@ -147,7 +152,10 @@ export class AbsoluteTimeSignalHandler implements SignalHandler {
     const timeUntilTarget = targetTime - currentTime
 
     this.isValid = true
-    this.friendlySignalDescription = new Date(targetTime).toLocaleString()
+    this.friendlySignalDescription = DateTime.now()
+      .setZone(timezone)
+      .plus({ millisecond: timeUntilTarget })
+      .toLocaleString()
 
     d(
       'AbsoluteTimeSignalHandler created for signal %s, automation %s. Target time: %s',

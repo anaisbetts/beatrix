@@ -270,44 +270,6 @@ function validateLlmConfig(config: AppConfig, context: string) {
   }
 }
 
-/**
- * Gets the current UTC offset in minutes for a given IANA/Olsen timezone
- * @param timezone IANA timezone identifier (e.g., "America/New_York")
- * @param date Optional date to get offset for (defaults to current time)
- * @returns Offset in minutes (e.g., -240 for EDT, which is UTC-4:00)
- */
-export function getTimezoneOffset(
-  timezone: string,
-  date: Date = new Date()
-): number {
-  // Use the raw formatter to get the UTC offset
-  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }))
-  const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }))
-
-  // Calculate the offset in minutes
-  return (utcDate.getTime() - tzDate.getTime()) / (60 * 1000)
-}
-
-/**
- * Format an IANA timezone as "UTC+/-HH:MM" format
- * @param timezone IANA timezone identifier
- * @param date Optional date to get offset for (defaults to current time)
- * @returns Formatted UTC offset string
- */
-export function formatTimezoneAsUTC(
-  timezone: string,
-  date: Date = new Date()
-): string {
-  const offsetMinutes = getTimezoneOffset(timezone, date)
-  const absOffset = Math.abs(offsetMinutes)
-  const hours = Math.floor(absOffset / 60)
-  const minutes = absOffset % 60
-
-  // Format as UTC+/-HH:MM
-  const sign = offsetMinutes < 0 ? '+' : '-' // Note: offset is inverted (negative means ahead of UTC)
-  return `UTC${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
-}
-
 /* example file
 
 ha_base_url = "https://foo"

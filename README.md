@@ -94,7 +94,7 @@ You must provide the configuration details for the LLM provider specified in the
 - "I want a pretty good experience, but not spend as much $$" <== Use GPT 4.1 Mini or Gemini 2.5 Pro
 - "I want to use Ollama" <== Use qwen2.5:7b or qwen2.5:14b
 
-#### The medium length version
+#### The medium length version (17.04.2025)
 
 ![image](https://github.com/user-attachments/assets/361d310c-1b8c-426e-9e2d-1c02f8bd0b31)
 

@@ -10,12 +10,13 @@ import {
   Observable,
   Subject,
   SubscriptionLike,
+  concat,
   defer,
   from,
   map,
   merge,
+  of,
   share,
-  startWith,
   switchMap,
   tap,
   throttleTime,
@@ -140,8 +141,9 @@ export class LiveAutomationRuntime
 
     if (isProdMode) {
       // Kick off a scan on startup
-      this.reparseAutomations = this.reparseAutomations.pipe(
-        startWith(getAutomationDirectory(this), getCueDirectory(this))
+      this.reparseAutomations = concat(
+        defer(() => of(getAutomationDirectory(this), getCueDirectory(this))),
+        this.reparseAutomations
       )
     } else {
       console.error(

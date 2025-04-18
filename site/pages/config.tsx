@@ -136,7 +136,7 @@ export default function Config() {
         <h2 className="text-lg font-semibold">Configuration</h2>
         <SaveButton
           saveResult={saveResult}
-          onClick={() => void saveConfig()}
+          onClick={saveConfig}
           isSaved={isSaved}
         />
       </div>
@@ -400,7 +400,7 @@ export default function Config() {
           })}
           <SaveButton
             saveResult={saveResult}
-            onClick={() => void saveConfig()}
+            onClick={saveConfig}
             isSaved={isSaved}
           />
         </div>

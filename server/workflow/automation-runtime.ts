@@ -267,6 +267,7 @@ export class LiveAutomationRuntime
     await saveConfig(config, getConfigFilePath(this.notebookDirectory!))
 
     this.shouldRestart.next(undefined)
+    this.shouldRestart.complete()
   }
 
   private async handlersForDatabaseSignals(): Promise<SignalHandler[]> {

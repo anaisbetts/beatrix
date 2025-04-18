@@ -33,8 +33,9 @@ export async function runExecutionForAutomation(
 
   const tools = createBuiltinServers(runtime, automation)
 
+  const llm = runtime.llmFactory()
   const msgs = await lastValueFrom(
-    runtime.llm
+    llm
       .executePromptWithTools(
         prompt(
           runtime,

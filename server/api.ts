@@ -146,10 +146,9 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     previousConversationId?: number,
     typeHint?: TypeHint
   ): Observable<MessageParamWithExtras> {
-    const llm = createDefaultLLMProvider(this.config, driver, model)
     const rqRuntime = new LiveAutomationRuntime(
       this.runtime.api,
-      llm,
+      () => createDefaultLLMProvider(this.config, driver, model),
       this.runtime.db,
       this.notebookDirectory
     )
@@ -182,6 +181,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         )
 
         previousMessages = msgs
+        const llm = this.runtime.llmFactory()
         if (prevMsgs.length > 0) {
           // If we are in a continuing conversation, we don't include the system
           // prompt
@@ -255,8 +255,6 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult> {
-    const llm = createDefaultLLMProvider(this.config, driver, model)
-
     const counter = generate({
       initialState: 0,
       iterate: (x) => x + 1,
@@ -264,6 +262,12 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     })
 
     const runEvals = type === 'all' ? runAllEvals : runQuickEvals
-    return from(counter.pipe(concatMap(() => runEvals(llm))))
+    return from(
+      counter.pipe(
+        concatMap(() =>
+          runEvals(() => createDefaultLLMProvider(this.config, driver, model))
+        )
+      )
+    )
   }
 }

@@ -170,8 +170,9 @@ export function createHomeAssistantServer(
             }),
           ]
 
+          const llm = runtime.llmFactory()
           msgs = await firstValueFrom(
-            runtime.llm
+            llm
               .executePromptWithTools(
                 callServicePrompt(prompt, entity_ids),
                 tools

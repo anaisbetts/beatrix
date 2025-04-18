@@ -149,7 +149,6 @@ async function evalCommand(options: {
   const { model, driver } = options
 
   const config = await createConfigViaEnv(options.notebook)
-  const llm = createDefaultLLMProvider(config, driver, model)
 
   console.log(`Running ${options.quick ? 'quick' : 'all'} evals...`)
   const results = []
@@ -157,7 +156,9 @@ async function evalCommand(options: {
     console.log(`Run ${i + 1} of ${options.num}`)
 
     const evalFunction = options.quick ? runQuickEvals : runAllEvals
-    for await (const result of evalFunction(llm)) {
+    for await (const result of evalFunction(() =>
+      createDefaultLLMProvider(config, driver, model)
+    )) {
       results.push(result)
       if (options.verbose) {
         console.log(JSON.stringify(result, null, 2))

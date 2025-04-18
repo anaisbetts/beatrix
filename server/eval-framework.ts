@@ -184,14 +184,16 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
   }
 }
 
-export async function createEvalRuntime(llm: LargeLanguageProvider) {
+export async function createEvalRuntime(
+  llmFactory: () => LargeLanguageProvider
+) {
   // Create a temporary notebook directory for eval mode
   const tmpNotebookDir = path.join(os.tmpdir(), 'beatrix-eval-notebook')
   await mkdir(tmpNotebookDir, { recursive: true })
 
   return new LiveAutomationRuntime(
     new EvalHomeAssistantApi(),
-    llm,
+    llmFactory,
     await createInMemoryDatabase(),
     tmpNotebookDir
   )

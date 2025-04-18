@@ -52,7 +52,7 @@ export interface SignalledAutomation {
 
 export interface AutomationRuntime extends SubscriptionLike {
   readonly api: HomeAssistantApi
-  readonly llm: LargeLanguageProvider
+  readonly llmFactory: () => LargeLanguageProvider
   readonly db: Kysely<Schema>
   readonly timezone: string // "America/Los_Angeles" etc
   readonly notebookDirectory: string | undefined
@@ -93,12 +93,11 @@ export class LiveAutomationRuntime
     api?: HomeAssistantApi,
     notebookDirectory?: string
   ) {
-    const llm = createDefaultLLMProvider(config)
     const db = await createDatabaseViaEnv()
 
     return new LiveAutomationRuntime(
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
-      llm,
+      () => createDefaultLLMProvider(config),
       db,
       config.timezone ?? 'Etc/UTC',
       notebookDirectory
@@ -107,7 +106,7 @@ export class LiveAutomationRuntime
 
   constructor(
     readonly api: HomeAssistantApi,
-    readonly llm: LargeLanguageProvider,
+    readonly llmFactory: () => LargeLanguageProvider,
     readonly db: Kysely<Schema>,
     readonly timezone: string,
     notebookDirectory?: string

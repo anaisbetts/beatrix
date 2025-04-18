@@ -20,14 +20,17 @@ import {
   schedulerPrompt,
 } from '../workflow/scheduler-step'
 
-export async function* simplestSchedulerEval(llm: LargeLanguageProvider) {
+export async function* simplestSchedulerEval(
+  llmFactory: () => LargeLanguageProvider
+) {
   const inputAutomation = automationFromString(
     'Every Monday at 8:00 AM, turn on the living room lights.',
     'test_automation.md',
     true
   )
 
-  const service = await createEvalRuntime(llm)
+  const service = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   const tools = createDefaultSchedulerTools(service, inputAutomation)
 
   yield runScenario(
@@ -194,7 +197,9 @@ function findMultipleSchedulesGrader(
 }
 
 // --- Consolidated Absolute Time Evals ---
-export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
+export async function* evalAbsoluteTimePrompts(
+  llmFactory: () => LargeLanguageProvider
+) {
   // Scenario 1: Single specific date/time
   // const prompt1 =
   //   'Schedule my bedroom chandelier to turn on at 7:15am on April 25th, 2025'
@@ -209,7 +214,8 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service2 = await createEvalRuntime(llm)
+  const service2 = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: CronSignal[] = [
     { type: 'cron', cron: '0 7 * * *' },
@@ -230,14 +236,15 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service7 = await createEvalRuntime(llm)
+  const service7 = await createEvalRuntime(llmFactory)
+  const llm7 = llmFactory()
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: CronSignal[] = [
     { type: 'cron', cron: '0 23 * * *' },
     { type: 'cron', cron: '0 3 * * *' },
   ]
   yield runScenario(
-    llm,
+    llm7,
     schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval Absolute Time: Multiple times daily (becomes cron)',
@@ -252,7 +259,8 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service8 = await createEvalRuntime(llm)
+  const service8 = await createEvalRuntime(llmFactory)
+  const llm8 = llmFactory()
   const tools8 = createDefaultSchedulerTools(service8, inputAutomation8)
   const expected8: CronSignal[] = [
     { type: 'cron', cron: '0 8 * * *' },
@@ -260,7 +268,7 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     { type: 'cron', cron: '0 17 * * *' },
   ]
   yield runScenario(
-    llm,
+    llm8,
     schedulerPrompt(service8, inputAutomation8.contents, ''),
     tools8,
     'Eval Absolute Time: Multiple specific times daily (becomes cron)',
@@ -275,14 +283,15 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service9 = await createEvalRuntime(llm)
+  const service9 = await createEvalRuntime(llmFactory)
+  const llm9 = llmFactory()
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
   const expected9: CronSignal[] = [
     { type: 'cron', cron: '45 6 * * 1-5' },
     { type: 'cron', cron: '30 8 * * 0,6' },
   ]
   yield runScenario(
-    llm,
+    llm9,
     schedulerPrompt(service9, inputAutomation9.contents, ''),
     tools9,
     'Eval Absolute Time: Weekday/Weekend split (becomes cron)',
@@ -291,7 +300,9 @@ export async function* evalAbsoluteTimePrompts(llm: LargeLanguageProvider) {
 }
 
 // --- Consolidated Cron Evals ---
-export async function* evalCronPrompts(llm: LargeLanguageProvider) {
+export async function* evalCronPrompts(
+  llmFactory: () => LargeLanguageProvider
+) {
   // Scenario 2: Weekday specific time
   const prompt2 = 'Turn on the bathroom overhead light at 8:00am on weekdays'
   const inputAutomation2 = automationFromString(
@@ -299,7 +310,8 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service2 = await createEvalRuntime(llm)
+  const service2 = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: CronSignal = {
     type: 'cron',
@@ -323,14 +335,15 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service3 = await createEvalRuntime(llm)
+  const service3 = await createEvalRuntime(llmFactory)
+  const llm3 = llmFactory()
   const tools3 = createDefaultSchedulerTools(service3, inputAutomation3)
   const expected3: CronSignal = {
     type: 'cron',
     cron: '0 0 1 * *',
   }
   yield runScenario(
-    llm,
+    llm3,
     schedulerPrompt(service3, inputAutomation3.contents, ''),
     tools3,
     'Eval Cron: End of month (becomes start of next month)',
@@ -342,7 +355,9 @@ export async function* evalCronPrompts(llm: LargeLanguageProvider) {
 }
 
 // --- Consolidated Mixed Signal Evals ---
-export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
+export async function* evalMixedPrompts(
+  llmFactory: () => LargeLanguageProvider
+) {
   // Scenario 1: Sunset and Sunrise (becomes state triggers)
   const prompt1 =
     'Turn on the foyer bird sconces at sunset and turn them off at sunrise'
@@ -351,7 +366,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service1 = await createEvalRuntime(llm)
+  const service1 = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
   const expected1: StateRegexSignal[] = [
     { type: 'state', entityIds: ['sun.sun'], regex: '^below_horizon$' },
@@ -373,7 +389,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service2 = await createEvalRuntime(llm)
+  const service2 = await createEvalRuntime(llmFactory)
+  const llm2 = llmFactory()
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: StateRegexSignal = {
     type: 'state',
@@ -381,7 +398,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     regex: '^home$',
   }
   yield runScenario(
-    llm,
+    llm2,
     schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval Mixed: State trigger (person arrives)',
@@ -399,14 +416,15 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service3 = await createEvalRuntime(llm)
+  const service3 = await createEvalRuntime(llmFactory)
+  const llm3 = llmFactory()
   const tools3 = createDefaultSchedulerTools(service3, inputAutomation3)
   const expected3: CronSignal = {
     type: 'cron',
     cron: '0 22 * * *',
   }
   yield runScenario(
-    llm,
+    llm3,
     schedulerPrompt(service3, inputAutomation3.contents, ''),
     tools3,
     'Eval Mixed: Time condition (becomes cron) + state condition',
@@ -424,7 +442,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service4 = await createEvalRuntime(llm)
+  const service4 = await createEvalRuntime(llmFactory)
+  const llm4 = llmFactory()
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
   const expected4: StateRegexSignal = {
     type: 'state',
@@ -432,7 +451,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     regex: '^on$',
   }
   yield runScenario(
-    llm,
+    llm4,
     schedulerPrompt(service4, inputAutomation4.contents, ''),
     tools4,
     'Eval Mixed: State trigger (relative time handled post-trigger)',
@@ -450,7 +469,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service5 = await createEvalRuntime(llm)
+  const service5 = await createEvalRuntime(llmFactory)
+  const llm5 = llmFactory()
   const tools5 = createDefaultSchedulerTools(service5, inputAutomation5)
   const expected5: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 8 * * *' },
@@ -461,7 +481,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     },
   ]
   yield runScenario(
-    llm,
+    llm5,
     schedulerPrompt(service5, inputAutomation5.contents, ''),
     tools5,
     'Eval Mixed: Cron and State trigger',
@@ -476,7 +496,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service6 = await createEvalRuntime(llm)
+  const service6 = await createEvalRuntime(llmFactory)
+  const llm6 = llmFactory()
   const tools6 = createDefaultSchedulerTools(service6, inputAutomation6)
   const expected6: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 23 * * *' },
@@ -487,7 +508,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     },
   ]
   yield runScenario(
-    llm,
+    llm6,
     schedulerPrompt(service6, inputAutomation6.contents, ''),
     tools6,
     'Eval Mixed: Cron or State trigger',
@@ -502,7 +523,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service7 = await createEvalRuntime(llm)
+  const service7 = await createEvalRuntime(llmFactory)
+  const llm7 = llmFactory()
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: StateRegexSignal = {
     type: 'state',
@@ -510,7 +532,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     regex: '^below_horizon$',
   }
   yield runScenario(
-    llm,
+    llm7,
     schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval Mixed: Sunset trigger with complex state/duration condition',
@@ -528,7 +550,8 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service9 = await createEvalRuntime(llm)
+  const service9 = await createEvalRuntime(llmFactory)
+  const llm9 = llmFactory()
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
   const expected9: (CronSignal | StateRegexSignal)[] = [
     { type: 'cron', cron: '0 22 * * *' },
@@ -539,7 +562,7 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
     },
   ]
   yield runScenario(
-    llm,
+    llm9,
     schedulerPrompt(service9, inputAutomation9.contents, ''),
     tools9,
     'Eval Mixed: Cron and State trigger (with time condition on state)',
@@ -548,7 +571,9 @@ export async function* evalMixedPrompts(llm: LargeLanguageProvider) {
 }
 
 // --- Consolidated Relative Time Evals ---
-export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
+export async function* evalRelativeTimePrompts(
+  llmFactory: () => LargeLanguageProvider
+) {
   // Scenario 1: State trigger (offset handled post-trigger)
   const prompt1 =
     'Turn off the living room overhead light 30 minutes after ani leaves the house'
@@ -557,7 +582,8 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service1 = await createEvalRuntime(llm)
+  const service1 = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
   const expected1: StateRegexSignal = {
     type: 'state',
@@ -582,14 +608,15 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service2 = await createEvalRuntime(llm)
+  const service2 = await createEvalRuntime(llmFactory)
+  const llm2 = llmFactory()
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: RelativeTimeSignal = {
     type: 'offset',
     offsetInSeconds: 45 * 60,
   }
   yield runScenario(
-    llm,
+    llm2,
     schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval Relative Time: Simple offset trigger',
@@ -607,7 +634,8 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service4 = await createEvalRuntime(llm)
+  const service4 = await createEvalRuntime(llmFactory)
+  const llm4 = llmFactory()
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
   const expected4: StateRegexSignal = {
     type: 'state',
@@ -615,7 +643,7 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     regex: '^not_home$',
   }
   yield runScenario(
-    llm,
+    llm4,
     schedulerPrompt(service4, inputAutomation4.contents, ''),
     tools4,
     'Eval Relative Time: Group state trigger (offset handled post-trigger)',
@@ -633,14 +661,15 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service5 = await createEvalRuntime(llm)
+  const service5 = await createEvalRuntime(llmFactory)
+  const llm5 = llmFactory()
   const tools5 = createDefaultSchedulerTools(service5, inputAutomation5)
   const expected5: CronSignal = {
     type: 'cron',
     cron: '*/15 * * * *',
   }
   yield runScenario(
-    llm,
+    llm5,
     schedulerPrompt(service5, inputAutomation5.contents, ''),
     tools5,
     'Eval Relative Time: Recurring action with state condition (becomes cron)',
@@ -658,14 +687,15 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service7 = await createEvalRuntime(llm)
+  const service7 = await createEvalRuntime(llmFactory)
+  const llm7 = llmFactory()
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: CronSignal = {
     type: 'cron',
     cron: '0,30 16-23 * * *',
   }
   yield runScenario(
-    llm,
+    llm7,
     schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval Relative Time: Recurring action after specific time (becomes cron)',
@@ -677,7 +707,9 @@ export async function* evalRelativeTimePrompts(llm: LargeLanguageProvider) {
 }
 
 // --- Consolidated State Regex Evals ---
-export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
+export async function* evalStateRegexPrompts(
+  llmFactory: () => LargeLanguageProvider
+) {
   // Scenario 1: Any person arrives (group state)
   const prompt1 = 'Turn on the foyer bird sconces when any person arrives home'
   const inputAutomation1 = automationFromString(
@@ -685,7 +717,8 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service1 = await createEvalRuntime(llm)
+  const service1 = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   const tools1 = createDefaultSchedulerTools(service1, inputAutomation1)
   const expected1: StateRegexSignal = {
     type: 'state',
@@ -710,7 +743,8 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service2 = await createEvalRuntime(llm)
+  const service2 = await createEvalRuntime(llmFactory)
+  const llm2 = llmFactory()
   const tools2 = createDefaultSchedulerTools(service2, inputAutomation2)
   const expected2: StateRegexSignal = {
     type: 'state',
@@ -718,7 +752,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     regex: '^off$',
   }
   yield runScenario(
-    llm,
+    llm2,
     schedulerPrompt(service2, inputAutomation2.contents, ''),
     tools2,
     'Eval State Regex: Specific entity turns off',
@@ -736,7 +770,8 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service4 = await createEvalRuntime(llm)
+  const service4 = await createEvalRuntime(llmFactory)
+  const llm4 = llmFactory()
   const tools4 = createDefaultSchedulerTools(service4, inputAutomation4)
   const expected4: StateRegexSignal = {
     type: 'state',
@@ -744,7 +779,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     regex: '^on$',
   }
   yield runScenario(
-    llm,
+    llm4,
     schedulerPrompt(service4, inputAutomation4.contents, ''),
     tools4,
     'Eval State Regex: Specific entity turns on',
@@ -762,7 +797,8 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service7 = await createEvalRuntime(llm)
+  const service7 = await createEvalRuntime(llmFactory)
+  const llm7 = llmFactory()
   const tools7 = createDefaultSchedulerTools(service7, inputAutomation7)
   const expected7: StateRegexSignal = {
     type: 'state',
@@ -770,7 +806,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     regex: '^on$',
   }
   yield runScenario(
-    llm,
+    llm7,
     schedulerPrompt(service7, inputAutomation7.contents, ''),
     tools7,
     'Eval State Regex: Update entity changes state (to on)',
@@ -787,7 +823,8 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service8 = await createEvalRuntime(llm)
+  const service8 = await createEvalRuntime(llmFactory)
+  const llm8 = llmFactory()
   const tools8 = createDefaultSchedulerTools(service8, inputAutomation8)
   const expected8: StateRegexSignal = {
     type: 'state',
@@ -795,7 +832,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     regex: '^off$',
   }
   yield runScenario(
-    llm,
+    llm8,
     schedulerPrompt(service8, inputAutomation8.contents, ''),
     tools8,
     'Eval State Regex: Input boolean turns off',
@@ -811,7 +848,8 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     'test_automation.md',
     true
   )
-  const service9 = await createEvalRuntime(llm)
+  const service9 = await createEvalRuntime(llmFactory)
+  const llm9 = llmFactory()
   const tools9 = createDefaultSchedulerTools(service9, inputAutomation9)
   const expected9: StateRegexSignal = {
     type: 'state',
@@ -819,7 +857,7 @@ export async function* evalStateRegexPrompts(llm: LargeLanguageProvider) {
     regex: '^on$',
   }
   yield runScenario(
-    llm,
+    llm9,
     schedulerPrompt(service9, inputAutomation9.contents, ''),
     tools9,
     'Eval State Regex: Input boolean changes to on',

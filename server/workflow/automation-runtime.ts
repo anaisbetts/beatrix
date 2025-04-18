@@ -132,15 +132,6 @@ export class LiveAutomationRuntime
       i('Directory changed! Re-reading automations')
       this.reparseAutomations.next(undefined)
     })
-
-    if (isProdMode) {
-      // Kick off a scan on startup
-      this.reparseAutomations.next(undefined)
-    } else {
-      console.error(
-        'Running in dev mode, skipping initial automations folder scan. Change a file to kick it off'
-      )
-    }
   }
 
   async reloadAutomations() {
@@ -210,6 +201,15 @@ export class LiveAutomationRuntime
             err
           ),
       })
+
+    if (isProdMode) {
+      // Kick off a scan on startup
+      this.reparseAutomations.next(undefined)
+    } else {
+      console.error(
+        'Running in dev mode, skipping initial automations folder scan. Change a file to kick it off'
+      )
+    }
 
     return this.pipelineSub
   }

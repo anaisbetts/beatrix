@@ -234,7 +234,8 @@ export function objectifyError(error: any): Record<string, any> {
       // stack: error.stack, // Omit stack trace for security
       name: error.name,
     }
-    if (!isProdMode) {
+
+    if (!isProdMode || process.env.DEBUG) {
       output.stack = error.stack
     }
 

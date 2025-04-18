@@ -88,7 +88,7 @@ export function ModelSelector({
             <Button
               variant="outline"
               size="icon"
-              onClick={void handleCopy}
+              onClick={handleCopy}
               disabled={!model || disabled || isCopied}
               aria-label="Copy model name"
             >

@@ -44,6 +44,7 @@ export default function Chat() {
 
   const [sendPrompt, result, reset] = useCommand(async () => {
     const before = performance.now()
+
     if (!api) throw new Error('Not connected!')
     if (!model) throw new Error('No model selected!')
 
@@ -211,7 +212,7 @@ export default function Chat() {
       </div>
 
       <div className="border-border border-t p-4">
-        <form onSubmit={void sendPrompt} className="flex gap-2">
+        <form onSubmit={sendPrompt} className="flex gap-2">
           <Input
             ref={inputRef}
             value={input}

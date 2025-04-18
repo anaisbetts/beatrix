@@ -212,7 +212,7 @@ export default function Chat() {
       </div>
 
       <div className="border-border border-t p-4">
-        <form onSubmit={() => void sendPrompt()} className="flex gap-2">
+        <form onSubmit={sendPrompt} className="flex gap-2">
           <Input
             ref={inputRef}
             value={input}

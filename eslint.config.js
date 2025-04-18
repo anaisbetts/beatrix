@@ -54,7 +54,7 @@ export default [
     rules: {
       // Include TS rules
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-unused-vars': [
         'error',

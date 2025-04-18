@@ -10,15 +10,12 @@ import {
   Observable,
   Subject,
   SubscriptionLike,
-  concat,
   defer,
   from,
   map,
   merge,
-  of,
-  share,
+  mergeMap,
   switchMap,
-  tap,
   throttleTime,
 } from 'rxjs'
 
@@ -62,11 +59,7 @@ export interface AutomationRuntime extends SubscriptionLike {
   cueList: Automation[]
   scheduledSignals: SignalHandler[]
 
-  reparseAutomations: Observable<string>
-  scannedAutomationDir: Observable<Automation[]>
-  createdSignalsForForAutomations: Observable<void>
-  signalFired: Observable<SignalledAutomation>
-  automationExecuted: Observable<void>
+  reparseAutomations: Observable<void>
   shouldRestart: Observable<void>
 
   saveConfigAndClose(config: AppConfig): Promise<void>
@@ -80,11 +73,7 @@ export class LiveAutomationRuntime
   scheduledSignals: SignalHandler[]
   notebookDirectory: string | undefined
 
-  reparseAutomations: Observable<string>
-  scannedAutomationDir: Observable<Automation[]>
-  createdSignalsForForAutomations: Observable<void>
-  signalFired: Observable<SignalledAutomation>
-  automationExecuted: Observable<void>
+  reparseAutomations: Subject<void> = new Subject()
   shouldRestart: Subject<void> = new AsyncSubject()
 
   pipelineSub = new SerialSubscription()
@@ -128,120 +117,99 @@ export class LiveAutomationRuntime
         ).pipe(
           map(() => {
             i(`Detected change in automation directory: ${dir}`)
-            return dir
+            return undefined
           })
         )
       )
 
-    this.reparseAutomations = this.notebookDirectory
+    const dirChanged = this.notebookDirectory
       ? defer(() => merge(...watchedDirectories())).pipe(
           throttleTime(30 * 1000)
         )
       : NEVER
 
+    dirChanged.subscribe(() => {
+      i('Directory changed! Re-reading automations')
+      this.reparseAutomations.next(undefined)
+    })
+
     if (isProdMode) {
       // Kick off a scan on startup
-      this.reparseAutomations = concat(
-        defer(() => of(getAutomationDirectory(this), getCueDirectory(this))),
-        this.reparseAutomations
-      )
+      this.reparseAutomations.next(undefined)
     } else {
       console.error(
         'Running in dev mode, skipping initial automations folder scan. Change a file to kick it off'
       )
     }
+  }
 
-    this.scannedAutomationDir = this.notebookDirectory
-      ? defer(() => this.reparseAutomations).pipe(
-          switchMap((dir) => {
-            const isCue = dir.startsWith(getCueDirectory(this))
-            const rootDir = isCue
-              ? getCueDirectory(this)
-              : getAutomationDirectory(this)
-            i(`Reparsing automations from directory: ${this.notebookDirectory}`)
+  async reloadAutomations() {
+    const toRead: [string, boolean][] = [
+      [getCueDirectory(this), true],
+      [getAutomationDirectory(this), false],
+    ]
 
-            return from(
-              parseAllAutomations(path.resolve(rootDir)).then((automations) => {
-                i(`Parsed ${automations.length} automations`)
+    for (const [dir, isCue] of toRead) {
+      i(`Reparsing automations from directory: ${dir}`)
 
-                if (isCue) {
-                  automations.forEach((x) => (x.isCue = true))
-                  this.cueList = automations
-                } else {
-                  this.automationList = automations
-                }
+      const automations = await parseAllAutomations(dir)
+      automations.forEach((x) => (x.isCue = isCue))
 
-                return automations
-              })
-            )
-          }),
-          share() // Share the result of parsing
-        )
-      : NEVER
+      if (isCue) {
+        this.cueList = automations
+      } else {
+        this.automationList = automations
+      }
 
-    this.createdSignalsForForAutomations = defer(
-      () => this.scannedAutomationDir
-    ).pipe(
-      switchMap((automations) => {
-        i(`Scheduling triggers for ${automations.length} automations`)
+      i(`Scheduling triggers for ${automations.length} automations`)
+      await rescheduleAutomations(this, automations)
+    }
 
-        return from(rescheduleAutomations(this, automations)).pipe(
-          tap(() => i('Finished scheduling triggers'))
-        )
-      }),
-      share() // Share the result of rescheduling
-    )
+    d('Setting up Signals based on database')
+    this.scheduledSignals = await this.handlersForDatabaseSignals()
 
-    this.signalFired = defer(() => this.createdSignalsForForAutomations).pipe(
-      switchMap(() => {
-        d('Setting up Signals based on database')
-        return from(this.handlersForDatabaseSignals())
-      }),
-      switchMap((handlers) => {
-        i(`Created ${handlers.length} Signal handlers from database`)
-        this.scheduledSignals = handlers
-
-        if (handlers.length === 0) {
-          return NEVER
-        }
-        return merge(...handlers.map((handler) => handler.signalObservable))
-      }),
-      share()
-    )
-
-    this.automationExecuted = defer(() => this.signalFired).pipe(
-      switchMap(({ signal, automation }) => {
-        i(
-          `Executing automation ${automation.fileName} (${automation.hash}), triggered by signal ID ${signal.id} (${signal.type})`
-        )
-
-        return from(
-          runExecutionForAutomation(this, automation, signal.id).then(() => {
-            i(
-              `Finished execution for automation ${automation.fileName} (${automation.hash})`
-            )
-
-            if (automation.isCue && this.notebookDirectory) {
-              i(`Removing automation ${automation.hash} because it is a Cue`)
-              return this.removeCue(automation)
-            }
-          })
-        )
-      }),
-      share() // Share the execution result
-    )
+    i(`Created ${this.scheduledSignals.length} Signal handlers from database`)
+    if (this.scheduledSignals.length < 1) {
+      return NEVER
+    } else {
+      return merge(
+        ...this.scheduledSignals.map((handler) => handler.signalObservable)
+      )
+    }
   }
 
   start() {
     i('Starting automation runtime event processing')
 
-    this.pipelineSub.current = this.automationExecuted.subscribe({
-      error: (err) =>
-        e(
-          'Error in automation execution pipeline, this should never happen!',
-          err
-        ),
-    })
+    this.pipelineSub.current = this.reparseAutomations
+      .pipe(
+        switchMap(() => {
+          return from(this.reloadAutomations()).pipe(mergeMap((x) => x))
+        }),
+        mergeMap(async ({ automation, signal }) => {
+          i(
+            `Executing automation ${automation.fileName} (${automation.hash}), triggered by signal ID ${signal.id} (${signal.type})`
+          )
+
+          await runExecutionForAutomation(this, automation, signal.id)
+
+          i(
+            `Finished execution for automation ${automation.fileName} (${automation.hash})`
+          )
+
+          if (automation.isCue && this.notebookDirectory) {
+            i(`Removing automation ${automation.hash} because it is a Cue`)
+            await this.removeCue(automation)
+          }
+        })
+      )
+      .subscribe({
+        error: (err) =>
+          e(
+            'Error in automation execution pipeline, this should never happen!',
+            err
+          ),
+      })
 
     return this.pipelineSub
   }

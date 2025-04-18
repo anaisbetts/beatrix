@@ -91,12 +91,13 @@ You must provide the configuration details for the LLM provider specified in the
 #### The short version:
 
 - "I want the best experience, I don't mind spending $$" <== Use GPT 4.1 or Claude 3.7 Sonnet
-- "I want a pretty good experience, but not spend as much $$" <== Use GPT 4.1 Mini or Gemini 2.5 Pro
+- "I want a pretty good experience, but not spend as much $$" <== Use GPT 4.1 Mini or Gemini 2.5 Pro, or even Gemini 2.5 Flash
 - "I want to use Ollama" <== Use qwen2.5:7b or qwen2.5:14b
 
-#### The medium length version (17.04.2025)
+#### The medium length version (18.04.2025)
 
-![image](https://github.com/user-attachments/assets/361d310c-1b8c-426e-9e2d-1c02f8bd0b31)
+![image](https://github.com/user-attachments/assets/438fd59f-b6cb-4cc4-ad2f-6a24f95d7c38)
+
 
 Note that this is the Quick test, with n=2. This is far from statistically valid, but it was what I could get done without spending a ton of money and time
 

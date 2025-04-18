@@ -119,6 +119,7 @@ describe('handleWebsocketRpc', () => {
     expect(responses.length).toBe(1)
     expect(responses[0].requestId).toBe('2')
     expect(responses[0].type).toBe('error')
+
     // The server code stringifies the error
     const errorObj = JSON.parse(responses[0].object)
     expect(errorObj).toBeDefined()

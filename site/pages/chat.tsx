@@ -89,7 +89,6 @@ export default function Chat() {
 
     // Clear the input after message is sent and processed
     setInput('')
-
     return {
       messages: result as MessageParam[],
       duration: performance.now() - before,

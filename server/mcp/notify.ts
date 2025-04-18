@@ -8,6 +8,7 @@ import {
   extractNotifiers,
   fetchHAUserInformation,
 } from '../lib/ha-ws-api'
+import { objectifyError, stringifyError } from '../lib/ws-rpc'
 import { i, w } from '../logging'
 
 const d = debug('b:notify')
@@ -43,7 +44,7 @@ export function createNotifyServer(
         w('list-notify-targets Error:', err)
 
         return {
-          content: [{ type: 'text', text: err.toString() }],
+          content: [{ type: 'text', text: stringifyError(err) }],
           isError: true,
         }
       }
@@ -66,7 +67,7 @@ export function createNotifyServer(
         w('list-people Error:', err)
 
         return {
-          content: [{ type: 'text', text: err.toString() }],
+          content: [{ type: 'text', text: stringifyError(err) }],
           isError: true,
         }
       }
@@ -128,7 +129,7 @@ export function createNotifyServer(
         w('send-notification-to-person Error:', err)
 
         return {
-          content: [{ type: 'text', text: JSON.stringify(err) }],
+          content: [{ type: 'text', text: stringifyError(err) }],
           isError: true,
         }
       }
@@ -153,7 +154,7 @@ export function createNotifyServer(
         w('send-notification Error:', err)
 
         return {
-          content: [{ type: 'text', text: err.toString() }],
+          content: [{ type: 'text', text: stringifyError(err) }],
           isError: true,
         }
       }

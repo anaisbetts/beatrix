@@ -26,7 +26,7 @@ export async function startLogger(db: Kysely<Schema>, timezone: string) {
   }
 
   const subj = new Subject<{ msg: string; type: string; timestamp: DateTime }>()
-  subj
+  const sub = subj
     .pipe(
       bufferTime(750),
       concatMap((msgs) => {
@@ -61,6 +61,8 @@ export async function startLogger(db: Kysely<Schema>, timezone: string) {
   } catch (err) {
     console.error('Error cleaning up old logs:', err)
   }
+
+  return sub
 }
 
 /**

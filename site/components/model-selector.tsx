@@ -1,7 +1,6 @@
 import { usePromise } from '@anaisbetts/commands'
 import { Check, Copy } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import React from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
 import { Button } from '@/components/ui/button'
@@ -46,7 +45,7 @@ export function ModelSelector({
     return models
   }, [api, driver, model, disabled])
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (!model) return
     try {
       await navigator.clipboard.writeText(model)
@@ -56,7 +55,7 @@ export function ModelSelector({
     } catch (err) {
       console.error('Failed to copy model name: ', err)
     }
-  }
+  }, [model])
 
   return useMemo(
     () =>
@@ -89,7 +88,7 @@ export function ModelSelector({
             <Button
               variant="outline"
               size="icon"
-              onClick={handleCopy}
+              onClick={void handleCopy}
               disabled={!model || disabled || isCopied}
               aria-label="Copy model name"
             >
@@ -123,6 +122,17 @@ export function ModelSelector({
           </div>
         ),
       }),
-    [modelList]
+    [
+      className,
+      disabled,
+      driver,
+      handleCopy,
+      isCopied,
+      model,
+      modelList,
+      onModelChange,
+      onOpenChange,
+      triggerClassName,
+    ]
   )
 }

@@ -1,6 +1,6 @@
 import { useCommand, usePromise } from '@anaisbetts/commands'
 import { Beaker, Play } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { firstValueFrom, share, toArray } from 'rxjs'
 
 import { Button } from '@/components/ui/button'
@@ -121,7 +121,7 @@ export default function Evals() {
         ),
         null: () => <div className="text-sm italic">Select a driver</div>,
       }),
-    [driverList]
+    [driver, driverList]
   )
 
   return (
@@ -182,7 +182,7 @@ export default function Evals() {
           <Button
             onClick={(e) => {
               e.preventDefault()
-              runEvals()
+              void runEvals()
             }}
             disabled={evalCommand.isPending() || !model.trim() || !driver}
             className="flex gap-2"

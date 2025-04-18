@@ -8,8 +8,12 @@ import {
 import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 // Basic service listing evaluation
-export async function* listServicesEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* listServicesEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
+
   yield await runScenario(
     llm,
     'What services are available for my living room lights?',
@@ -26,8 +30,12 @@ export async function* listServicesEval(llm: LargeLanguageProvider) {
 }
 
 // Basic light control evaluation
-export async function* lightControlEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* lightControlEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
+
   yield await runScenario(
     llm,
     'Turn on the kitchen chandelier light',
@@ -43,8 +51,11 @@ export async function* lightControlEval(llm: LargeLanguageProvider) {
 }
 
 // Advanced light control with brightness
-export async function* lightBrightnessEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* lightBrightnessEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Set the brightness of the living room lights to 50%',
@@ -61,8 +72,9 @@ export async function* lightBrightnessEval(llm: LargeLanguageProvider) {
 }
 
 // Light color control
-export async function* lightColorEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* lightColorEval(llmFactory: () => LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Make the bedroom lights blue',
@@ -79,8 +91,11 @@ export async function* lightColorEval(llm: LargeLanguageProvider) {
 }
 
 // Multiple entity control
-export async function* multipleEntityControlEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* multipleEntityControlEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Turn off all the lights in the living room and kitchen',
@@ -97,8 +112,11 @@ export async function* multipleEntityControlEval(llm: LargeLanguageProvider) {
 }
 
 // Media player control
-export async function* mediaPlayerControlEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* mediaPlayerControlEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Pause the TV in the living room',
@@ -116,9 +134,10 @@ export async function* mediaPlayerControlEval(llm: LargeLanguageProvider) {
 
 // Climate control with temperature
 export async function* climateControlTemperatureEval(
-  llm: LargeLanguageProvider
+  llmFactory: () => LargeLanguageProvider
 ) {
-  const runtime = await createEvalRuntime(llm)
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Set the thermostat in the bedroom to 72 degrees',
@@ -135,8 +154,11 @@ export async function* climateControlTemperatureEval(
 }
 
 // Climate control with mode
-export async function* climateControlModeEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* climateControlModeEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Switch the living room thermostat to heat mode',

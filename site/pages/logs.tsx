@@ -42,7 +42,7 @@ export default function Logs() {
   // Fetch logs on component mount if API is available
   useEffect(() => {
     if (api) {
-      fetchLogsCmd()
+      void fetchLogsCmd()
     }
   }, [api, fetchLogsCmd])
 
@@ -58,9 +58,7 @@ export default function Logs() {
     })
   }
 
-  const refreshLogs = () => {
-    fetchLogsCmd()
-  }
+  const refreshLogs = () => void fetchLogsCmd()
 
   const filteredLogs = useMemo(() => {
     return logs

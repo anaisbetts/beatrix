@@ -5,8 +5,11 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { unlink } from 'node:fs/promises'
 import path from 'node:path'
 import {
+  AsyncSubject,
   NEVER,
   Observable,
+  Subject,
+  SubscriptionLike,
   defer,
   from,
   map,
@@ -47,9 +50,9 @@ export interface SignalledAutomation {
   automation: Automation
 }
 
-export interface AutomationRuntime {
+export interface AutomationRuntime extends SubscriptionLike {
   readonly api: HomeAssistantApi
-  readonly llm: LargeLanguageProvider
+  readonly llmFactory: () => LargeLanguageProvider
   readonly db: Kysely<Schema>
   readonly timezone: string // "America/Los_Angeles" etc
   readonly notebookDirectory: string | undefined
@@ -63,11 +66,14 @@ export interface AutomationRuntime {
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
+  shouldRestart: Observable<void>
 
-  saveConfigAndReload(config: AppConfig): Promise<void>
+  saveConfigAndClose(config: AppConfig): Promise<void>
 }
 
-export class LiveAutomationRuntime implements AutomationRuntime {
+export class LiveAutomationRuntime
+  implements AutomationRuntime, SubscriptionLike
+{
   automationList: Automation[]
   cueList: Automation[]
   scheduledSignals: SignalHandler[]
@@ -78,6 +84,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
   createdSignalsForForAutomations: Observable<void>
   signalFired: Observable<SignalledAutomation>
   automationExecuted: Observable<void>
+  shouldRestart: Subject<void> = new AsyncSubject()
 
   pipelineSub = new SerialSubscription()
 
@@ -86,12 +93,11 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     api?: HomeAssistantApi,
     notebookDirectory?: string
   ) {
-    const llm = createDefaultLLMProvider(config)
     const db = await createDatabaseViaEnv()
 
     return new LiveAutomationRuntime(
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
-      llm,
+      () => createDefaultLLMProvider(config),
       db,
       config.timezone ?? 'Etc/UTC',
       notebookDirectory
@@ -100,7 +106,7 @@ export class LiveAutomationRuntime implements AutomationRuntime {
 
   constructor(
     readonly api: HomeAssistantApi,
-    readonly llm: LargeLanguageProvider,
+    readonly llmFactory: () => LargeLanguageProvider,
     readonly db: Kysely<Schema>,
     readonly timezone: string,
     notebookDirectory?: string
@@ -256,11 +262,11 @@ export class LiveAutomationRuntime implements AutomationRuntime {
     }
   }
 
-  async saveConfigAndReload(config: AppConfig): Promise<void> {
+  async saveConfigAndClose(config: AppConfig): Promise<void> {
     i('Saving new configuration and restarting')
     await saveConfig(config, getConfigFilePath(this.notebookDirectory!))
 
-    this.start()
+    this.shouldRestart.next(undefined)
   }
 
   private async handlersForDatabaseSignals(): Promise<SignalHandler[]> {
@@ -367,6 +373,15 @@ export class LiveAutomationRuntime implements AutomationRuntime {
       `Finished processing signals. Active trigger handlers: ${signalHandlers.length}`
     )
     return signalHandlers
+  }
+
+  closed: boolean = false
+  unsubscribe(): void {
+    if (this.closed) return
+    this.closed = true
+
+    void this.db.destroy()
+    this.pipelineSub.unsubscribe()
   }
 }
 

@@ -8,8 +8,11 @@ import {
 import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 // Basic notification target listing eval
-export async function* listNotifyTargetsEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* listNotifyTargetsEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'What are all the possible notification targets in my Home Assistant setup?',
@@ -26,8 +29,9 @@ export async function* listNotifyTargetsEval(llm: LargeLanguageProvider) {
 }
 
 // List people with notification capabilities
-export async function* listPeopleEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* listPeopleEval(llmFactory: () => LargeLanguageProvider) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Which people in my Home Assistant setup can receive notifications?',
@@ -44,8 +48,11 @@ export async function* listPeopleEval(llm: LargeLanguageProvider) {
 }
 
 // Send notification to specific person
-export async function* notifyPersonEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* notifyPersonEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Send a notification to Ani saying "Dinner is ready!"',
@@ -66,8 +73,11 @@ export async function* notifyPersonEval(llm: LargeLanguageProvider) {
 }
 
 // Send notification with title
-export async function* notifyWithTitleEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* notifyWithTitleEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Send a notification to Ulrike with the title "Urgent" and the message "Please call me back."',
@@ -84,8 +94,11 @@ export async function* notifyWithTitleEval(llm: LargeLanguageProvider) {
 }
 
 // Send to multiple people
-export async function* notifyMultiplePeopleEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* notifyMultiplePeopleEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Let both Ani and Effie know that "The movie is starting in 5 minutes."',
@@ -102,8 +115,11 @@ export async function* notifyMultiplePeopleEval(llm: LargeLanguageProvider) {
 }
 
 // Notify everyone
-export async function* notifyEveryoneEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* notifyEveryoneEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Send a notification to everyone in the house saying "Fire alarm test in 10 minutes."',
@@ -120,8 +136,11 @@ export async function* notifyEveryoneEval(llm: LargeLanguageProvider) {
 }
 
 // Notify specific device
-export async function* notifySpecificDeviceEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* notifySpecificDeviceEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Send a notification specifically to Ani\'s its an flippi saying "Don\'t forget to bring your charger."',

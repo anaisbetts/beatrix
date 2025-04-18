@@ -45,57 +45,57 @@ async function* combine<T1, T2>(generators: AsyncGenerator<T1, T2, void>[]) {
   }
 }
 
-export function runAllEvals(llm: LargeLanguageProvider) {
+export function runAllEvals(llmFactory: () => LargeLanguageProvider) {
   return combine([
     // Simple smoke tests
-    smokeTestEval(llm),
-    smokeTestToolsEval(llm),
+    smokeTestEval(llmFactory),
+    smokeTestToolsEval(llmFactory),
 
     // Home Assistant general evals
-    listEntitiesEval(llm),
-    bulkLightOperationsEval(llm),
-    multiEntityStatusEval(llm),
-    climateControlEval(llm),
-    sceneActivationEval(llm),
-    entityAttributeQueryEval(llm),
-    complexAutomationEval(llm),
+    listEntitiesEval(llmFactory),
+    bulkLightOperationsEval(llmFactory),
+    multiEntityStatusEval(llmFactory),
+    climateControlEval(llmFactory),
+    sceneActivationEval(llmFactory),
+    entityAttributeQueryEval(llmFactory),
+    complexAutomationEval(llmFactory),
 
     // Call service specific evals
-    listServicesEval(llm),
-    lightControlEval(llm),
-    lightBrightnessEval(llm),
-    lightColorEval(llm),
-    multipleEntityControlEval(llm),
-    mediaPlayerControlEval(llm),
-    climateControlTemperatureEval(llm),
-    climateControlModeEval(llm),
+    listServicesEval(llmFactory),
+    lightControlEval(llmFactory),
+    lightBrightnessEval(llmFactory),
+    lightColorEval(llmFactory),
+    multipleEntityControlEval(llmFactory),
+    mediaPlayerControlEval(llmFactory),
+    climateControlTemperatureEval(llmFactory),
+    climateControlModeEval(llmFactory),
 
     // Notification specific evals
-    listNotifyTargetsEval(llm),
-    listPeopleEval(llm),
-    notifyPersonEval(llm),
-    notifyWithTitleEval(llm),
-    notifyMultiplePeopleEval(llm),
-    notifyEveryoneEval(llm),
-    notifySpecificDeviceEval(llm),
+    listNotifyTargetsEval(llmFactory),
+    listPeopleEval(llmFactory),
+    notifyPersonEval(llmFactory),
+    notifyWithTitleEval(llmFactory),
+    notifyMultiplePeopleEval(llmFactory),
+    notifyEveryoneEval(llmFactory),
+    notifySpecificDeviceEval(llmFactory),
 
     // Scheduler evals
-    simplestSchedulerEval(llm),
-    evalAbsoluteTimePrompts(llm),
-    evalCronPrompts(llm),
-    evalMixedPrompts(llm),
-    evalRelativeTimePrompts(llm),
-    evalStateRegexPrompts(llm),
+    simplestSchedulerEval(llmFactory),
+    evalAbsoluteTimePrompts(llmFactory),
+    evalCronPrompts(llmFactory),
+    evalMixedPrompts(llmFactory),
+    evalRelativeTimePrompts(llmFactory),
+    evalStateRegexPrompts(llmFactory),
   ])
 }
 
-export function runQuickEvals(llm: LargeLanguageProvider) {
+export function runQuickEvals(llmFactory: () => LargeLanguageProvider) {
   return combine([
-    smokeTestToolsEval(llm),
-    simplestSchedulerEval(llm),
-    bulkLightOperationsEval(llm),
-    lightBrightnessEval(llm),
-    mediaPlayerControlEval(llm),
-    notifyMultiplePeopleEval(llm),
+    smokeTestToolsEval(llmFactory),
+    simplestSchedulerEval(llmFactory),
+    bulkLightOperationsEval(llmFactory),
+    lightBrightnessEval(llmFactory),
+    mediaPlayerControlEval(llmFactory),
+    notifyMultiplePeopleEval(llmFactory),
   ])
 }

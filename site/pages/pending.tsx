@@ -17,28 +17,23 @@ import { SignalHandlerInfo } from '../../shared/types'
 import { useWebSocket } from '../components/ws-provider'
 
 export default function PendingAutomations() {
-  const [signals, setSignals] = useState<SignalHandlerInfo[]>([])
   const { api } = useWebSocket()
 
   // Define a command to fetch scheduled signals
-  const [fetchSignalsCmd, fetchSignalsResult, resetFetchSignals] =
-    useCommand(async () => {
-      if (!api) return []
-      const result = await firstValueFrom(api.getScheduledSignals())
-      setSignals(result)
-      return result
-    }, [api])
+  const [fetchSignalsCmd, fetchSignalsResult] = useCommand(async () => {
+    if (!api) return []
+    const result = await firstValueFrom(api.getScheduledSignals())
+    return result
+  }, [api])
 
   // Fetch signals on component mount if API is available
   useEffect(() => {
     if (api) {
-      fetchSignalsCmd()
+      void fetchSignalsCmd()
     }
   }, [api, fetchSignalsCmd])
 
-  const refreshSignals = () => {
-    fetchSignalsCmd()
-  }
+  const refreshSignals = () => fetchSignalsCmd()
 
   const signalsContent = fetchSignalsResult.mapOrElse({
     pending: () => (
@@ -47,13 +42,13 @@ export default function PendingAutomations() {
       </div>
     ),
     ok: (result) =>
-      signals.length === 0 ? (
+      result?.length === 0 ? (
         <div className="text-muted-foreground p-8 text-center">
           No pending automations found
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
-          {signals.map((signal, index) => (
+          {result?.map((signal, index) => (
             <SignalCard key={index} signal={signal} />
           ))}
         </div>
@@ -70,7 +65,7 @@ export default function PendingAutomations() {
       <div className="border-border flex items-center justify-between border-b p-4">
         <h2 className="text-lg font-semibold">Pending Automations</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={refreshSignals}>
+          <Button variant="outline" size="icon" onClick={void refreshSignals}>
             <RotateCw size={18} />
           </Button>
         </div>

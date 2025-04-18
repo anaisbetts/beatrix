@@ -8,8 +8,11 @@ import {
 import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
 // Basic Home Assistant entity listing eval
-export async function* listEntitiesEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* listEntitiesEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'List all the light entities in the living room. Give me their friendly names only.',
@@ -30,8 +33,11 @@ export async function* listEntitiesEval(llm: LargeLanguageProvider) {
 }
 
 // Bulk operations on lights eval
-export async function* bulkLightOperationsEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* bulkLightOperationsEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Turn off all the lights in the kitchen.',
@@ -51,8 +57,11 @@ export async function* bulkLightOperationsEval(llm: LargeLanguageProvider) {
 }
 
 // Status checking across multiple entity types
-export async function* multiEntityStatusEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* multiEntityStatusEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Tell me about all the lights and media players that are currently on.',
@@ -74,8 +83,11 @@ export async function* multiEntityStatusEval(llm: LargeLanguageProvider) {
 }
 
 // Climate control evaluation
-export async function* climateControlEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* climateControlEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     "Set all thermostats to 72 degrees and make sure they're in heat mode.",
@@ -96,8 +108,11 @@ export async function* climateControlEval(llm: LargeLanguageProvider) {
 }
 
 // Scene activation evaluation
-export async function* sceneActivationEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* sceneActivationEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'Activate the night mode opening scene.',
@@ -114,8 +129,11 @@ export async function* sceneActivationEval(llm: LargeLanguageProvider) {
 }
 
 // Entity attribute querying
-export async function* entityAttributeQueryEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* entityAttributeQueryEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'What is the current temperature and humidity in each room?',
@@ -132,8 +150,11 @@ export async function* entityAttributeQueryEval(llm: LargeLanguageProvider) {
 }
 
 // Complex multi-step automation
-export async function* complexAutomationEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* complexAutomationEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     "I'm leaving the house. Turn off all lights and make sure all media players are off.",

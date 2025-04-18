@@ -6,11 +6,11 @@ import { configDotenv } from 'dotenv'
 import { mkdir } from 'fs/promises'
 import { sql } from 'kysely'
 import path from 'path'
-import { Subject, filter } from 'rxjs'
+import { Observable, Subject, Subscription, filter, mergeMap } from 'rxjs'
 
-import packageJson from '../package.json'
 import pkg from '../package.json'
 import { ServerWebsocketApi, messagesToString } from '../shared/api'
+import { SerialSubscription } from '../shared/serial-subscription'
 import { ScenarioResult } from '../shared/types'
 import { ServerMessage } from '../shared/ws-rpc'
 import { ServerWebsocketApiImpl } from './api'
@@ -40,39 +40,11 @@ async function serveCommand(options: {
   evalMode: boolean
 }) {
   const port = options.port || process.env.PORT || DEFAULT_PORT
-  const config = await createConfigViaEnv(options.notebook)
-
-  const conn = options.evalMode
-    ? new EvalHomeAssistantApi()
-    : await LiveHomeAssistantApi.createViaConfig(config)
-
-  const db = await createDatabaseViaEnv()
-  await startLogger(db, config.timezone ?? 'Etc/UTC')
-
-  await mkdir(path.join(options.notebook, 'automations'), {
-    recursive: true,
-  })
-
-  const runtime = await LiveAutomationRuntime.createViaConfig(
-    config,
-    conn,
-    path.resolve(options.notebook)
-  )
+  const websocketMessages: Subject<ServerMessage> = new Subject()
+  const startItUp: Subject<void> = new Subject()
 
   console.log(
     `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode})`
-  )
-
-  const subj: Subject<ServerMessage> = new Subject()
-  handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(
-      config,
-      runtime,
-      path.resolve(options.notebook),
-      options.testMode,
-      options.evalMode
-    ),
-    subj
   )
 
   if (isProdMode) {
@@ -81,11 +53,31 @@ async function serveCommand(options: {
     i('Running in development server-only mode')
   }
 
-  runtime.start()
+  const currentSub = new SerialSubscription()
+  let currentRuntime: AutomationRuntime
+
+  startItUp
+    .pipe(
+      mergeMap(async () => {
+        i('Starting up Runtime')
+        let { runtime, subscription } = await initializeRuntimeAndStart(
+          options.notebook,
+          options.evalMode,
+          options.testMode,
+          websocketMessages
+        )
+
+        runtime.shouldRestart.subscribe(() => startItUp.next(undefined))
+
+        currentSub.current = subscription
+        currentRuntime = runtime
+      })
+    )
+    .subscribe()
 
   // Setup graceful shutdown handler
   process.on('SIGINT', () => {
-    void flushAndExit(runtime)
+    if (currentRuntime) void flushAndExit(currentRuntime)
   })
 
   const assetsServer = serveStatic(path.join(repoRootDir(), 'public'))
@@ -102,7 +94,7 @@ async function serveCommand(options: {
     },
     websocket: {
       async message(ws: ServerWebSocket, message: string | Buffer) {
-        subj.next({
+        websocketMessages.next({
           message: message,
           reply: async (m) => {
             ws.send(m, true)
@@ -111,6 +103,8 @@ async function serveCommand(options: {
       },
     },
   })
+
+  startItUp.next(undefined)
 }
 
 async function mcpCommand(options: { testMode: boolean; notebook: string }) {
@@ -155,7 +149,6 @@ async function evalCommand(options: {
   const { model, driver } = options
 
   const config = await createConfigViaEnv(options.notebook)
-  const llm = createDefaultLLMProvider(config, driver, model)
 
   console.log(`Running ${options.quick ? 'quick' : 'all'} evals...`)
   const results = []
@@ -163,7 +156,9 @@ async function evalCommand(options: {
     console.log(`Run ${i + 1} of ${options.num}`)
 
     const evalFunction = options.quick ? runQuickEvals : runAllEvals
-    for await (const result of evalFunction(llm)) {
+    for await (const result of evalFunction(() =>
+      createDefaultLLMProvider(config, driver, model)
+    )) {
       results.push(result)
       if (options.verbose) {
         console.log(JSON.stringify(result, null, 2))
@@ -207,6 +202,64 @@ async function dumpEventsCommand() {
     })
 }
 
+async function initializeRuntimeAndStart(
+  notebook: string,
+  evalMode: boolean,
+  testMode: boolean,
+  websocketMessages: Observable<ServerMessage>
+) {
+  const subscription = new Subscription()
+  const config = await createConfigViaEnv(notebook)
+
+  await mkdir(path.join(notebook, 'automations'), {
+    recursive: true,
+  })
+
+  const conn = evalMode
+    ? new EvalHomeAssistantApi()
+    : await LiveHomeAssistantApi.createViaConfig(config)
+
+  const db = await createDatabaseViaEnv()
+  subscription.add(await startLogger(db, config.timezone ?? 'Etc/UTC'))
+
+  const runtime = await LiveAutomationRuntime.createViaConfig(
+    config,
+    conn,
+    path.resolve(notebook)
+  )
+
+  handleWebsocketRpc<ServerWebsocketApi>(
+    new ServerWebsocketApiImpl(
+      config,
+      runtime,
+      path.resolve(notebook),
+      testMode,
+      evalMode
+    ),
+    websocketMessages
+  )
+
+  subscription.add(runtime.start())
+  return { runtime, subscription }
+}
+
+async function flushAndExit(runtime: AutomationRuntime) {
+  try {
+    console.log('Flushing database...')
+
+    // Run PRAGMA commands to ensure database integrity during shutdown
+    await sql`PRAGMA wal_checkpoint(FULL)`.execute(runtime.db)
+
+    // Close database connection
+    await runtime.db.destroy()
+    runtime.unsubscribe()
+  } catch (error) {
+    console.error('Error during shutdown:', error)
+  }
+
+  process.exit(0)
+}
+
 async function main() {
   const program = new Command()
   const debugMode = process.execPath.endsWith('bun')
@@ -214,7 +267,7 @@ async function main() {
   program
     .name('beatrix')
     .description('Home Assistant Agentic Automation')
-    .version(packageJson.version)
+    .version(pkg.version)
 
   program
     .command('serve')
@@ -284,22 +337,6 @@ async function main() {
   }
 
   await program.parseAsync()
-}
-
-async function flushAndExit(runtime: AutomationRuntime) {
-  try {
-    console.log('Flushing database...')
-
-    // Run PRAGMA commands to ensure database integrity during shutdown
-    await sql`PRAGMA wal_checkpoint(FULL)`.execute(runtime.db)
-
-    // Close database connection
-    await runtime.db.destroy()
-  } catch (error) {
-    console.error('Error during shutdown:', error)
-  }
-
-  process.exit(0)
 }
 
 main().catch((err) => {

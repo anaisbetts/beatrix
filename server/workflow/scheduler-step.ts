@@ -19,6 +19,7 @@ export async function rescheduleAutomations(
     const automationRecord = await runtime.db
       .selectFrom('signals')
       .where('automationHash', '=', automation.hash)
+      .where('isDead', '!=', true)
       .select('id')
       .executeTakeFirst()
 
@@ -43,8 +44,9 @@ export async function runSchedulerForAutomation(
   const tools = createDefaultSchedulerTools(runtime, automation)
 
   const memory = await fs.readFile(getMemoryFile(runtime), 'utf-8')
+  const llm = runtime.llmFactory()
   const msgs = await lastValueFrom(
-    runtime.llm
+    llm
       .executePromptWithTools(
         schedulerPrompt(runtime, automation.contents, memory),
         tools

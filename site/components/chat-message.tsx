@@ -8,7 +8,6 @@ import {
   CollapsibleTrigger,
 } from '@radix-ui/react-collapsible'
 import { ChevronDown } from 'lucide-react'
-import type { Root } from 'mdast'
 import { JSX, useMemo, useState } from 'react'
 import { Remark } from 'react-remark'
 

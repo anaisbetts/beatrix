@@ -1,5 +1,5 @@
 import { useObservable } from '@anaisbetts/commands'
-import { ReactNode, createContext, useContext, useEffect } from 'react'
+import { ReactNode, createContext, useContext } from 'react'
 import {
   EMPTY,
   Observable,
@@ -50,7 +50,7 @@ function connectApiToWs() {
                 let resp: any
                 try {
                   resp = JSON.parse(msg.data)
-                } catch (e) {
+                } catch {
                   return EMPTY
                 }
 

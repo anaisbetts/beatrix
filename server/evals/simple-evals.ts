@@ -7,7 +7,8 @@ import {
 } from '../eval-framework'
 import { LargeLanguageProvider, createBuiltinServers } from '../llm'
 
-export async function* smokeTestEval(llm: LargeLanguageProvider) {
+export async function* smokeTestEval(llmFactory: () => LargeLanguageProvider) {
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'What is the capital of France?',
@@ -23,8 +24,11 @@ export async function* smokeTestEval(llm: LargeLanguageProvider) {
   )
 }
 
-export async function* smokeTestToolsEval(llm: LargeLanguageProvider) {
-  const runtime = await createEvalRuntime(llm)
+export async function* smokeTestToolsEval(
+  llmFactory: () => LargeLanguageProvider
+) {
+  const runtime = await createEvalRuntime(llmFactory)
+  const llm = llmFactory()
   yield await runScenario(
     llm,
     'What lights are in the foyer? Tell me the friendly names of each light.',

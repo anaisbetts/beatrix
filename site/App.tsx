@@ -40,7 +40,7 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
 
       onPageClicked(page)
     },
-    [isMobile]
+    [isMobile, onPageClicked, toggleSidebar]
   )
 
   const bg = isMobile ? 'bg-white' : ''

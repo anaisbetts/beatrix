@@ -66,7 +66,7 @@ export default function PendingAutomations() {
           <Button
             variant="outline"
             size="icon"
-            onClick={(e) => fetchSignalsCmd()}
+            onClick={() => void fetchSignalsCmd()}
           >
             <RotateCw size={18} />
           </Button>

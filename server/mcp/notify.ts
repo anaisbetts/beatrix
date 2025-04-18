@@ -8,7 +8,7 @@ import {
   extractNotifiers,
   fetchHAUserInformation,
 } from '../lib/ha-ws-api'
-import { objectifyError, stringifyError } from '../lib/ws-rpc'
+import { stringifyError } from '../lib/ws-rpc'
 import { i, w } from '../logging'
 
 const d = debug('b:notify')

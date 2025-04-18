@@ -12,6 +12,7 @@ import {
 
 import { getAllProperties } from '../../shared/utility'
 import { IpcRequest, IpcResponse, ServerMessage } from '../../shared/ws-rpc'
+import { isProdMode } from '../paths'
 
 const d = debug('b:ws')
 
@@ -57,7 +58,7 @@ export function handleWebsocketRpc<T extends object>(
             const resp: IpcResponse = {
               requestId: rq?.requestId ?? '',
               type: 'error',
-              object: JSON.stringify(err),
+              object: stringifyError(err),
             }
 
             return from(sm.reply(JSON.stringify(resp)))
@@ -167,9 +168,7 @@ function handleSingleResponse(
         const resp: IpcResponse = {
           requestId: rq.requestId,
           type: 'error',
-          object: {
-            message: err?.message || String(err),
-          },
+          object: stringifyError(err),
         }
 
         return from(serverMessage.reply(JSON.stringify(resp)))
@@ -201,9 +200,7 @@ function handleSingleResponse(
           const resp: IpcResponse = {
             requestId: rq.requestId,
             type: 'error',
-            object: {
-              message: err?.message || String(err),
-            },
+            object: stringifyError(err),
           }
           return serverMessage.reply(JSON.stringify(resp))
         }
@@ -224,4 +221,42 @@ function handleSingleResponse(
   }
 
   return from(serverMessage.reply(JSON.stringify(resp)))
+}
+
+/**
+ * Serializes an error object into a plain object suitable for JSON stringification.
+ * Captures message, stack, and any other own properties.
+ */
+export function objectifyError(error: any): Record<string, any> {
+  if (error instanceof Error) {
+    const output: Record<string, any> = {
+      message: error.message,
+      // stack: error.stack, // Omit stack trace for security
+      name: error.name,
+    }
+    if (!isProdMode) {
+      output.stack = error.stack
+    }
+
+    // Include any additional own properties, excluding 'stack' if it exists
+    Object.keys(error).forEach((key) => {
+      if (key !== 'stack') {
+        output[key] = (error as any)[key]
+      }
+    })
+    return output
+  }
+
+  // If it's not an Error instance, try to return it as is,
+  // or convert to string if it's a primitive.
+  if (typeof error !== 'object' || error === null) {
+    return { message: String(error) }
+  }
+
+  // For generic objects, just return them.
+  return error
+}
+
+export function stringifyError(error: any): string {
+  return JSON.stringify(objectifyError(error))
 }

@@ -33,8 +33,6 @@ export default function PendingAutomations() {
     }
   }, [api, fetchSignalsCmd])
 
-  const refreshSignals = () => fetchSignalsCmd()
-
   const signalsContent = fetchSignalsResult.mapOrElse({
     pending: () => (
       <div className="flex justify-center p-8">
@@ -65,7 +63,11 @@ export default function PendingAutomations() {
       <div className="border-border flex items-center justify-between border-b p-4">
         <h2 className="text-lg font-semibold">Pending Automations</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={void refreshSignals}>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => void fetchSignalsCmd()}
+          >
             <RotateCw size={18} />
           </Button>
         </div>

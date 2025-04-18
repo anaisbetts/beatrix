@@ -19,6 +19,7 @@ export async function runExecutionForAutomation(
     .selectFrom('signals')
     .selectAll()
     .where('id', '==', signalId)
+    .where('isDead', '!=', true)
     .executeTakeFirst()
 
   if (!signal) {

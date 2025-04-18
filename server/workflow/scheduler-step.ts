@@ -19,6 +19,7 @@ export async function rescheduleAutomations(
     const automationRecord = await runtime.db
       .selectFrom('signals')
       .where('automationHash', '=', automation.hash)
+      .where('isDead', '!=', true)
       .select('id')
       .executeTakeFirst()
 

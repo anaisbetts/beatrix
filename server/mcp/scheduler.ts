@@ -157,6 +157,7 @@ export function createSchedulerServer(
         const rows = await db
           .selectFrom('signals')
           .where('automationHash', '=', automationHash)
+          .where('isDead', '!=', true)
           .select(['id', 'type', 'data'])
           .execute()
 
@@ -185,8 +186,9 @@ export function createSchedulerServer(
       i(`Cancelling all scheduled triggers for automation ${automationHash}`)
       try {
         const rows = await db
-          .deleteFrom('signals')
+          .updateTable('signals')
           .where('automationHash', '=', automationHash)
+          .set({ isDead: true })
           .execute()
 
         i(

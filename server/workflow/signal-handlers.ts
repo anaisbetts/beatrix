@@ -1,4 +1,4 @@
-import { CronExpression, CronExpressionParser } from 'cron-parser'
+import { CronDate, CronExpressionParser } from 'cron-parser'
 import { DateTime } from 'luxon'
 import { NEVER, Observable, filter, map, share, timer } from 'rxjs'
 
@@ -31,17 +31,19 @@ export class CronSignalHandler implements SignalHandler {
     timezone: string
   ) {
     const data: CronSignal = JSON.parse(signal.data)
-    let cron: CronExpression | null = null
+    let next: CronDate | null = null
 
     this.isValid = false // Default to invalid
     this.friendlySignalDescription = 'Invalid cron expression'
 
     const currentTime = DateTime.now().setZone(timezone)
     try {
-      cron = CronExpressionParser.parse(data.cron, {
+      const cron = CronExpressionParser.parse(data.cron, {
         tz: timezone,
         currentDate: currentTime.toJSDate(),
       }) // Assign inside try
+
+      next = cron.next()
 
       this.friendlySignalDescription = DateTime.fromISO(
         cron.next().toISOString()!
@@ -64,8 +66,8 @@ export class CronSignalHandler implements SignalHandler {
     }
 
     // Create trigger only if cron is valid
-    if (this.isValid && cron) {
-      this.signalObservable = this.cronToObservable(cron, currentTime).pipe(
+    if (this.isValid && next) {
+      this.signalObservable = this.cronToObservable(next, currentTime).pipe(
         map(() => {
           d(
             'Cron trigger fired for signal %s, automation %s',
@@ -85,7 +87,7 @@ export class CronSignalHandler implements SignalHandler {
     }
   }
 
-  cronToObservable(cron: CronExpression, now: DateTime): Observable<void> {
+  cronToObservable(cron: CronDate, now: DateTime): Observable<void> {
     d('Setting up cron interval for: %o', cron)
     return new Observable<void>((subj) => {
       const task = () => {
@@ -93,7 +95,7 @@ export class CronSignalHandler implements SignalHandler {
         subj.next()
       }
 
-      const next = DateTime.fromISO(cron.next().toISOString()!)
+      const next = DateTime.fromISO(cron.toISOString()!)
       const handle = setTimeout(task, next.diff(now).as('milliseconds'))
 
       d('Cron interval scheduled with handle %o', handle)

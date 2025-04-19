@@ -1,5 +1,4 @@
-import { Cron, parseCronExpression } from 'cron-schedule'
-import { TimerBasedCronScheduler as scheduler } from 'cron-schedule/schedulers/timer-based.js'
+import { CronDate, CronExpressionParser } from 'cron-parser'
 import { DateTime } from 'luxon'
 import { NEVER, Observable, filter, map, share, timer } from 'rxjs'
 
@@ -32,17 +31,23 @@ export class CronSignalHandler implements SignalHandler {
     timezone: string
   ) {
     const data: CronSignal = JSON.parse(signal.data)
-    let cron: Cron | null = null // Declare outside try
+    let next: CronDate | null = null
 
     this.isValid = false // Default to invalid
     this.friendlySignalDescription = 'Invalid cron expression'
 
+    const currentTime = DateTime.now().setZone(timezone)
     try {
-      cron = parseCronExpression(data.cron) // Assign inside try
+      const cron = CronExpressionParser.parse(data.cron, {
+        tz: timezone,
+        currentDate: currentTime.toJSDate(),
+      }) // Assign inside try
 
-      this.friendlySignalDescription = DateTime.fromJSDate(
-        cron.getNextDate(DateTime.now().setZone(timezone).toJSDate())
-      ).toLocaleString(DateTime.DATETIME_MED_WITH_SECONDS)
+      next = cron.next()
+
+      this.friendlySignalDescription = DateTime.fromISO(
+        cron.next().toISOString()!
+      ).toLocaleString(DateTime.DATETIME_MED)
 
       this.isValid = true // Set to valid only if parsing and date calculation succeed
 
@@ -61,8 +66,8 @@ export class CronSignalHandler implements SignalHandler {
     }
 
     // Create trigger only if cron is valid
-    if (this.isValid && cron) {
-      this.signalObservable = this.cronToObservable(cron).pipe(
+    if (this.isValid && next) {
+      this.signalObservable = this.cronToObservable(next, currentTime).pipe(
         map(() => {
           d(
             'Cron trigger fired for signal %s, automation %s',
@@ -82,19 +87,22 @@ export class CronSignalHandler implements SignalHandler {
     }
   }
 
-  cronToObservable(cron: Cron): Observable<void> {
+  cronToObservable(cron: CronDate, now: DateTime): Observable<void> {
     d('Setting up cron interval for: %o', cron)
     return new Observable<void>((subj) => {
       const task = () => {
         d('Cron task executing for signal %s', this.signal.id)
         subj.next()
       }
-      const handle = scheduler.setInterval(cron, task)
+
+      const next = DateTime.fromISO(cron.toISOString()!)
+      const handle = setTimeout(task, next.diff(now).as('milliseconds'))
+
       d('Cron interval scheduled with handle %o', handle)
 
       return () => {
         d('Clearing cron interval with handle %o', handle)
-        scheduler.clearTimeoutOrInterval(handle)
+        clearTimeout(handle)
       }
     }).pipe(share())
   }

@@ -22,7 +22,7 @@
         "clsx": "^2.1.1",
         "colorette": "^2.0.20",
         "commander": "^13.1.0",
-        "cron-schedule": "^5.0.4",
+        "cron-parser": "^5.1.1",
         "debug": "^4.4.0",
         "dotenv": "^16.5.0",
         "home-assistant-js-websocket": "^9.5.0",
@@ -500,7 +500,7 @@
 
     "cors": ["cors@2.8.5", "", { "dependencies": { "object-assign": "^4", "vary": "^1" } }, "sha512-KIHbLJqu73RGr/hnbrO9uBeixNGuvSQjul/jdFvS/KFSIH1hWVd1ng7zOHx+YrEfInLG7q4n6GHQ9cDtxv/P6g=="],
 
-    "cron-schedule": ["cron-schedule@5.0.4", "", {}, "sha512-nH0a49E/kSVk6BeFgKZy4uUsy6D2A16p120h5bYD9ILBhQu7o2sJFH+WI4R731TSBQ0dB1Ik7inB/dRAB4C8QQ=="],
+    "cron-parser": ["cron-parser@5.1.1", "", { "dependencies": { "luxon": "^3.6.1" } }, "sha512-xNhwjTUTJcvevF4EvOxB3xYpEKC/qOAmykR+2Qf91ARIfdbjStUwo8qpem6jjzdwFgoo4pnf3sS264xG0G858w=="],
 
     "cross-spawn": ["cross-spawn@7.0.6", "", { "dependencies": { "path-key": "^3.1.0", "shebang-command": "^2.0.0", "which": "^2.0.1" } }, "sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA=="],
 

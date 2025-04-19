@@ -1,6 +1,14 @@
 import { CronDate, CronExpressionParser } from 'cron-parser'
 import { DateTime } from 'luxon'
-import { NEVER, Observable, filter, map, share, timer } from 'rxjs'
+import {
+  NEVER,
+  Observable,
+  distinctUntilChanged,
+  filter,
+  map,
+  share,
+  timer,
+} from 'rxjs'
 
 import {
   AbsoluteTimeSignal,
@@ -248,6 +256,7 @@ export class StateRegexSignalHandler implements SignalHandler {
         const match = regex.test(state.state) // Use the compiled regex (isValid check ensures regex is non-null)
         return match
       }),
+      distinctUntilChanged(),
       map((matchedState: HassState) => {
         i(
           `State regex trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Matched entity: ${matchedState.entity_id}, State: "${matchedState.state}"`

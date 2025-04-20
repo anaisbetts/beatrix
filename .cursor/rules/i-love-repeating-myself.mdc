@@ -7,12 +7,9 @@ alwaysApply: true
 
 ## Build & Test Commands
 
-- Run server: `bun run ./server/index.ts` or `bun dev`
-- Debug mode: `bun dev:debug`
 - Run tests: `bun test` (all tests)
 - Run single test: `bun test server/lib/file.test.ts`
-- Lint & typecheck: `bun lint` (eslint, tsc, prettier)
-- Fix linting: `bun f`
+- Lint & typecheck: `bun f` (eslint, tsc, prettier)
 
 ## Code Style Guidelines
 
@@ -26,3 +23,9 @@ alwaysApply: true
 - Create reusable utility files for common functionality
 - Use environment variables for configuration (HA_BASE_URL, HA_TOKEN, etc.)
 - components/ui gets updated via the shadcn CLI tool
+- Don't use .then unless you have a good reason, use async/await
+- After every big change use `bun f`
+
+
+
+

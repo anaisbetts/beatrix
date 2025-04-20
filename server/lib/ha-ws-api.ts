@@ -165,7 +165,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
     this.connectionSub = this.connectionFactory.subscribe({
       next: (x) => (this.connection = x),
-      error: (e) => e('Failed to connect to Home Assistant!', e),
+      error: (err) => e('Failed to connect to Home Assistant!', err),
     })
 
     this.connectionSub.add(

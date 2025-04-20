@@ -34,6 +34,8 @@ import { runAllEvals, runQuickEvals } from './run-evals'
 import {
   AutomationRuntime,
   LiveAutomationRuntime,
+  getAutomationDirectory,
+  getCueDirectory,
   now,
 } from './workflow/automation-runtime'
 import { automationFromString } from './workflow/parser'
@@ -356,59 +358,22 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   ): Observable<{ relativePath: string }> {
     return from(
       (async () => {
-        const subfolder = type === 'cue' ? 'cues' : 'automations'
-        const targetDirectory = path.resolve(this.notebookDirectory, subfolder)
+        const targetDirectory =
+          type == 'cue'
+            ? getCueDirectory(this.runtime)
+            : getAutomationDirectory(this.runtime)
 
-        // Basic filename sanitization
-        let sanitizedFileName = fileName.trim()
-        if (
-          !sanitizedFileName ||
-          sanitizedFileName === '.' ||
-          sanitizedFileName === '..'
-        ) {
-          throw new Error('Invalid file name.')
-        }
-        // Remove potentially problematic characters (allow letters, numbers, underscore, hyphen, dot)
-        sanitizedFileName = sanitizedFileName.replace(/[^a-zA-Z0-9_.-]/g, '_')
-        // Prevent path traversal by ensuring no slashes remain
-        if (
-          sanitizedFileName.includes('/') ||
-          sanitizedFileName.includes('\\')
-        ) {
-          throw new Error('File name cannot contain path separators.')
+        const target = path.resolve(targetDirectory, fileName)
+        if (!target.startsWith(targetDirectory)) {
+          throw new Error('Cannot write outside directory')
         }
 
-        // Add default extension if missing (e.g., .md)
-        // Let's decide against this for now to allow flexibility, user can name it fully.
-        // if (!sanitizedFileName.includes('.')) {
-        //    sanitizedFileName += '.md';
-        // }
+        await fs.mkdir(path.dirname(target), { recursive: true })
 
-        const relativePath = path.join(subfolder, sanitizedFileName)
-        const fullPath = path.resolve(this.notebookDirectory, relativePath)
-
-        // Security: Final check to ensure the resolved path is within the target subfolder
-        if (
-          !fullPath.startsWith(targetDirectory + path.sep) &&
-          fullPath !== targetDirectory /* In case filename makes it the dir */
-        ) {
-          // Check if the path is exactly the target directory (filename was empty/dots after sanitize?)
-          if (fullPath === targetDirectory) {
-            throw new Error('Invalid file name results in directory path.')
-          }
-          console.error(
-            `Path traversal attempt detected: ${fullPath} vs ${targetDirectory}`
-          )
-          throw new Error('Security violation: Invalid path construction.')
-        }
-
-        // Ensure directory exists
-        await fs.mkdir(targetDirectory, { recursive: true })
-
+        const relativePath = target.replace(`${targetDirectory}${path.sep}`, '')
         try {
           // Create file with 'wx' flag to fail if it already exists
-          await fs.writeFile(fullPath, '\n', { flag: 'wx' })
-          i('Created new notebook file: %s', relativePath)
+          await fs.writeFile(target, '\n', { flag: 'wx' })
           return { relativePath }
         } catch (error: any) {
           if (error.code === 'EEXIST') {

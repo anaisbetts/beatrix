@@ -52,6 +52,7 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@iarna/toml": "^2.2.5",
     "@modelcontextprotocol/sdk": "^1.9.0",
+    "@radix-ui/react-alert-dialog": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.4",
     "@radix-ui/react-dialog": "^1.1.7",
     "@radix-ui/react-select": "^2.1.7",

@@ -207,7 +207,13 @@ async function dumpBugReportCommand(options: { dbPath?: string }) {
       return
     }
 
-    const bugReportData = JSON.parse(bugReportEntry.message) as BugReportData
+    let bugReportData: BugReportData
+    try {
+      bugReportData = JSON.parse(bugReportEntry.message) as BugReportData
+    } catch (error) {
+      console.error('Failed to parse bug report JSON:', error)
+      return
+    }
     const createdAt = DateTime.fromISO(bugReportEntry.createdAt)
     const reportDirName = `bug-report-${createdAt.toFormat('yyyyMMdd_HHmmss')}`
     console.log(`Creating bug report directory: ${reportDirName}`)

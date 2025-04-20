@@ -29,7 +29,7 @@ import {
 } from 'rxjs'
 
 import { AppConfig } from '../../shared/types'
-import { i } from '../logging'
+import { e, i, w } from '../logging'
 
 const d = debug('b:ws')
 
@@ -132,17 +132,27 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       i(`Connecting to Home Assistant...`)
       createConnection({ auth }).then(
         (x) => {
+          i('Connected successfully')
+
           disp.add(
             merge(
               fromHassEvent(x, 'disconnected', (e) => JSON.stringify(e)),
               fromHassEvent(x, 'reconnect-error', (e) => JSON.stringify(e))
-            ).subscribe((e) => subj.error(new Error(e)))
+            ).subscribe((e) => {
+              w('Disconnected from Home Assistant!', e)
+              subj.error(new Error(e))
+            })
           )
 
           disp.add(
             interval(3 * 60 * 1000)
               .pipe(switchMap(async () => x.ping()))
-              .subscribe({ error: (e) => subj.error(e) })
+              .subscribe({
+                error: (e) => {
+                  w('Ping to Home Assistant WS connection failed!', e)
+                  subj.error(e)
+                },
+              })
           )
 
           x.subscribeEvents<HassEvent>((ev) => this.eventsObs.next(ev)).then(
@@ -152,7 +162,10 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
           LiveHomeAssistantApi.fetchFullState(x).then(
             (states) => (this.stateCache = states),
-            (e: any) => subj.error(e)
+            (err: any) => {
+              e('Failed to fetch initial state information!')
+              subj.error(err)
+            }
           )
 
           subj.next(x)

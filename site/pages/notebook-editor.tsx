@@ -276,7 +276,7 @@ export function NotebookEditorPage() {
         open={isCreateFileDialogOpen}
         onOpenChange={setIsCreateFileDialogOpen}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-white">
           <AlertDialogHeader>
             <AlertDialogTitle>
               Create New {createFileType === 'cue' ? 'Cue' : 'Automation'}
@@ -290,7 +290,7 @@ export function NotebookEditorPage() {
               {/* Show error inside dialog */}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="grid gap-2 py-4">
+          <div className="grid gap-2 py-4 bg-white">
             <Label htmlFor="name">Filename</Label>
             <Input
               id="name"

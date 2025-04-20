@@ -3,6 +3,16 @@ import { Check, Save } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -24,6 +34,9 @@ export default function Config() {
   const { api } = useWebSocket()
   const [config, setConfig] = useState<AppConfig>({})
   const [isSaved, setIsSaved] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [showCompletionDialog, setShowCompletionDialog] = useState(false)
+  const [debugReportError, setDebugReportError] = useState<string | null>(null)
 
   // Fetch initial config
   const [fetchConfig, configResult] = useCommand(async () => {
@@ -48,6 +61,22 @@ export default function Config() {
     setTimeout(() => setIsSaved(false), 1500)
     return { success: true }
   }, [config, api])
+
+  // Command for generating debug report
+  const [generateDebugReport, debugReportResult] = useCommand(async () => {
+    if (!api) throw new Error('Not connected!')
+    setDebugReportError(null)
+    try {
+      await firstValueFrom(api.captureBugReport())
+      setShowCompletionDialog(true)
+      return { success: true }
+    } catch (error) {
+      setDebugReportError(
+        error instanceof Error ? error.message : 'An unknown error occurred'
+      )
+      throw error
+    }
+  }, [api])
 
   // Handle basic field changes
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +139,26 @@ export default function Config() {
         openAIProviders: updatedProviders,
       }
     })
+  }, [])
+
+  const handleGenerateDebugReportClick = useCallback(() => {
+    setShowConfirmDialog(true)
+  }, [])
+
+  const handleConfirmDebugReport = useCallback(() => {
+    setShowConfirmDialog(false)
+    generateDebugReport().catch((error) => {
+      // Error is already handled within the useCommand hook and state is updated
+      console.error('Error generating debug report:', error)
+    })
+  }, [generateDebugReport])
+
+  const handleCancelDebugReport = useCallback(() => {
+    setShowConfirmDialog(false)
+  }, [])
+
+  const handleCloseCompletionDialog = useCallback(() => {
+    setShowCompletionDialog(false)
   }, [])
 
   // Show loading state
@@ -386,6 +435,33 @@ export default function Config() {
           </CardContent>
         </Card>
 
+        {/* Debug Report Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Debugging</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Generate a debug report containing automation configurations and
+              Home Assistant details. This can be helpful for troubleshooting.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleGenerateDebugReportClick}
+              disabled={debugReportResult.isPending()}
+            >
+              {debugReportResult.isPending()
+                ? 'Generating Report...'
+                : 'Generate Debug Report'}
+            </Button>
+            {debugReportError && (
+              <p className="text-sm text-red-500">
+                Error generating report: {debugReportError}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Save Result Status and Button */}
         <div className="flex items-center justify-end py-4">
           {saveResult.mapOrElse({
@@ -405,6 +481,50 @@ export default function Config() {
           />
         </div>
       </div>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Generate Debug Report?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will capture your list of automations and details about your
+              Home Assistant installation (excluding sensitive tokens) into the{' '}
+              <code>app.db</code> file. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDebugReport}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDebugReport}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Completion Dialog */}
+      <AlertDialog
+        open={showCompletionDialog}
+        onOpenChange={setShowCompletionDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Debug Report Generated</AlertDialogTitle>
+            <AlertDialogDescription>
+              The debug report has been successfully generated and saved to{' '}
+              <code>app.db</code>. Please send this file to the developer for
+              analysis.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleCloseCompletionDialog}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

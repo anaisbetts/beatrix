@@ -3,19 +3,20 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { ServerWebSocket } from 'bun'
 import { Command } from 'commander'
 import { configDotenv } from 'dotenv'
-import { mkdir } from 'fs/promises'
+import { mkdir, writeFile } from 'fs/promises'
 import { sql } from 'kysely'
+import { DateTime } from 'luxon'
 import path from 'path'
 import { Observable, Subject, Subscription, filter, mergeMap } from 'rxjs'
 
 import pkg from '../package.json'
 import { ServerWebsocketApi, messagesToString } from '../shared/api'
 import { SerialSubscription } from '../shared/serial-subscription'
-import { ScenarioResult } from '../shared/types'
+import { Automation, BugReportData, ScenarioResult } from '../shared/types'
 import { ServerMessage } from '../shared/ws-rpc'
 import { ServerWebsocketApiImpl } from './api'
 import { createConfigViaEnv } from './config'
-import { createDatabaseViaEnv } from './db'
+import { createDatabase, createDatabaseViaEnv } from './db'
 import { EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
@@ -184,6 +185,93 @@ async function evalCommand(options: {
   )
 }
 
+async function dumpBugReportCommand(options: { dbPath?: string }) {
+  disableLogging()
+  console.log('Dumping latest bug report...')
+
+  const db = options.dbPath
+    ? await createDatabase(options.dbPath)
+    : await createDatabaseViaEnv()
+
+  try {
+    const bugReportEntry = await db
+      .selectFrom('logs')
+      .select(['createdAt', 'message'])
+      .where('level', '=', 100)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .executeTakeFirst()
+
+    if (!bugReportEntry?.message) {
+      console.error('No bug report found (log level 100).')
+      return
+    }
+
+    let bugReportData: BugReportData
+    try {
+      bugReportData = JSON.parse(bugReportEntry.message) as BugReportData
+    } catch (error) {
+      console.error('Failed to parse bug report JSON:', error)
+      return
+    }
+    const createdAt = DateTime.fromISO(bugReportEntry.createdAt)
+    const reportDirName = `bug-report-${createdAt.toFormat('yyyyMMdd_HHmmss')}`
+    console.log(`Creating bug report directory: ${reportDirName}`)
+    await mkdir(reportDirName, { recursive: true })
+    const reportDirPath = path.resolve(reportDirName)
+
+    await writeFile(
+      path.join(reportDirPath, 'states.json'),
+      JSON.stringify(bugReportData.states, null, 2)
+    )
+    await writeFile(
+      path.join(reportDirPath, 'services.json'),
+      JSON.stringify(bugReportData.services, null, 2)
+    )
+
+    const writeAutomationFiles = async (
+      items: Automation[],
+      subDir: string
+    ) => {
+      const dirPath = path.join(reportDirPath, subDir)
+      await mkdir(dirPath, { recursive: true })
+
+      for (const item of items) {
+        // Normalize paths to use forward slashes for cross-platform compatibility
+        const normalizedFileName = item.fileName.replace(/\\/g, '/')
+        const normalizedNotebookRoot = (
+          bugReportData.notebookRoot ?? ''
+        ).replace(/\\/g, '/')
+
+        // Ensure notebookRoot ends with a slash for correct replacement
+        const notebookRootPrefix = normalizedNotebookRoot.endsWith('/')
+          ? normalizedNotebookRoot
+          : `${normalizedNotebookRoot}/`
+
+        const relativePath = normalizedFileName.replace(notebookRootPrefix, '')
+
+        if (relativePath === normalizedFileName) {
+          // This should not happen if notebookRoot is set correctly, but good to check
+          console.warn(
+            `Could not make path relative: ${item.fileName} (notebookRoot: ${bugReportData.notebookRoot})`
+          )
+        }
+
+        const filePath = path.join(dirPath, relativePath)
+        await mkdir(path.dirname(filePath), { recursive: true })
+        await writeFile(filePath, item.contents)
+      }
+    }
+
+    await writeAutomationFiles(bugReportData.automations, 'automations')
+    await writeAutomationFiles(bugReportData.cues, 'cues')
+
+    console.log('Bug report dump complete.')
+  } finally {
+    await db.destroy()
+  }
+}
+
 async function dumpEventsCommand() {
   const config = await createConfigViaEnv('.')
   const conn = await LiveHomeAssistantApi.createViaConfig(config)
@@ -323,6 +411,15 @@ async function main() {
       './notebook'
     )
     .action(evalCommand)
+
+  program
+    .command('dump-bug-report')
+    .description('Dumps the latest captured bug report data into a directory.')
+    .option(
+      '--db-path <path>',
+      'Path to the database file to dump the report from (defaults to app.db in data dir)'
+    )
+    .action(dumpBugReportCommand)
 
   if (debugMode) {
     program

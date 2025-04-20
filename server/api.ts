@@ -1,4 +1,5 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import { sql } from 'kysely'
 import { DateTime } from 'luxon'
 import path from 'node:path'
 import {
@@ -16,6 +17,7 @@ import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/api'
 import {
   Automation,
   AutomationLogEntry,
+  BugReportData,
   ScenarioResult,
   SignalHandlerInfo,
   TypeHint,
@@ -269,5 +271,34 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         )
       )
     )
+  }
+
+  captureBugReport(): Observable<void> {
+    return from(this._captureBugReport())
+  }
+
+  async _captureBugReport(): Promise<void> {
+    const services = await this.runtime.api.fetchServices()
+    const states = await this.runtime.api.fetchStates()
+
+    const toSave: BugReportData = {
+      timezone: this.runtime.timezone,
+      cues: this.runtime.cueList,
+      automations: this.runtime.automationList,
+      notebookRoot: this.runtime.notebookDirectory,
+      services,
+      states,
+    }
+
+    await this.runtime.db
+      .insertInto('logs')
+      .values({
+        level: 100,
+        createdAt: DateTime.now().toISO(),
+        message: JSON.stringify(toSave),
+      })
+      .execute()
+
+    await sql`VACUUM`.execute(this.runtime.db)
   }
 }

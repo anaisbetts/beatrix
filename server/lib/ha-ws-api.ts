@@ -26,10 +26,12 @@ import {
   retry,
   shareReplay,
   switchMap,
+  timer,
 } from 'rxjs'
 
 import { AppConfig } from '../../shared/types'
 import { e, i, w } from '../logging'
+import { clamp } from './math'
 
 const d = debug('b:ws')
 
@@ -121,6 +123,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   private connection: Connection | null = null
   readonly connectionFactory: Observable<Connection>
   readonly eventsObs: Subject<HassEvent> = new Subject()
+  private failCount = 0
 
   private constructor(
     auth: Auth,
@@ -133,6 +136,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       createConnection({ auth }).then(
         (x) => {
           i('Connected successfully')
+          this.failCount = 0
 
           disp.add(
             merge(
@@ -176,7 +180,9 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       disp.add(() => this.connection?.close())
       return disp
     }).pipe(
-      retry({ count: 5, delay: 3 * 1000, resetOnSuccess: true }),
+      retry({
+        delay: () => timer(Math.pow(2, clamp(0, this.failCount++, 10)) * 1000),
+      }),
       shareReplay(1)
     )
 

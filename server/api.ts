@@ -348,4 +348,76 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       })()
     )
   }
+
+  // Implementation for creating new files
+  createNotebookFile(
+    fileName: string,
+    type: 'cue' | 'automation'
+  ): Observable<{ relativePath: string }> {
+    return from(
+      (async () => {
+        const subfolder = type === 'cue' ? 'cues' : 'automations'
+        const targetDirectory = path.resolve(this.notebookDirectory, subfolder)
+
+        // Basic filename sanitization
+        let sanitizedFileName = fileName.trim()
+        if (
+          !sanitizedFileName ||
+          sanitizedFileName === '.' ||
+          sanitizedFileName === '..'
+        ) {
+          throw new Error('Invalid file name.')
+        }
+        // Remove potentially problematic characters (allow letters, numbers, underscore, hyphen, dot)
+        sanitizedFileName = sanitizedFileName.replace(/[^a-zA-Z0-9_.-]/g, '_')
+        // Prevent path traversal by ensuring no slashes remain
+        if (
+          sanitizedFileName.includes('/') ||
+          sanitizedFileName.includes('\\')
+        ) {
+          throw new Error('File name cannot contain path separators.')
+        }
+
+        // Add default extension if missing (e.g., .md)
+        // Let's decide against this for now to allow flexibility, user can name it fully.
+        // if (!sanitizedFileName.includes('.')) {
+        //    sanitizedFileName += '.md';
+        // }
+
+        const relativePath = path.join(subfolder, sanitizedFileName)
+        const fullPath = path.resolve(this.notebookDirectory, relativePath)
+
+        // Security: Final check to ensure the resolved path is within the target subfolder
+        if (
+          !fullPath.startsWith(targetDirectory + path.sep) &&
+          fullPath !== targetDirectory /* In case filename makes it the dir */
+        ) {
+          // Check if the path is exactly the target directory (filename was empty/dots after sanitize?)
+          if (fullPath === targetDirectory) {
+            throw new Error('Invalid file name results in directory path.')
+          }
+          console.error(
+            `Path traversal attempt detected: ${fullPath} vs ${targetDirectory}`
+          )
+          throw new Error('Security violation: Invalid path construction.')
+        }
+
+        // Ensure directory exists
+        await fs.mkdir(targetDirectory, { recursive: true })
+
+        try {
+          // Create file with 'wx' flag to fail if it already exists
+          await fs.writeFile(fullPath, '\n', { flag: 'wx' })
+          i('Created new notebook file: %s', relativePath)
+          return { relativePath }
+        } catch (error: any) {
+          if (error.code === 'EEXIST') {
+            throw new Error(`File already exists: ${relativePath}`)
+          } else {
+            throw error // Re-throw other errors
+          }
+        }
+      })()
+    )
+  }
 }

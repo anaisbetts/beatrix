@@ -3,6 +3,20 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Subject, firstValueFrom } from 'rxjs'
 import { debounceTime, switchMap } from 'rxjs/operators'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
 import { useWebSocket } from '../components/ws-provider'
 
 // Import WebSocket hook
@@ -48,6 +62,12 @@ export function NotebookEditorPage() {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+  const [isCreateFileDialogOpen, setIsCreateFileDialogOpen] =
+    useState<boolean>(false)
+  const [createFileType, setCreateFileType] = useState<
+    'cue' | 'automation' | null
+  >(null)
+  const [newFileName, setNewFileName] = useState<string>('')
   const saveSubjectRef = useRef(
     new Subject<{ file: string; content: string }>()
   )
@@ -99,6 +119,50 @@ export function NotebookEditorPage() {
     [selectedFile]
   )
 
+  // Function to handle opening the create file dialog
+  const handleCreateNewFile = useCallback(
+    async (type: 'cue' | 'automation') => {
+      setCreateFileType(type)
+      setNewFileName(type === 'cue' ? 'new-cue.md' : 'new-automation.md') // Set default name
+      setError(null) // Clear previous errors
+      setIsCreateFileDialogOpen(true)
+    },
+    []
+  )
+
+  // Function to handle the actual creation via the dialog
+  const submitCreateFile = useCallback(async () => {
+    if (!api || !createFileType || !newFileName) return
+
+    const fileName = newFileName.trim()
+
+    // Basic client-side check (server does thorough validation)
+    if (!fileName || fileName.includes('/') || fileName.includes('\\')) {
+      setError('Invalid file name (cannot be empty or contain slashes).')
+      return // Keep dialog open
+    }
+
+    setIsLoading(true) // Use isLoading state for feedback
+    setError(null)
+    try {
+      const result = await firstValueFrom(
+        api.createNotebookFile(fileName, createFileType)
+      )
+      setIsCreateFileDialogOpen(false) // Close dialog on success
+      setNewFileName('') // Reset input
+      // Refresh file list
+      const files = await firstValueFrom(api.listNotebookFiles())
+      setFileList(files.sort())
+      // Select the new file
+      await handleFileSelect(result.relativePath)
+    } catch (err: any) {
+      setError(`Failed to create ${createFileType}: ${err.message}`)
+      // Keep dialog open on error
+    } finally {
+      setIsLoading(false)
+    }
+  }, [api, createFileType, newFileName, handleFileSelect])
+
   // Effect for debounced saving using RxJS
   useEffect(() => {
     if (!api) return
@@ -148,8 +212,30 @@ export function NotebookEditorPage() {
       <div className="flex flex-grow space-x-0 overflow-hidden">
         {/* File Tree */}
         <div className="w-1/4 overflow-y-auto border-r p-2">
-          <h2 className="mb-2 text-sm font-semibold">Files</h2>
-          {fileList.length === 0 && !error && <div>Loading files...</div>}
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Files</h2>
+            <div className="flex space-x-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCreateNewFile('cue')}
+              >
+                + Cue
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleCreateNewFile('automation')}
+              >
+                + Auto
+              </Button>
+            </div>
+          </div>
+          {fileList.length === 0 && !error && !isLoading && (
+            <div>Loading files...</div>
+          )}
+          {isLoading && fileList.length === 0 && <div>Loading...</div>}{' '}
+          {/* Show loading only when list is empty initially */}
           <ul>
             {fileList.map((file) => (
               <li key={file} className="mb-1">
@@ -184,6 +270,57 @@ export function NotebookEditorPage() {
           />
         </div>
       </div>
+
+      {/* Create File Dialog */}
+      <AlertDialog
+        open={isCreateFileDialogOpen}
+        onOpenChange={setIsCreateFileDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Create New {createFileType === 'cue' ? 'Cue' : 'Automation'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a filename. It will be created in the `notebook/
+              {createFileType}s/` directory.
+              {error && (
+                <p className="text-destructive mt-2">Error: {error}</p>
+              )}{' '}
+              {/* Show error inside dialog */}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid gap-2 py-4">
+            <Label htmlFor="name">Filename</Label>
+            <Input
+              id="name"
+              value={newFileName}
+              onChange={(e) => setNewFileName(e.target.value)}
+              placeholder={
+                createFileType === 'cue' ? 'new-cue.md' : 'new-automation.md'
+              }
+              onKeyDown={async (e) => {
+                if (e.key === 'Enter') await submitCreateFile()
+              }} // Submit on Enter
+              disabled={isLoading}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isLoading}
+              onClick={() => setNewFileName('')}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={submitCreateFile}
+              disabled={isLoading || !newFileName.trim()}
+            >
+              {isLoading ? 'Creating...' : 'Create'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

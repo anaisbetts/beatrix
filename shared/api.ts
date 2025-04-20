@@ -42,6 +42,15 @@ export interface ServerWebsocketApi {
   setConfig(config: AppConfig): Observable<void>
 
   captureBugReport(): Observable<void>
+
+  // Notebook Editor
+  listNotebookFiles(): Observable<string[]>
+  readNotebookFile(filePath: string): Observable<string>
+  writeNotebookFile(filePath: string, content: string): Observable<void>
+  createNotebookFile(
+    fileName: string,
+    type: 'cue' | 'automation'
+  ): Observable<{ relativePath: string }>
 }
 
 export function messagesToString(

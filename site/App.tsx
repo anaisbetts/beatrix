@@ -1,10 +1,18 @@
-import { Beaker, Calendar, MessageSquare, Scroll, Settings } from 'lucide-react'
+import {
+  Beaker,
+  Calendar,
+  FileCode,
+  MessageSquare,
+  Scroll,
+  Settings,
+} from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 
 import Chat from '@/pages/chat'
 import Config from '@/pages/config'
 import Evals from '@/pages/evals'
 import Logs from '@/pages/logs'
+import NotebookEditorPage from '@/pages/notebook-editor'
 import PendingAutomations from '@/pages/pending'
 
 import {
@@ -57,6 +65,14 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
                   <a href="#" onClick={() => nav('debug')}>
                     <MessageSquare size={18} />
                     <span className="ms-1">Chat</span>
+                  </a>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <a href="#" onClick={() => nav('notebook')}>
+                    <FileCode size={18} />
+                    <span className="ms-1">Notebook</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -116,6 +132,8 @@ export default function Home() {
         return <Evals />
       case 'config':
         return <Config />
+      case 'notebook':
+        return <NotebookEditorPage />
       default:
         throw new Error('u blew it')
     }

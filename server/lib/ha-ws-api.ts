@@ -10,11 +10,15 @@ import { LRUCache } from 'lru-cache'
 import {
   EMPTY,
   Observable,
+  ReplaySubject,
   Subscription,
   SubscriptionLike,
   concat,
   filter,
   from,
+  fromEvent,
+  map,
+  merge,
   of,
   share,
   switchMap,
@@ -22,6 +26,7 @@ import {
 
 import { SerialSubscription } from '../../shared/serial-subscription'
 import { AppConfig } from '../../shared/types'
+import { i } from '../logging'
 
 const d = debug('b:ws')
 
@@ -87,15 +92,26 @@ export interface HomeAssistantApi extends SubscriptionLike {
 export class LiveHomeAssistantApi implements HomeAssistantApi {
   private eventsSub = new SerialSubscription()
   private stateCache: Promise<Record<string, HassState>> | undefined
+  private readonly _connectionEvents = new ReplaySubject<string>(1)
+  public readonly connectionEvents = this._connectionEvents.asObservable()
 
   constructor(
     private connection: Connection,
     private testMode: boolean = false
-  ) {}
+  ) {
+    // Feed underlying connection events into the Subject
+    merge(
+      fromEvent(this.connection, 'disconnected'),
+      fromEvent(this.connection, 'reconnect-error') // Assuming this is the correct event name
+    )
+      .pipe(map(() => 'disconnect-error' as const))
+      .subscribe(this._connectionEvents) // Use the private subject
+  }
 
   static async createViaConfig(config: AppConfig) {
     const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
+    i(`Connecting to ${config.haBaseUrl}...`)
     const connection = await createConnection({ auth })
 
     // Send supported_features message immediately after connection/auth
@@ -249,7 +265,21 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       ...options,
     }
 
-    return this.connection.sendMessagePromise<T>(message)
+    try {
+      // NB: home-assistant-js-websocket timeout error is just Error('Timeout')
+      return await this.connection.sendMessagePromise<T>(message)
+    } catch (e) {
+      if (e instanceof Error && e.message === 'Timeout') {
+        d(
+          'sendMessagePromise timed out, emitting disconnect-error and closing connection'
+        )
+        this._connectionEvents.next('disconnect-error')
+        this.connection.close()
+      }
+
+      // Re-throw the error so the caller can handle it
+      throw e
+    }
   }
 
   filterUncommonEntities(

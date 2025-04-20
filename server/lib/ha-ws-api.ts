@@ -1,6 +1,8 @@
 import debug from 'debug'
 import {
+  Auth,
   Connection,
+  ConnectionEventListener,
   HassEvent,
   HassServices,
   createConnection,
@@ -11,20 +13,21 @@ import {
   EMPTY,
   Observable,
   ReplaySubject,
+  Subject,
   Subscription,
   SubscriptionLike,
   concat,
   filter,
+  firstValueFrom,
   from,
-  fromEvent,
-  map,
+  interval,
   merge,
   of,
-  share,
+  retry,
+  shareReplay,
   switchMap,
 } from 'rxjs'
 
-import { SerialSubscription } from '../../shared/serial-subscription'
 import { AppConfig } from '../../shared/types'
 import { i } from '../logging'
 
@@ -89,48 +92,105 @@ export interface HomeAssistantApi extends SubscriptionLike {
   ): Record<string, HassState>
 }
 
+interface HassEventTargetAddRemove {
+  addEventListener(eventType: string, callback: ConnectionEventListener): void
+  removeEventListener(
+    eventType: string,
+    callback: ConnectionEventListener
+  ): void
+}
+
+function fromHassEvent<R>(
+  target: HassEventTargetAddRemove,
+  name: string,
+  resultSelector: (event: any) => R
+) {
+  return new Observable<R>((subj) => {
+    const h = (_: Connection, r: any) => subj.next(resultSelector(r))
+    target.addEventListener(name, h)
+    return new Subscription(() => target.removeEventListener(name, h))
+  })
+}
+
 export class LiveHomeAssistantApi implements HomeAssistantApi {
-  private eventsSub = new SerialSubscription()
-  private stateCache: Promise<Record<string, HassState>> | undefined
+  private stateCache: Record<string, HassState> | undefined
   private readonly _connectionEvents = new ReplaySubject<string>(1)
   public readonly connectionEvents = this._connectionEvents.asObservable()
 
-  constructor(
-    private connection: Connection,
+  private connectionSub: Subscription
+  private connection: Connection | null = null
+  readonly connectionFactory: Observable<Connection>
+  readonly eventsObs: Subject<HassEvent> = new Subject()
+
+  private constructor(
+    auth: Auth,
     private testMode: boolean = false
   ) {
-    // Feed underlying connection events into the Subject
-    merge(
-      fromEvent(this.connection, 'disconnected'),
-      fromEvent(this.connection, 'reconnect-error') // Assuming this is the correct event name
+    this.connectionFactory = new Observable<Connection>((subj) => {
+      const disp = new Subscription()
+
+      i(`Connecting to Home Assistant...`)
+      createConnection({ auth }).then(
+        (x) => {
+          disp.add(
+            merge(
+              fromHassEvent(x, 'disconnected', (e) => JSON.stringify(e)),
+              fromHassEvent(x, 'reconnect-error', (e) => JSON.stringify(e))
+            ).subscribe((e) => subj.error(new Error(e)))
+          )
+
+          disp.add(
+            interval(3 * 60 * 1000)
+              .pipe(switchMap(async () => x.ping()))
+              .subscribe({ error: (e) => subj.error(e) })
+          )
+
+          x.subscribeEvents<HassEvent>((ev) => this.eventsObs.next(ev)).then(
+            (unsub) => disp.add(() => void unsub()),
+            (err) => subj.error(err)
+          )
+
+          LiveHomeAssistantApi.fetchFullState(x).then(
+            (states) => (this.stateCache = states),
+            (e: any) => subj.error(e)
+          )
+
+          subj.next(x)
+        },
+        (e) => subj.error(e)
+      )
+
+      disp.add(() => this.connection?.close())
+      return disp
+    }).pipe(
+      retry({ count: 5, delay: 3 * 1000, resetOnSuccess: true }),
+      shareReplay(1)
     )
-      .pipe(map(() => 'disconnect-error' as const))
-      .subscribe(this._connectionEvents) // Use the private subject
+
+    this.connectionSub = this.connectionFactory.subscribe({
+      next: (x) => (this.connection = x),
+      error: (e) => e('Failed to connect to Home Assistant!', e),
+    })
+
+    this.connectionSub.add(
+      this.eventsObs
+        .pipe(filter((x) => x.event_type === 'state_changed'))
+        .subscribe((ev) => {
+          const entityId = ev.data.entity_id
+          if (entityId) {
+            delete ev.data.new_state.context
+            this.stateCache![entityId] = ev.data.new_state
+          }
+        })
+    )
   }
 
   static async createViaConfig(config: AppConfig) {
+    i(`Using Home Assistant URL ${config.haBaseUrl}`)
     const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
-    i(`Connecting to ${config.haBaseUrl}...`)
-    const connection = await createConnection({ auth })
-
-    // Send supported_features message immediately after connection/auth
-    try {
-      await connection.sendMessagePromise({
-        id: 1, // As per HA documentation for the first message
-        type: 'supported_features',
-        features: { coalesce_messages: 1 },
-      })
-      d('Sent supported_features message with coalesce_messages.')
-    } catch (err) {
-      // Log a warning if sending supported_features fails, but proceed.
-      // It's optional and might not be supported by all HA versions or configurations.
-      console.warn('Failed to send supported_features message:', err)
-      d('Failed to send supported_features message: %o', err)
-    }
-
-    const ret = new LiveHomeAssistantApi(connection)
-    await ret.setupStateCache()
+    const ret = new LiveHomeAssistantApi(auth)
+    await firstValueFrom(ret.connectionFactory)
 
     return ret
   }
@@ -140,7 +200,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       return cache.get('services') as HassServices
     }
 
-    const ret = await this.connection.sendMessagePromise<HassServices>({
+    const ret = await this.connection!.sendMessagePromise<HassServices>({
       type: 'get_services',
     })
 
@@ -148,8 +208,10 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     return ret
   }
 
-  private async fetchFullState(): Promise<Record<string, HassState>> {
-    const ret = await this.connection.sendMessagePromise<HassState[]>({
+  private static async fetchFullState(
+    conn: Connection
+  ): Promise<Record<string, HassState>> {
+    const ret = await conn.sendMessagePromise<HassState[]>({
       type: 'get_states',
     })
 
@@ -166,46 +228,19 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     )
   }
 
-  private async setupStateCache() {
-    this.stateCache = this.fetchFullState()
-
-    const state = await this.stateCache
-    this.stateCache = Promise.resolve(state)
-
-    this.eventsSub.current = this.eventsObservable()
-      .pipe(filter((x) => x.event_type === 'state_changed'))
-      .subscribe((ev) => {
-        const entityId = ev.data.entity_id
-        if (entityId) {
-          delete ev.data.new_state.context
-          state[entityId] = ev.data.new_state
-        }
-      })
-  }
-
-  fetchStates(): Promise<Record<string, HassState>> {
-    if (this.stateCache) {
+  async fetchStates(force = false): Promise<Record<string, HassState>> {
+    if (this.stateCache && !force) {
       // NB: We do the Object.assign here so that callers get a stable snapshot
       // rather than a constantly shifting live object
-      return this.stateCache.then((x) => Object.assign({}, x))
+      return Promise.resolve(Object.assign({}, this.stateCache))
     }
 
-    const ret = (this.stateCache = this.fetchFullState())
-    return ret
+    this.stateCache = await LiveHomeAssistantApi.fetchFullState(
+      this.connection!
+    )
+
+    return this.stateCache
   }
-
-  private eventsObs = new Observable<HassEvent>((subj) => {
-    const disp = new Subscription()
-
-    this.connection
-      .subscribeEvents<HassEvent>((ev) => subj.next(ev))
-      .then(
-        (unsub) => disp.add(() => void unsub()),
-        (err) => subj.error(err)
-      )
-
-    return disp
-  }).pipe(share())
 
   eventsObservable(): Observable<HassEvent> {
     return this.eventsObs
@@ -224,7 +259,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
         throw new Error('Target not found')
       }
     } else {
-      await this.connection.sendMessagePromise({
+      await this.connection!.sendMessagePromise({
         type: 'call_service',
         domain: 'notify',
         service: target,
@@ -267,14 +302,14 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
     try {
       // NB: home-assistant-js-websocket timeout error is just Error('Timeout')
-      return await this.connection.sendMessagePromise<T>(message)
+      return await this.connection!.sendMessagePromise<T>(message)
     } catch (e) {
       if (e instanceof Error && e.message === 'Timeout') {
         d(
           'sendMessagePromise timed out, emitting disconnect-error and closing connection'
         )
         this._connectionEvents.next('disconnect-error')
-        this.connection.close()
+        this.unsubscribe()
       }
 
       // Re-throw the error so the caller can handle it
@@ -292,11 +327,12 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   }
 
   unsubscribe(): void {
-    this.eventsSub.unsubscribe()
+    this.eventsObs.complete()
+    this.connectionSub.unsubscribe()
   }
 
   get closed() {
-    return this.eventsSub.closed
+    return this.connectionSub.closed
   }
 }
 

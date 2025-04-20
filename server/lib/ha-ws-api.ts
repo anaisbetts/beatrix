@@ -1,6 +1,8 @@
 import debug from 'debug'
 import {
+  Auth,
   Connection,
+  ConnectionEventListener,
   HassEvent,
   HassServices,
   createConnection,
@@ -10,18 +12,25 @@ import { LRUCache } from 'lru-cache'
 import {
   EMPTY,
   Observable,
+  Subject,
   Subscription,
   SubscriptionLike,
   concat,
   filter,
+  firstValueFrom,
   from,
+  interval,
+  merge,
   of,
-  share,
+  retry,
+  shareReplay,
   switchMap,
+  timer,
 } from 'rxjs'
 
-import { SerialSubscription } from '../../shared/serial-subscription'
 import { AppConfig } from '../../shared/types'
+import { e, i, w } from '../logging'
+import { clamp } from './math'
 
 const d = debug('b:ws')
 
@@ -85,20 +94,99 @@ export interface HomeAssistantApi extends SubscriptionLike {
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
-  private eventsSub = new SerialSubscription()
-  private stateCache: Promise<Record<string, HassState>> | undefined
+  private stateCache: Record<string, HassState> | undefined
 
-  constructor(
-    private connection: Connection,
+  private connectionSub: Subscription
+  private connection: Connection | null = null
+  private readonly connectionFactory: Observable<Connection>
+  private readonly eventsObs: Subject<HassEvent> = new Subject()
+  private failCount = 0
+
+  private constructor(
+    auth: Auth,
     private testMode: boolean = false
-  ) {}
+  ) {
+    this.connectionFactory = new Observable<Connection>((subj) => {
+      const disp = new Subscription()
+
+      i(`Connecting to Home Assistant...`)
+      createConnection({ auth }).then(
+        (x) => {
+          i('Connected successfully')
+          this.failCount = 0
+
+          disp.add(
+            merge(
+              fromHassEvent(x, 'disconnected', (e) => JSON.stringify(e)),
+              fromHassEvent(x, 'reconnect-error', (e) => JSON.stringify(e))
+            ).subscribe((e) => {
+              w('Disconnected from Home Assistant!', e)
+              subj.error(new Error(e))
+            })
+          )
+
+          disp.add(
+            interval(3 * 60 * 1000)
+              .pipe(switchMap(async () => x.ping()))
+              .subscribe({
+                error: (e) => {
+                  w('Ping to Home Assistant WS connection failed!', e)
+                  subj.error(e)
+                },
+              })
+          )
+
+          x.subscribeEvents<HassEvent>((ev) => this.eventsObs.next(ev)).then(
+            (unsub) => disp.add(() => void unsub()),
+            (err) => subj.error(err)
+          )
+
+          LiveHomeAssistantApi.fetchFullState(x).then(
+            (states) => (this.stateCache = states),
+            (err: any) => {
+              e('Failed to fetch initial state information!')
+              subj.error(err)
+            }
+          )
+
+          subj.next(x)
+        },
+        (e) => subj.error(e)
+      )
+
+      disp.add(() => this.connection?.close())
+      return disp
+    }).pipe(
+      retry({
+        delay: () => timer(Math.pow(2, clamp(0, this.failCount++, 10)) * 1000),
+      }),
+      shareReplay(1)
+    )
+
+    this.connectionSub = this.connectionFactory.subscribe({
+      next: (x) => (this.connection = x),
+      error: (err) => e('Failed to connect to Home Assistant!', err),
+    })
+
+    this.connectionSub.add(
+      this.eventsObs
+        .pipe(filter((x) => x.event_type === 'state_changed'))
+        .subscribe((ev) => {
+          const entityId = ev.data.entity_id
+          if (entityId) {
+            delete ev.data.new_state.context
+            this.stateCache![entityId] = ev.data.new_state
+          }
+        })
+    )
+  }
 
   static async createViaConfig(config: AppConfig) {
+    i(`Using Home Assistant URL ${config.haBaseUrl}`)
     const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
-    const connection = await createConnection({ auth })
-    const ret = new LiveHomeAssistantApi(connection)
-    await ret.setupStateCache()
+    const ret = new LiveHomeAssistantApi(auth)
+    await firstValueFrom(ret.connectionFactory)
 
     return ret
   }
@@ -108,7 +196,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       return cache.get('services') as HassServices
     }
 
-    const ret = await this.connection.sendMessagePromise<HassServices>({
+    const ret = await this.connection!.sendMessagePromise<HassServices>({
       type: 'get_services',
     })
 
@@ -116,8 +204,10 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     return ret
   }
 
-  private async fetchFullState(): Promise<Record<string, HassState>> {
-    const ret = await this.connection.sendMessagePromise<HassState[]>({
+  private static async fetchFullState(
+    conn: Connection
+  ): Promise<Record<string, HassState>> {
+    const ret = await conn.sendMessagePromise<HassState[]>({
       type: 'get_states',
     })
 
@@ -134,46 +224,19 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     )
   }
 
-  private async setupStateCache() {
-    this.stateCache = this.fetchFullState()
-
-    const state = await this.stateCache
-    this.stateCache = Promise.resolve(state)
-
-    this.eventsSub.current = this.eventsObservable()
-      .pipe(filter((x) => x.event_type === 'state_changed'))
-      .subscribe((ev) => {
-        const entityId = ev.data.entity_id
-        if (entityId) {
-          delete ev.data.new_state.context
-          state[entityId] = ev.data.new_state
-        }
-      })
-  }
-
-  fetchStates(): Promise<Record<string, HassState>> {
-    if (this.stateCache) {
+  async fetchStates(force = false): Promise<Record<string, HassState>> {
+    if (this.stateCache && !force) {
       // NB: We do the Object.assign here so that callers get a stable snapshot
       // rather than a constantly shifting live object
-      return this.stateCache.then((x) => Object.assign({}, x))
+      return Promise.resolve(Object.assign({}, this.stateCache))
     }
 
-    const ret = (this.stateCache = this.fetchFullState())
-    return ret
+    this.stateCache = await LiveHomeAssistantApi.fetchFullState(
+      this.connection!
+    )
+
+    return this.stateCache
   }
-
-  private eventsObs = new Observable<HassEvent>((subj) => {
-    const disp = new Subscription()
-
-    this.connection
-      .subscribeEvents<HassEvent>((ev) => subj.next(ev))
-      .then(
-        (unsub) => disp.add(() => void unsub()),
-        (err) => subj.error(err)
-      )
-
-    return disp
-  }).pipe(share())
 
   eventsObservable(): Observable<HassEvent> {
     return this.eventsObs
@@ -192,7 +255,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
         throw new Error('Target not found')
       }
     } else {
-      await this.connection.sendMessagePromise({
+      await this.connection!.sendMessagePromise({
         type: 'call_service',
         domain: 'notify',
         service: target,
@@ -232,8 +295,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       type: 'call_service',
       ...options,
     }
-
-    return this.connection.sendMessagePromise<T>(message)
+    return await this.connection!.sendMessagePromise<T>(message)
   }
 
   filterUncommonEntities(
@@ -246,11 +308,12 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   }
 
   unsubscribe(): void {
-    this.eventsSub.unsubscribe()
+    this.eventsObs.complete()
+    this.connectionSub.unsubscribe()
   }
 
   get closed() {
-    return this.eventsSub.closed
+    return this.connectionSub.closed
   }
 }
 
@@ -415,4 +478,24 @@ function changedRecently(date: Date, hours: number, now: number): boolean {
   const hoursInMilliseconds = hours * 60 * 60 * 1000
 
   return timeDifference < hoursInMilliseconds
+}
+
+interface HassEventTargetAddRemove {
+  addEventListener(eventType: string, callback: ConnectionEventListener): void
+  removeEventListener(
+    eventType: string,
+    callback: ConnectionEventListener
+  ): void
+}
+
+function fromHassEvent<R>(
+  target: HassEventTargetAddRemove,
+  name: string,
+  resultSelector: (event: any) => R
+) {
+  return new Observable<R>((subj) => {
+    const h = (_: Connection, r: any) => subj.next(resultSelector(r))
+    target.addEventListener(name, h)
+    return new Subscription(() => target.removeEventListener(name, h))
+  })
 }

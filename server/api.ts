@@ -17,6 +17,7 @@ import { MessageParamWithExtras, ServerWebsocketApi } from '../shared/api'
 import {
   Automation,
   AutomationLogEntry,
+  BugReportData,
   ScenarioResult,
   SignalHandlerInfo,
   TypeHint,
@@ -280,10 +281,11 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     const services = await this.runtime.api.fetchServices()
     const states = await this.runtime.api.fetchStates()
 
-    const toSave = {
+    const toSave: BugReportData = {
       timezone: this.runtime.timezone,
       cues: this.runtime.cueList,
       automations: this.runtime.automationList,
+      notebookRoot: this.runtime.notebookDirectory,
       services,
       states,
     }

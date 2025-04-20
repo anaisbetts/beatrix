@@ -117,3 +117,26 @@ export interface OpenAIProviderConfig {
   apiKey?: string
   model?: string
 }
+
+/**
+ * Represents the data captured for a bug report.
+ */
+export interface BugReportData {
+  /** The timezone setting when the report was captured. */
+  timezone?: string
+
+  /** List of cues active at the time of the report. */
+  cues: Automation[]
+
+  /** List of automations active at the time of the report. */
+  automations: Automation[]
+
+  /** The root directory of the notebook. */
+  notebookRoot?: string
+
+  /** The Home Assistant services data. */
+  services: any // Consider defining a more specific type if the structure is known
+
+  /** The Home Assistant states data. */
+  states: any // Consider defining a more specific type if the structure is known
+}

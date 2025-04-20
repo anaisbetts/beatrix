@@ -14,14 +14,11 @@
     "ms-azuretools.vscode-docker"
   ],
   "postCreateCommand": "bun install",
-  "remoteUser": "root",
   "mounts": [
     "source=${localWorkspaceFolder}/.env,target=/workspace/.env,type=bind,consistency=cached,optional",
     "source=${localWorkspaceFolder}/.env.example,target=/workspace/.env.example,type=bind,consistency=cached,optional"
   ],
-  "forwardPorts": [
-    8080
-  ],
+  "forwardPorts": [8080],
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/node:1": {

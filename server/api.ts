@@ -77,9 +77,9 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       fetchAutomationLogs(
         this.runtime.db,
         this.runtime.automationList,
-        DateTime.fromJSDate(beforeTimestamp ?? new Date()).setZone(
-          this.runtime.timezone
-        )
+        beforeTimestamp
+          ? DateTime.fromJSDate(beforeTimestamp).setZone(this.runtime.timezone)
+          : undefined
       )
     )
   }

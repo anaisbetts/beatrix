@@ -1,6 +1,8 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import { glob } from 'glob'
 import { sql } from 'kysely'
 import { DateTime } from 'luxon'
+import fs from 'node:fs/promises'
 import path from 'node:path'
 import {
   Observable,
@@ -26,6 +28,7 @@ import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
 import { fetchAutomationLogs } from './db'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
+import { i } from './logging'
 import { getSystemPrompt } from './prompts'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import {
@@ -300,5 +303,49 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       .execute()
 
     await sql`VACUUM`.execute(this.runtime.db)
+  }
+
+  listNotebookFiles(): Observable<string[]> {
+    return from(
+      (async () => {
+        const pattern = '**/*'
+        const files = await glob(pattern, {
+          cwd: this.notebookDirectory,
+          nodir: true,
+          absolute: false,
+        })
+        return files
+      })()
+    )
+  }
+
+  readNotebookFile(filePath: string): Observable<string> {
+    return from(
+      (async () => {
+        const fullPath = path.resolve(this.notebookDirectory, filePath)
+        if (!fullPath.startsWith(this.notebookDirectory)) {
+          throw new Error('Invalid file path')
+        }
+        return await fs.readFile(fullPath, 'utf-8')
+      })()
+    )
+  }
+
+  writeNotebookFile(filePath: string, content: string): Observable<void> {
+    return from(
+      (async () => {
+        const fullPath = path.resolve(this.notebookDirectory, filePath)
+
+        if (!fullPath.startsWith(this.notebookDirectory)) {
+          throw new Error('Invalid file path')
+        }
+
+        const dir = path.dirname(fullPath)
+        await fs.mkdir(dir, { recursive: true })
+
+        await fs.writeFile(fullPath, content, 'utf-8')
+        i('Saved notebook file: %s', filePath)
+      })()
+    )
   }
 }

@@ -40,6 +40,8 @@ export interface ServerWebsocketApi {
 
   getConfig(): Observable<AppConfig>
   setConfig(config: AppConfig): Observable<void>
+
+  captureBugReport(): Observable<void>
 }
 
 export function messagesToString(

@@ -97,6 +97,22 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
     const connection = await createConnection({ auth })
+
+    // Send supported_features message immediately after connection/auth
+    try {
+      await connection.sendMessagePromise({
+        id: 1, // As per HA documentation for the first message
+        type: 'supported_features',
+        features: { coalesce_messages: 1 },
+      })
+      d('Sent supported_features message with coalesce_messages.')
+    } catch (err) {
+      // Log a warning if sending supported_features fails, but proceed.
+      // It's optional and might not be supported by all HA versions or configurations.
+      console.warn('Failed to send supported_features message:', err)
+      d('Failed to send supported_features message: %o', err)
+    }
+
     const ret = new LiveHomeAssistantApi(connection)
     await ret.setupStateCache()
 

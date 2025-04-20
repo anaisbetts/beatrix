@@ -12,7 +12,6 @@ import { LRUCache } from 'lru-cache'
 import {
   EMPTY,
   Observable,
-  ReplaySubject,
   Subject,
   Subscription,
   SubscriptionLike,
@@ -94,35 +93,13 @@ export interface HomeAssistantApi extends SubscriptionLike {
   ): Record<string, HassState>
 }
 
-interface HassEventTargetAddRemove {
-  addEventListener(eventType: string, callback: ConnectionEventListener): void
-  removeEventListener(
-    eventType: string,
-    callback: ConnectionEventListener
-  ): void
-}
-
-function fromHassEvent<R>(
-  target: HassEventTargetAddRemove,
-  name: string,
-  resultSelector: (event: any) => R
-) {
-  return new Observable<R>((subj) => {
-    const h = (_: Connection, r: any) => subj.next(resultSelector(r))
-    target.addEventListener(name, h)
-    return new Subscription(() => target.removeEventListener(name, h))
-  })
-}
-
 export class LiveHomeAssistantApi implements HomeAssistantApi {
   private stateCache: Record<string, HassState> | undefined
-  private readonly _connectionEvents = new ReplaySubject<string>(1)
-  public readonly connectionEvents = this._connectionEvents.asObservable()
 
   private connectionSub: Subscription
   private connection: Connection | null = null
-  readonly connectionFactory: Observable<Connection>
-  readonly eventsObs: Subject<HassEvent> = new Subject()
+  private readonly connectionFactory: Observable<Connection>
+  private readonly eventsObs: Subject<HassEvent> = new Subject()
   private failCount = 0
 
   private constructor(
@@ -318,22 +295,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       type: 'call_service',
       ...options,
     }
-
-    try {
-      // NB: home-assistant-js-websocket timeout error is just Error('Timeout')
-      return await this.connection!.sendMessagePromise<T>(message)
-    } catch (e) {
-      if (e instanceof Error && e.message === 'Timeout') {
-        d(
-          'sendMessagePromise timed out, emitting disconnect-error and closing connection'
-        )
-        this._connectionEvents.next('disconnect-error')
-        this.unsubscribe()
-      }
-
-      // Re-throw the error so the caller can handle it
-      throw e
-    }
+    return await this.connection!.sendMessagePromise<T>(message)
   }
 
   filterUncommonEntities(
@@ -516,4 +478,24 @@ function changedRecently(date: Date, hours: number, now: number): boolean {
   const hoursInMilliseconds = hours * 60 * 60 * 1000
 
   return timeDifference < hoursInMilliseconds
+}
+
+interface HassEventTargetAddRemove {
+  addEventListener(eventType: string, callback: ConnectionEventListener): void
+  removeEventListener(
+    eventType: string,
+    callback: ConnectionEventListener
+  ): void
+}
+
+function fromHassEvent<R>(
+  target: HassEventTargetAddRemove,
+  name: string,
+  resultSelector: (event: any) => R
+) {
+  return new Observable<R>((subj) => {
+    const h = (_: Connection, r: any) => subj.next(resultSelector(r))
+    target.addEventListener(name, h)
+    return new Subscription(() => target.removeEventListener(name, h))
+  })
 }

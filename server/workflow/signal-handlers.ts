@@ -1,12 +1,14 @@
-import { CronDate, CronExpressionParser } from 'cron-parser'
+import { CronExpression, CronExpressionParser } from 'cron-parser'
 import { DateTime } from 'luxon'
 import {
   NEVER,
   Observable,
   distinctUntilChanged,
   filter,
+  generate,
   map,
   share,
+  switchMap,
   timer,
 } from 'rxjs'
 
@@ -30,7 +32,7 @@ export interface SignalHandler extends SignalHandlerInfo {
 
 export class CronSignalHandler implements SignalHandler {
   readonly signalObservable: Observable<SignalledAutomation>
-  readonly friendlySignalDescription: string
+  friendlySignalDescription: string
   readonly isValid: boolean
 
   constructor(
@@ -39,7 +41,6 @@ export class CronSignalHandler implements SignalHandler {
     timezone: string
   ) {
     const data: CronSignal = JSON.parse(signal.data)
-    let next: CronDate | null = null
 
     this.isValid = false // Default to invalid
     this.friendlySignalDescription = 'Invalid cron expression'
@@ -50,8 +51,6 @@ export class CronSignalHandler implements SignalHandler {
         tz: timezone,
         currentDate: currentTime.toJSDate(),
       }) // Assign inside try
-
-      next = cron.next()
 
       this.friendlySignalDescription = DateTime.fromISO(
         cron.next().toISOString()!
@@ -70,18 +69,32 @@ export class CronSignalHandler implements SignalHandler {
         `Invalid cron expression "${data.cron}" for signal ${signal.id}:`,
         error
       )
-      // isValid remains false, description remains 'Invalid cron expression'
     }
 
-    // Create trigger only if cron is valid
-    if (this.isValid && next) {
-      this.signalObservable = this.cronToObservable(next, currentTime).pipe(
+    const cron = CronExpressionParser.parse(data.cron, {
+      tz: timezone,
+      currentDate: currentTime.toJSDate(),
+    })
+
+    if (this.isValid) {
+      this.signalObservable = this.cronToObservable(cron).pipe(
         map(() => {
           d(
             'Cron trigger fired for signal %s, automation %s',
             this.signal.id,
             this.automation.hash
           )
+
+          if (cron.hasNext()) {
+            this.friendlySignalDescription = DateTime.fromISO(
+              cron.next().toISOString()!
+            ).toLocaleString(DateTime.DATETIME_MED)
+
+            cron.prev()
+          } else {
+            this.friendlySignalDescription = '(Does not fire again)'
+          }
+
           return { signal: this.signal, automation: this.automation }
         })
       )
@@ -95,24 +108,18 @@ export class CronSignalHandler implements SignalHandler {
     }
   }
 
-  cronToObservable(cron: CronDate, now: DateTime): Observable<void> {
+  cronToObservable(cron: CronExpression): Observable<void> {
     d('Setting up cron interval for: %o', cron)
-    return new Observable<void>((subj) => {
-      const task = () => {
-        d('Cron task executing for signal %s', this.signal.id)
-        subj.next()
-      }
 
-      const next = DateTime.fromISO(cron.toISOString()!)
-      const handle = setTimeout(task, next.diff(now).as('milliseconds'))
-
-      d('Cron interval scheduled with handle %o', handle)
-
-      return () => {
-        d('Clearing cron interval with handle %o', handle)
-        clearTimeout(handle)
-      }
-    }).pipe(share())
+    return generate({
+      initialState: cron.next(),
+      condition: () => cron.hasNext(),
+      iterate: () => cron.next(),
+    }).pipe(
+      switchMap((n) => timer(n.toDate())),
+      map(() => {}),
+      share()
+    )
   }
 }
 export class RelativeTimeSignalHandler implements SignalHandler {

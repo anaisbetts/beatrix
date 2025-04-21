@@ -3,12 +3,19 @@ import { DateTime } from 'luxon'
 import {
   NEVER,
   Observable,
+  concatMap,
+  defer,
   distinctUntilChanged,
   filter,
   generate,
   map,
+  of,
+  repeat,
+  repeatWhen,
   share,
   switchMap,
+  takeUntil,
+  takeWhile,
   timer,
 } from 'rxjs'
 
@@ -111,17 +118,16 @@ export class CronSignalHandler implements SignalHandler {
   cronToObservable(cron: CronExpression): Observable<void> {
     d('Setting up cron interval for: %o', cron)
 
-    return generate({
-      initialState: cron.next(),
-      condition: () => cron.hasNext(),
-      iterate: () => cron.next(),
-    }).pipe(
+    return defer(() => of(cron.next())).pipe(
       switchMap((n) => timer(n.toDate())),
       map(() => {}),
+      takeWhile(() => cron.hasNext()),
+      repeat(),
       share()
     )
   }
 }
+
 export class RelativeTimeSignalHandler implements SignalHandler {
   readonly signalObservable: Observable<SignalledAutomation>
   readonly friendlySignalDescription: string

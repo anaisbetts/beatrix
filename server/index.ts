@@ -44,7 +44,7 @@ async function serveCommand(options: {
   const websocketMessages: Subject<ServerMessage> = new Subject()
   const startItUp: Subject<void> = new Subject()
 
-  console.log(
+  i(
     `Starting server on port ${port} (testMode: ${options.testMode || options.evalMode}, evalMode: ${options.evalMode})`
   )
 

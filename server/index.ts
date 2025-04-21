@@ -334,7 +334,11 @@ async function initializeRuntimeAndStart(
   return { runtime, subscription }
 }
 
+let exiting = false
 async function flushAndExit(runtime: AutomationRuntime) {
+  if (exiting) return
+  exiting = true
+
   try {
     console.log('Flushing database...')
 
@@ -348,7 +352,9 @@ async function flushAndExit(runtime: AutomationRuntime) {
     console.error('Error during shutdown:', error)
   }
 
-  process.exit(0)
+  // NB: There seems to be a bug in Bun where if you call db.close() then
+  // immediately exit, the database connection will not be correctly closed
+  setTimeout(() => process.exit(0), 100)
 }
 
 async function main() {

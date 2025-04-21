@@ -21,7 +21,7 @@ import { EvalHomeAssistantApi } from './eval-framework'
 import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
-import { disableLogging, i, startLogger } from './logging'
+import { disableLogging, e, i, startLogger } from './logging'
 import { isProdMode, repoRootDir } from './paths'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import serveStatic from './serve-static-bun'
@@ -76,7 +76,6 @@ async function serveCommand(options: {
     )
     .subscribe()
 
-  // Setup graceful shutdown handler
   process.on('SIGINT', () => {
     if (currentRuntime) void flushAndExit(currentRuntime)
   })
@@ -340,7 +339,8 @@ async function flushAndExit(runtime: AutomationRuntime) {
   exiting = true
 
   try {
-    console.log('Flushing database...')
+    i('Flushing database...')
+    disableLogging()
 
     // Run PRAGMA commands to ensure database integrity during shutdown
     await sql`PRAGMA wal_checkpoint(FULL)`.execute(runtime.db)
@@ -349,7 +349,7 @@ async function flushAndExit(runtime: AutomationRuntime) {
     await runtime.db.destroy()
     runtime.unsubscribe()
   } catch (error) {
-    console.error('Error during shutdown:', error)
+    e('Error during shutdown:', error)
   }
 
   // NB: There seems to be a bug in Bun where if you call db.close() then

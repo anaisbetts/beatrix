@@ -28,7 +28,7 @@ export async function startLogger(db: Kysely<Schema>, timezone: string) {
   const subj = new Subject<{ msg: string; type: string; timestamp: DateTime }>()
   const sub = subj
     .pipe(
-      bufferTime(750),
+      bufferTime(500),
       concatMap((msgs) => {
         if (msgs.length < 1) {
           return from([])

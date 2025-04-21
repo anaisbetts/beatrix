@@ -311,14 +311,13 @@ async function initializeRuntimeAndStart(
     ? new EvalHomeAssistantApi()
     : await LiveHomeAssistantApi.createViaConfig(config)
 
-  const db = await createDatabaseViaEnv()
-  subscription.add(await startLogger(db, config.timezone ?? 'Etc/UTC'))
-
   const runtime = await LiveAutomationRuntime.createViaConfig(
     config,
     conn,
     path.resolve(notebook)
   )
+
+  subscription.add(await startLogger(runtime.db, config.timezone ?? 'Etc/UTC'))
 
   handleWebsocketRpc<ServerWebsocketApi>(
     new ServerWebsocketApiImpl(

@@ -77,10 +77,15 @@ async function serveCommand(options: {
     .subscribe()
 
   process.on('SIGINT', () => {
+    console.log('Got sigint!')
     if (currentRuntime) void flushAndExit(currentRuntime)
   })
-
   process.on('SIGTERM', () => {
+    console.log('Got sigterm!')
+    if (currentRuntime) void flushAndExit(currentRuntime)
+  })
+  process.on('SIGQUIT', () => {
+    console.log('Got sigterm!')
     if (currentRuntime) void flushAndExit(currentRuntime)
   })
 

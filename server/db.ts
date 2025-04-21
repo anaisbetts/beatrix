@@ -68,9 +68,11 @@ export async function fetchAutomationLogs(
     .leftJoin('signals as s', 's.id', 'a.signalId')
     .limit(limit)
 
+  /*
   if (beforeTimestamp) {
     q = q.where('a.createdAt', '<', `datetime(${beforeTimestamp.toISO()!})`)
   }
+    */
 
   const rows = await q
     .select(['s.data as signalData', 's.type as signalType'])

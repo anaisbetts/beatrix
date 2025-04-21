@@ -61,7 +61,7 @@ export async function fetchAutomationLogs(
   db: Kysely<Schema>,
   automations: Automation[],
   beforeTimestamp?: DateTime,
-  limit = 30
+  limit = 100
 ): Promise<AutomationLogEntry[]> {
   let q = db
     .selectFrom('automationLogs as a')

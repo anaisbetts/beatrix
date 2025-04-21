@@ -81,6 +81,10 @@ async function serveCommand(options: {
     if (currentRuntime) void flushAndExit(currentRuntime)
   })
 
+  process.on('SIGTERM', () => {
+    if (currentRuntime) void flushAndExit(currentRuntime)
+  })
+
   const assetsServer = serveStatic(path.join(repoRootDir(), 'public'))
 
   Bun.serve({

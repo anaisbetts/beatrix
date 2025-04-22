@@ -1,9 +1,12 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { ServerWebSocket } from 'bun'
+import type { ServerWebSocket } from 'bun'
 import { Command } from 'commander'
 import { configDotenv } from 'dotenv'
 import { mkdir, writeFile } from 'fs/promises'
+import { Hono } from 'hono'
+import { serveStatic } from 'hono/bun'
+import { createBunWebSocket } from 'hono/bun'
 import { sql } from 'kysely'
 import { DateTime } from 'luxon'
 import path from 'path'
@@ -24,7 +27,6 @@ import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, e, i, startLogger } from './logging'
 import { isProdMode, repoRootDir } from './paths'
 import { runAllEvals, runQuickEvals } from './run-evals'
-import serveStatic from './serve-static-bun'
 import {
   AutomationRuntime,
   LiveAutomationRuntime,
@@ -89,30 +91,53 @@ async function serveCommand(options: {
     if (currentRuntime) void flushAndExit(currentRuntime)
   })
 
-  const assetsServer = serveStatic(path.join(repoRootDir(), 'public'))
+  // Create Hono app
+  const app = new Hono()
 
-  Bun.serve({
-    port: port,
-    async fetch(req, server) {
-      const u = URL.parse(req.url)
+  // Set up WebSocket handling
+  const { upgradeWebSocket, websocket } = createBunWebSocket<ServerWebSocket>()
 
-      if (u?.pathname === '/api/ws' && server.upgrade(req)) {
-        return new Response()
+  // Handle WebSocket connections at /api/ws
+  app.get(
+    '/api/ws',
+    upgradeWebSocket(() => {
+      return {
+        onMessage(message, ws) {
+          // Handle WebSocket messages in the simplest form
+          // Just convert to string if it's not already a string
+          const data =
+            typeof message.data === 'string'
+              ? message.data
+              : JSON.stringify({ type: 'binary-data' })
+
+          websocketMessages.next({
+            message: data,
+            reply: async (m) => {
+              ws.send(m)
+            },
+          })
+        },
+        onClose() {
+          i('WebSocket connection closed')
+        },
+        onError(error) {
+          e('WebSocket error:', error)
+        },
       }
-      return await assetsServer(req)
-    },
-    websocket: {
-      async message(ws: ServerWebSocket, message: string | Buffer) {
-        websocketMessages.next({
-          message: message,
-          reply: async (m) => {
-            ws.send(m, true)
-          },
-        })
-      },
-    },
+    })
+  )
+
+  // Serve static files
+  app.use('/*', serveStatic({ root: path.join(repoRootDir(), 'public') }))
+
+  // Start the server
+  Bun.serve({
+    port: parseInt(port),
+    fetch: app.fetch,
+    websocket,
   })
 
+  i(`Server started at http://localhost:${port}`)
   startItUp.next(undefined)
 }
 

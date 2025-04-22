@@ -95,11 +95,14 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
         anthropicMessages
       )
 
+      let assistantMessage: Message | null = null
+
       observable.subscribe({
         next: (message) => {
           if (message.role === 'assistant') {
             // Convert Anthropic message to Ollama format
             const ollamaMessage = convertAnthropicMessageToOllama(message)
+            assistantMessage = ollamaMessage
             const content = ollamaMessage.content
 
             if (content) {
@@ -144,6 +147,8 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
             model,
             created_at: new Date().toISOString(),
             done: true,
+            // Include an empty message in the final response to satisfy the validation
+            message: assistantMessage || { role: 'assistant', content: '' },
           }
 
           // Handle each operation separately

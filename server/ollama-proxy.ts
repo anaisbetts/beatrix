@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { BlankEnv, BlankSchema } from 'hono/types'
 import { Message } from 'ollama'
 
+import { createBuiltinServers } from './llm'
 import {
   convertAnthropicMessageToOllama,
   convertOllamaMessageToAnthropic,
@@ -89,9 +90,14 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
       })
 
       // Process the observable
+      const tools = createBuiltinServers(runtime, null, {
+        testMode: false,
+        includeCueServer: true,
+      })
+
       const observable = llm.executePromptWithTools(
         userPrompt,
-        [],
+        tools,
         anthropicMessages
       )
 

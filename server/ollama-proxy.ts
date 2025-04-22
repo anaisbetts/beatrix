@@ -107,7 +107,11 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
         next: (message) => {
           if (message.role === 'assistant') {
             // Convert Anthropic message to Ollama format
-            const ollamaMessage = convertAnthropicMessageToOllama(message)
+            // NB: We use the censored version because the client we're
+            // typically talking to is Home Assistant, who gets confused as
+            // hell if it sees tool blocks
+            const ollamaMessage =
+              convertAnthropicMessageToOllamaCensored(message)
             assistantMessage = ollamaMessage
             const content = ollamaMessage.content
 
@@ -182,7 +186,8 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
         observable.subscribe({
           next: (message) => {
             if (message.role === 'assistant') {
-              assistantMessage = convertAnthropicMessageToOllama(message)
+              assistantMessage =
+                convertAnthropicMessageToOllamaCensored(message)
             }
           },
           error: (err) => {
@@ -228,4 +233,30 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
       })
     }
   })
+}
+
+export function convertAnthropicMessageToOllamaCensored(
+  msg: MessageParam
+): Message {
+  // Handle standard messages
+  let contentString = ''
+  if (typeof msg.content === 'string') {
+    contentString = msg.content
+  } else if (Array.isArray(msg.content)) {
+    // Only include text blocks, completely skipping tool blocks
+    contentString = msg.content
+      .filter((block) => block.type === 'text')
+      .map((block) => {
+        if (block.type === 'text') {
+          return block.text
+        }
+        return ''
+      })
+      .join('\n')
+  }
+
+  return {
+    role: msg.role,
+    content: contentString,
+  }
 }

@@ -138,7 +138,6 @@ async function serveCommand(options: {
     websocket,
   })
 
-  i(`Server started at http://localhost:${port}`)
   startItUp.next(undefined)
 }
 

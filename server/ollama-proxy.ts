@@ -16,18 +16,23 @@ export function setOllamaAutomationRuntime(currentRuntime: AutomationRuntime) {
 
 export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
   app.get('/ollama/api/tags', (c) => {
+    // NB: All of this data is faked but just in case some client
+    // wants it, it's there
     return c.json({
       models: [
         {
           name: 'beatrix-runtime',
+          model: 'beatrix-runtime',
           modified_at: new Date().toISOString(),
-          size: 0,
-          digest: 'beatrix-runtime',
+          size: 4920753328,
+          digest: 'beatrix-' + Math.random().toString(16).substring(2, 10),
           details: {
-            format: 'beatrix',
+            parent_model: '',
+            format: 'gguf',
             family: 'beatrix',
-            parameter_size: 'runtime',
-            quantization_level: 'none',
+            families: ['beatrix', 'assistant'],
+            parameter_size: '8.0B',
+            quantization_level: 'Q4_K_M',
           },
         },
       ],

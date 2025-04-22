@@ -25,7 +25,8 @@ import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, e, i, startLogger } from './logging'
-import { setAutomationRuntime, setupOpenAIProxy } from './openai-proxy'
+import { setOllamaAutomationRuntime, setupOllamaProxy } from './ollama-proxy'
+import { setOpenAIAutomationRuntime, setupOpenAIProxy } from './openai-proxy'
 import { isProdMode, repoRootDir } from './paths'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import {
@@ -76,7 +77,8 @@ async function serveCommand(options: {
         currentSub.current = subscription
         currentRuntime = runtime
 
-        setAutomationRuntime(currentRuntime)
+        setOpenAIAutomationRuntime(currentRuntime)
+        setOllamaAutomationRuntime(currentRuntime)
       })
     )
     .subscribe()
@@ -125,6 +127,8 @@ async function serveCommand(options: {
   )
 
   setupOpenAIProxy(app)
+  setupOllamaProxy(app)
+
   app.use('/*', serveStatic({ root: path.join(repoRootDir(), 'public') }))
 
   // Start the server

@@ -231,7 +231,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   }
 }
 
-function convertOllamaMessageToAnthropic(
+export function convertOllamaMessageToAnthropic(
   msg: Message
 ): Anthropic.Messages.MessageParam {
   if (msg.role === 'tool') {
@@ -292,7 +292,7 @@ function convertOllamaMessageToAnthropic(
   }
 }
 
-function convertAnthropicMessageToOllama(msg: MessageParam): Message {
+export function convertAnthropicMessageToOllama(msg: MessageParam): Message {
   if (msg.role === 'user' && Array.isArray(msg.content)) {
     // Check if this user message contains tool results
     const toolResultBlock = msg.content.find(

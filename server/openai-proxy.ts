@@ -9,7 +9,7 @@ import {
 import { AutomationRuntime } from './workflow/automation-runtime'
 
 let runtime: AutomationRuntime | undefined
-export function setAutomationRuntime(currentRuntime: AutomationRuntime) {
+export function setOpenAIAutomationRuntime(currentRuntime: AutomationRuntime) {
   runtime = currentRuntime
 }
 

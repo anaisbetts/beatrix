@@ -379,7 +379,7 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
   }
 }
 
-function convertOpenAIMessageToAnthropic(
+export function convertOpenAIMessageToAnthropic(
   message: OpenAI.ChatCompletionMessage
 ): MessageParam {
   if (message.tool_calls && message.tool_calls.length > 0) {
@@ -424,7 +424,7 @@ function convertOpenAIMessageToAnthropic(
   }
 }
 
-function convertAnthropicMessageToOpenAI(
+export function convertAnthropicMessageToOpenAI(
   message: MessageParam
 ): OpenAI.ChatCompletionMessageParam {
   if (message.role === 'user' || message.role === 'assistant') {

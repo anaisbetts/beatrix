@@ -25,6 +25,7 @@ import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, e, i, startLogger } from './logging'
+import { setAutomationRuntime, setupOpenAIProxy } from './openai-proxy'
 import { isProdMode, repoRootDir } from './paths'
 import { runAllEvals, runQuickEvals } from './run-evals'
 import {
@@ -74,6 +75,8 @@ async function serveCommand(options: {
 
         currentSub.current = subscription
         currentRuntime = runtime
+
+        setAutomationRuntime(currentRuntime)
       })
     )
     .subscribe()
@@ -91,20 +94,14 @@ async function serveCommand(options: {
     if (currentRuntime) void flushAndExit(currentRuntime)
   })
 
-  // Create Hono app
   const app = new Hono()
 
-  // Set up WebSocket handling
   const { upgradeWebSocket, websocket } = createBunWebSocket<ServerWebSocket>()
-
-  // Handle WebSocket connections at /api/ws
   app.get(
     '/api/ws',
     upgradeWebSocket(() => {
       return {
         onMessage(message, ws) {
-          // Handle WebSocket messages in the simplest form
-          // Just convert to string if it's not already a string
           const data =
             typeof message.data === 'string'
               ? message.data
@@ -127,7 +124,7 @@ async function serveCommand(options: {
     })
   )
 
-  // Serve static files
+  setupOpenAIProxy(app)
   app.use('/*', serveStatic({ root: path.join(repoRootDir(), 'public') }))
 
   // Start the server

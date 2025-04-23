@@ -33,7 +33,11 @@ export function createDefaultLLMProvider(
   model?: string
 ): LargeLanguageProvider {
   const providerName = driver ?? config.llm
-  let effectiveModel = model // Use the override model if provided
+  if (!providerName) {
+    throw new Error('No driver provided and no default config')
+  }
+
+  let effectiveModel = model ?? getDefaultModelForDriver(config, providerName)
 
   if (!providerName) {
     throw new Error(
@@ -45,11 +49,10 @@ export function createDefaultLLMProvider(
     case 'anthropic':
       if (!config.anthropicApiKey) {
         throw new Error(
-          "LLM provider set to 'anthropic' but ANTHROPIC_API_KEY is missing."
+          "LLM provider set to 'anthropic' but anthropic.key is missing."
         )
       }
 
-      effectiveModel ??= config.anthropicModel // Fallback to config model
       return new AnthropicLargeLanguageProvider(
         config.anthropicApiKey,
         effectiveModel
@@ -57,11 +60,10 @@ export function createDefaultLLMProvider(
     case 'ollama':
       if (!config.ollamaHost) {
         throw new Error(
-          "LLM provider set to 'ollama' but OLLAMA_HOST is missing."
+          "LLM provider set to 'ollama' but ollama.host is missing."
         )
       }
 
-      effectiveModel ??= config.ollamaModel // Fallback to config model
       return new OllamaLargeLanguageProvider(config.ollamaHost, effectiveModel)
     default:
       // Assume it's an OpenAI-compatible provider name
@@ -74,14 +76,30 @@ export function createDefaultLLMProvider(
         )
       }
 
-      // Fallback to model from the specific provider config
-      effectiveModel ??= openAIProviderConfig.model
-
       return new OpenAILargeLanguageProvider({
         apiKey: openAIProviderConfig.apiKey,
         baseURL: openAIProviderConfig.baseURL,
-        model: effectiveModel, // Pass the determined model
+        model: effectiveModel,
       })
+  }
+}
+
+export function getDefaultModelForDriver(
+  config: AppConfig,
+  driver: string
+): string {
+  switch (driver) {
+    case 'anthropic':
+      return config.anthropicModel ?? 'claude-3-7-sonnet-20250219'
+    case 'ollama':
+      return config.ollamaModel ?? 'qwen2.5:14b'
+    case 'openai':
+      return (
+        config.openAIProviders?.find((p) => p.providerName === driver)?.model ??
+        'gpt4.1'
+      )
+    default:
+      throw new Error(`Unsupported driver: ${driver}`)
   }
 }
 

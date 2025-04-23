@@ -40,7 +40,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
   private model: string
   public constructor(
     private apiKey: string,
-    model?: string,
+    model: string,
     maxTokens?: number
   ) {
     this.model = model ?? 'claude-3-7-sonnet-20250219'

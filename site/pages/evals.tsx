@@ -1,4 +1,4 @@
-import { useCommand, usePromise } from '@anaisbetts/commands'
+import { useCommand } from '@anaisbetts/commands'
 import { Beaker, Play } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { firstValueFrom, share, toArray } from 'rxjs'
@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select'
 
 import { GradeResult, ScenarioResult } from '../../shared/types'
-import { ModelSelector } from '../components/model-selector'
+import { DriverSelector, ModelSelector } from '../components/llm-selector'
 import { useWebSocket } from '../components/ws-provider'
 
 export default function Evals() {
@@ -24,11 +24,6 @@ export default function Evals() {
   const [evalType, setEvalType] = useState<'all' | 'quick'>('all')
   const [results, setResults] = useState<ScenarioResult[]>([])
   const { api } = useWebSocket()
-
-  const driverList = usePromise(async () => {
-    if (!api) return []
-    return await firstValueFrom(api.getDriverList())
-  }, [api])
 
   const [runEvals, evalCommand, reset] = useCommand(async () => {
     if (!api) throw new Error('Not connected!')
@@ -94,36 +89,6 @@ export default function Evals() {
     null: () => null,
   })
 
-  const driverSelector = useMemo(
-    () =>
-      driverList.mapOrElse({
-        ok: (drivers) => (
-          <Select value={driver} onValueChange={(value) => setDriver(value)}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select driver" />
-            </SelectTrigger>
-            <SelectContent>
-              {drivers.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ),
-        err: () => (
-          <div className="text-sm text-red-500">Failed to load drivers</div>
-        ),
-        pending: () => (
-          <div className="flex h-10 w-[180px] items-center justify-center">
-            <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-          </div>
-        ),
-        null: () => <div className="text-sm italic">Select a driver</div>,
-      }),
-    [driver, driverList]
-  )
-
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
@@ -136,7 +101,11 @@ export default function Evals() {
       <div className="border-border flex flex-wrap gap-4 border-b p-4">
         <div className="flex flex-col">
           <label className="mb-1 text-sm">Driver</label>
-          {driverSelector}
+          <DriverSelector
+            driver={driver}
+            onDriverChange={setDriver}
+            disabled={evalCommand.isPending()}
+          />
         </div>
 
         <div className="flex flex-col">

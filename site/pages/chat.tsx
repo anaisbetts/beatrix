@@ -1,4 +1,4 @@
-import { useCommand, usePromise } from '@anaisbetts/commands'
+import { useCommand } from '@anaisbetts/commands'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { Bug, Send } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -7,13 +7,6 @@ import { firstValueFrom, share, toArray } from 'rxjs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -21,7 +14,7 @@ import {
 } from '@/components/ui/tooltip'
 
 import { ChatMessage } from '../components/chat-message'
-import { ModelSelector } from '../components/model-selector'
+import { DriverSelector, ModelSelector } from '../components/llm-selector'
 import { useWebSocket } from '../components/ws-provider'
 
 export default function Chat() {
@@ -36,11 +29,6 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const { api } = useWebSocket()
-
-  const driverList = usePromise(async () => {
-    if (!api) return []
-    return await firstValueFrom(api.getDriverList())
-  }, [api])
 
   const [sendPrompt, result, reset] = useCommand(async () => {
     const before = performance.now()
@@ -155,42 +143,16 @@ export default function Chat() {
     null: () => null,
   })
 
-  const driverSelector = useMemo(
-    () =>
-      driverList.mapOrElse({
-        ok: (drivers) => (
-          <Select value={driver} onValueChange={handleDriverChange}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select driver" />
-            </SelectTrigger>
-            <SelectContent>
-              {drivers.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d.charAt(0).toUpperCase() + d.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ),
-        err: () => (
-          <div className="text-sm text-red-500">Failed to load drivers</div>
-        ),
-        pending: () => (
-          <div className="flex h-10 w-[180px] items-center justify-center">
-            <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
-          </div>
-        ),
-        null: () => <div className="text-sm italic">Select a driver</div>,
-      }),
-    [driver, driverList, handleDriverChange]
-  )
-
   return (
     <div className="flex h-full flex-col">
       <div className="border-border flex items-center justify-between border-b p-4">
         <h2 className="text-lg font-semibold">Chat Session</h2>
         <div className="flex items-center gap-2">
-          {driverSelector}
+          <DriverSelector
+            driver={driver}
+            onDriverChange={handleDriverChange}
+            disabled={result.isPending()}
+          />
 
           <ModelSelector
             driver={driver}

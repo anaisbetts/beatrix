@@ -46,8 +46,8 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
 
   public constructor(opts: {
     apiKey: string
+    model: string
     baseURL?: string
-    model?: string
     maxTokens?: number
   }) {
     const { apiKey, baseURL, model, maxTokens } = opts

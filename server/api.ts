@@ -27,7 +27,11 @@ import {
 import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
 import { fetchAutomationLogs } from './db'
-import { createBuiltinServers, createDefaultLLMProvider } from './llm'
+import {
+  createBuiltinServers,
+  createDefaultLLMProvider,
+  getDefaultModelForDriver,
+} from './llm'
 import { i } from './logging'
 import { getSystemPrompt } from './prompts'
 import { runAllEvals, runQuickEvals } from './run-evals'
@@ -49,27 +53,33 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     private evalMode: boolean
   ) {}
 
-  getDriverList(): Observable<string[]> {
-    const list = []
+  getDriverList(): Observable<{ defaultDriver: string; drivers: string[] }> {
+    const drivers: string[] = []
     if (this.config.anthropicApiKey) {
-      list.push('anthropic')
+      drivers.push('anthropic')
     }
     if (this.config.ollamaHost) {
-      list.push('ollama')
+      drivers.push('ollama')
     }
-
     if (this.config.openAIProviders && this.config.openAIProviders.length > 0) {
-      list.push(
+      drivers.push(
         ...this.config.openAIProviders.map((x) => x.providerName ?? 'openai')
       )
     }
-
-    return of(list)
+    const defaultDriver = this.config.llm ?? drivers[0]
+    return of({ defaultDriver, drivers })
   }
 
-  getModelListForDriver(driver: string): Observable<string[]> {
+  getModelListForDriver(
+    driver: string
+  ): Observable<{ defaultModel?: string; models: string[] }> {
     const llm = createDefaultLLMProvider(this.config, driver.toLowerCase())
-    return from(llm.getModelList())
+    return from(
+      llm.getModelList().then((models) => ({
+        defaultModel: getDefaultModelForDriver(this.config, driver),
+        models,
+      }))
+    )
   }
 
   getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]> {

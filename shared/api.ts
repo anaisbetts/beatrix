@@ -29,8 +29,10 @@ export interface ServerWebsocketApi {
     count: number
   ): Observable<ScenarioResult>
 
-  getModelListForDriver(driver: string): Observable<string[]>
-  getDriverList(): Observable<string[]>
+  getModelListForDriver(
+    driver: string
+  ): Observable<{ defaultModel?: string; models: string[] }>
+  getDriverList(): Observable<{ defaultDriver: string; drivers: string[] }>
 
   getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]>
 

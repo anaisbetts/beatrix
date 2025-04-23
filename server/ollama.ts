@@ -27,8 +27,8 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
 
   private ollama: Ollama
   private model: string
-  constructor(endpoint: string, model?: string) {
-    this.model = model ?? 'qwen2.5:14b'
+  constructor(endpoint: string, model: string) {
+    this.model = model
     this.ollama = new Ollama({ host: endpoint })
   }
 

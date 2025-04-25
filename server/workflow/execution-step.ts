@@ -4,7 +4,7 @@ import { lastValueFrom, toArray } from 'rxjs'
 import { Automation } from '../../shared/types'
 import { formatDateForLLM } from '../lib/date-utils'
 import { createBuiltinServers } from '../llm'
-import { e, i } from '../logging'
+import { i } from '../logging'
 import { agenticReminders } from '../prompts'
 import { AutomationRuntime, now } from './automation-runtime'
 

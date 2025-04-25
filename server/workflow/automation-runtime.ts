@@ -11,7 +11,6 @@ import {
   Subject,
   SubscriptionLike,
   defer,
-  from,
   map,
   merge,
   mergeMap,
@@ -174,9 +173,11 @@ export class LiveAutomationRuntime
 
     this.pipelineSub.current = this.reparseAutomations
       .pipe(
-        switchMap(() => {
-          return from(this.reloadAutomations()).pipe(mergeMap((x) => x))
+        switchMap(async () => {
+          const ret = await this.reloadAutomations()
+          return ret
         }),
+        switchMap((x) => x),
         mergeMap(async ({ automation, signal }) => {
           i(
             `Executing automation ${automation.fileName} (${automation.hash}), triggered by signal ID ${signal.id} (${signal.type})`

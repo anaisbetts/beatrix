@@ -226,9 +226,9 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
 
   async fetchStates(force = false): Promise<Record<string, HassState>> {
     if (this.stateCache && !force) {
-      // NB: We do the Object.assign here so that callers get a stable snapshot
+      // NB: We do the clone here so that callers get a stable snapshot
       // rather than a constantly shifting live object
-      return Promise.resolve(Object.assign({}, this.stateCache))
+      return Promise.resolve(structuredClone(this.stateCache))
     }
 
     this.stateCache = await LiveHomeAssistantApi.fetchFullState(

@@ -130,12 +130,14 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       // NB: If we don't do this, we will end up trying to serialize an Observable
       // which obvs won't work
       this.runtime.scheduledSignals.map((x) => {
-        const ret = pick(x, [
-          'automation',
-          'friendlySignalDescription',
-          'isValid',
-          'signal',
-        ])
+        const ret = structuredClone(
+          pick(x, [
+            'automation',
+            'friendlySignalDescription',
+            'isValid',
+            'signal',
+          ])
+        )
 
         // Make the filenames relative to the automation dir when returning them
         ret.automation.fileName = ret.automation.fileName.replace(

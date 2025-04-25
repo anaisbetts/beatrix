@@ -46,11 +46,11 @@ import { automationFromString } from './workflow/parser'
 
 export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   public constructor(
-    private config: AppConfig,
-    private runtime: AutomationRuntime,
-    private notebookDirectory: string,
-    private testMode: boolean,
-    private evalMode: boolean
+    public config: AppConfig,
+    public runtime: AutomationRuntime,
+    public notebookDirectory: string,
+    public testMode: boolean,
+    public evalMode: boolean
   ) {}
 
   getDriverList(): Observable<{ defaultDriver: string; drivers: string[] }> {

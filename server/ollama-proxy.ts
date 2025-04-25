@@ -1,18 +1,15 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { Hono } from 'hono'
 import { BlankEnv, BlankSchema } from 'hono/types'
+import { LRUCache } from 'lru-cache'
 import { Message } from 'ollama'
 
-import { createBuiltinServers } from './llm'
-import {
-  convertAnthropicMessageToOllama,
-  convertOllamaMessageToAnthropic,
-} from './ollama'
-import { AutomationRuntime } from './workflow/automation-runtime'
+import { ServerWebsocketApiImpl } from './api'
+import { convertOllamaMessageToAnthropic } from './ollama'
 
-let runtime: AutomationRuntime | undefined
-export function setOllamaAutomationRuntime(currentRuntime: AutomationRuntime) {
-  runtime = currentRuntime
+let serverApi: ServerWebsocketApiImpl | undefined
+export function setOllamaApiImpl(api: ServerWebsocketApiImpl) {
+  serverApi = api
 }
 
 export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
@@ -40,17 +37,26 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
     })
   })
 
+  // NB: So this entire codebase is a bit Weird. Tools like Home Assistant can't
+  // Deal with seeing tool calls and end up mangling them. To prevent that from
+  // happening, we need to provide them a "censored" conversation, while we
+  // still have the real one in the background with Beatrix
+  const msgIdCache = new LRUCache<string, number>({
+    max: 256,
+  })
+
   app.post('/ollama/api/chat', async (c) => {
     const body = await c.req.json()
     const { messages, stream = false, model } = body
 
-    if (!runtime) {
+    if (!serverApi) {
       c.status(500)
       return c.text('Runtime not set up')
     }
 
-    // Create LLM provider using runtime
-    const llm = runtime.llmFactory()
+    // Try to find the server ID via their first message
+    const firstMsg = messages[0].content
+    const previousMessageId = msgIdCache.get(firstMsg)
 
     // Convert Ollama messages to Anthropic format
     const anthropicMessages: MessageParam[] = []
@@ -89,22 +95,19 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
         },
       })
 
-      // Process the observable
-      const tools = createBuiltinServers(runtime, null, {
-        testMode: false,
-        includeCueServer: true,
-      })
-
-      const observable = llm.executePromptWithTools(
+      const observable = serverApi.handlePromptRequest(
         userPrompt,
-        tools,
-        anthropicMessages
+        undefined,
+        undefined,
+        previousMessageId,
+        'chat'
       )
 
       let assistantMessage: Message | null = null
 
       observable.subscribe({
         next: (message) => {
+          msgIdCache.set(firstMsg, message.serverId)
           if (message.role === 'assistant') {
             // Convert Anthropic message to Ollama format
             // NB: We use the censored version because the client we're
@@ -177,14 +180,18 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
       return new Promise<Response>((resolve) => {
         let assistantMessage: Message | null = null
 
-        const observable = llm.executePromptWithTools(
+        const observable = serverApi!.handlePromptRequest(
           userPrompt,
-          [],
-          anthropicMessages
+          undefined,
+          undefined,
+          previousMessageId,
+          'chat'
         )
 
         observable.subscribe({
           next: (message) => {
+            msgIdCache.set(firstMsg, message.serverId)
+
             if (message.role === 'assistant') {
               assistantMessage =
                 convertAnthropicMessageToOllamaCensored(message)

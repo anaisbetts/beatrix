@@ -25,7 +25,7 @@ import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, e, i, startLogger } from './logging'
-import { setOllamaAutomationRuntime, setupOllamaProxy } from './ollama-proxy'
+import { setOllamaApiImpl, setupOllamaProxy } from './ollama-proxy'
 import { setOpenAIAutomationRuntime, setupOpenAIProxy } from './openai-proxy'
 import { isProdMode, repoRootDir } from './paths'
 import { runAllEvals, runQuickEvals } from './run-evals'
@@ -65,7 +65,7 @@ async function serveCommand(options: {
     .pipe(
       mergeMap(async () => {
         i('Starting up Runtime')
-        let { runtime, subscription } = await initializeRuntimeAndStart(
+        let { runtime, subscription, wsApi } = await initializeRuntimeAndStart(
           options.notebook,
           options.evalMode,
           options.testMode,
@@ -78,7 +78,7 @@ async function serveCommand(options: {
         currentRuntime = runtime
 
         setOpenAIAutomationRuntime(currentRuntime)
-        setOllamaAutomationRuntime(currentRuntime)
+        setOllamaApiImpl(wsApi)
       })
     )
     .subscribe()
@@ -347,20 +347,18 @@ async function initializeRuntimeAndStart(
   )
 
   subscription.add(await startLogger(runtime.db, config.timezone ?? 'Etc/UTC'))
-
-  handleWebsocketRpc<ServerWebsocketApi>(
-    new ServerWebsocketApiImpl(
-      config,
-      runtime,
-      path.resolve(notebook),
-      testMode,
-      evalMode
-    ),
-    websocketMessages
+  const wsApi = new ServerWebsocketApiImpl(
+    config,
+    runtime,
+    path.resolve(notebook),
+    testMode,
+    evalMode
   )
 
+  handleWebsocketRpc<ServerWebsocketApi>(wsApi, websocketMessages)
+
   subscription.add(runtime.start())
-  return { runtime, subscription }
+  return { runtime, subscription, wsApi }
 }
 
 let exiting = false

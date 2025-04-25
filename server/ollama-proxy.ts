@@ -1,4 +1,5 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import debug from 'debug'
 import { Hono } from 'hono'
 import { BlankEnv, BlankSchema } from 'hono/types'
 import { LRUCache } from 'lru-cache'
@@ -7,13 +8,18 @@ import { Message } from 'ollama'
 import { ServerWebsocketApiImpl } from './api'
 import { convertOllamaMessageToAnthropic } from './ollama'
 
+const d = debug('b:ollama-proxy')
+
 let serverApi: ServerWebsocketApiImpl | undefined
 export function setOllamaApiImpl(api: ServerWebsocketApiImpl) {
+  d('Setting Ollama API implementation: %o', api ? api.constructor.name : api)
   serverApi = api
 }
 
 export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
+  d('Setting up Ollama proxy routes')
   app.get('/ollama/api/tags', (c) => {
+    d('GET /ollama/api/tags called')
     // NB: All of this data is faked but just in case some client
     // wants it, it's there
     return c.json({
@@ -46,10 +52,13 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
   })
 
   app.post('/ollama/api/chat', async (c) => {
+    d('POST /ollama/api/chat called')
     const body = await c.req.json()
+    d('Request body: %o', body)
     const { messages, stream = false, model } = body
 
     if (!serverApi) {
+      d('Error: serverApi not set')
       c.status(500)
       return c.text('Runtime not set up')
     }
@@ -57,6 +66,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
     // Try to find the server ID via their first message
     const firstMsg = messages[0].content
     const previousMessageId = msgIdCache.get(firstMsg)
+    d('First message: %s, previousMessageId: %o', firstMsg, previousMessageId)
 
     // Convert Ollama messages to Anthropic format
     const anthropicMessages: MessageParam[] = []
@@ -64,7 +74,9 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 
     // Process all messages except the last one
     for (let i = 0; i < messages.length - 1; i++) {
-      anthropicMessages.push(convertOllamaMessageToAnthropic(messages[i]))
+      const converted = convertOllamaMessageToAnthropic(messages[i])
+      d('Converted Ollama message to Anthropic: %o', converted)
+      anthropicMessages.push(converted)
     }
 
     // The last message is the user's prompt
@@ -72,10 +84,12 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
       const lastMessage = messages[messages.length - 1]
       if (lastMessage.role === 'user') {
         userPrompt = lastMessage.content
+        d('User prompt: %s', userPrompt)
       }
     }
 
     if (stream) {
+      d('Handling streaming response')
       // Set up streaming response
       c.header('Content-Type', 'text/event-stream')
       c.header('Cache-Control', 'no-cache')
@@ -107,14 +121,16 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 
       observable.subscribe({
         next: (message) => {
+          d('Observable next (stream): %o', message)
           msgIdCache.set(firstMsg, message.serverId)
           if (message.role === 'assistant') {
             // Convert Anthropic message to Ollama format
-            // NB: We use the censored version because the client we're
-            // typically talking to is Home Assistant, who gets confused as
-            // hell if it sees tool blocks
             const ollamaMessage =
               convertAnthropicMessageToOllamaCensored(message)
+            d(
+              'Converted Anthropic message to Ollama (censored): %o',
+              ollamaMessage
+            )
             assistantMessage = ollamaMessage
             const content = ollamaMessage.content
 
@@ -129,12 +145,13 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
                 },
                 done: false,
               }
-
+              d('Writing streaming response chunk: %o', response)
               void writer.write(encoder.encode(JSON.stringify(response) + '\n'))
             }
           }
         },
         error: (err) => {
+          d('Observable error (stream): %o', err)
           console.error('Error in stream:', err)
           // Send error event and close the writer
           const errorResponse = {
@@ -155,6 +172,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
           })
         },
         complete: () => {
+          d('Observable complete (stream)')
           // Send completion event and close
           const finalResponse = {
             model,
@@ -176,6 +194,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 
       return c.body(null)
     } else {
+      d('Handling non-streaming response')
       // Non-streaming response
       return new Promise<Response>((resolve) => {
         let assistantMessage: Message | null = null
@@ -190,14 +209,20 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 
         observable.subscribe({
           next: (message) => {
+            d('Observable next (non-stream): %o', message)
             msgIdCache.set(firstMsg, message.serverId)
 
             if (message.role === 'assistant') {
               assistantMessage =
                 convertAnthropicMessageToOllamaCensored(message)
+              d(
+                'Converted Anthropic message to Ollama (censored): %o',
+                assistantMessage
+              )
             }
           },
           error: (err) => {
+            d('Observable error (non-stream): %o', err)
             console.error('Error in completion:', err)
             resolve(
               c.json(
@@ -212,6 +237,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
             )
           },
           complete: () => {
+            d('Observable complete (non-stream)')
             // Final Ollama response format
             if (assistantMessage) {
               resolve(
@@ -245,6 +271,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 export function convertAnthropicMessageToOllamaCensored(
   msg: MessageParam
 ): Message {
+  d('Converting Anthropic message to Ollama (censored): %o', msg)
   // Handle standard messages
   let contentString = ''
   if (typeof msg.content === 'string') {

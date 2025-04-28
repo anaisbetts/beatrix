@@ -114,7 +114,7 @@ export const guaranteedThrottle =
   <T>(time: number, scheduler?: SchedulerLike) =>
   (source: Observable<T>) => {
     return source.pipe(
-      map((x: any) => timer(time, scheduler).pipe(map(() => x))),
+      map((x: T) => timer(time, scheduler).pipe(map(() => x))),
       switchAll()
     )
   }

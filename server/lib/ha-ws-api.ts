@@ -84,13 +84,6 @@ export interface HomeAssistantApi extends SubscriptionLike {
     options: CallServiceOptions,
     testModeOverride?: boolean
   ): Promise<T | null>
-
-  filterUncommonEntities(
-    entities: Record<string, HassState>,
-    options?: {
-      includeUnavailable?: boolean
-    }
-  ): Record<string, HassState>
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
@@ -298,15 +291,6 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     return await this.connection!.sendMessagePromise<T>(message)
   }
 
-  filterUncommonEntities(
-    entities: Record<string, HassState>,
-    options?: {
-      includeUnavailable?: boolean
-    }
-  ): Record<string, HassState> {
-    return filterUncommonEntitiesFromTime(entities, Date.now(), options)
-  }
-
   unsubscribe(): void {
     this.eventsObs.complete()
     this.connectionSub.unsubscribe()
@@ -407,28 +391,16 @@ export function observeStatesForEntities(
 const LOW_VALUE_REGEXES = [
   // Domain-based filters (anchored at start)
   /^update\./,
-  /^device_tracker\./,
-  /^button\./,
   /^binary_sensor\.remote_ui/,
-  /^conversation\./,
-  /^stt\./,
-  /^tts\./,
-  /^number\./,
-  /^select\./,
 
   // Name-based pattern filters (can appear anywhere)
   /_uptime/,
   /_cpu_utilization/,
   /_memory_/,
-  /_battery_/,
   /_uplink_mac/,
   /_firmware/,
   /debug_/,
   /_identify/,
-  /_reboot/,
-  /_restart/,
-  /_power_cycle/,
-  /_fan_speed/,
   /_signal/,
   /_mac/,
   /_version/,
@@ -439,9 +411,8 @@ const LOW_VALUE_REGEXES = [
   /_connectivity/,
 ]
 
-export function filterUncommonEntitiesFromTime(
+export function filterUncommonEntities(
   entities: Record<string, HassState>,
-  currentTime: number,
   options: {
     includeUnavailable?: boolean
   } = {}
@@ -455,13 +426,7 @@ export function filterUncommonEntitiesFromTime(
     ? Object.keys(entities)
     : Object.keys(entities).filter(
         (e) =>
-          entities[e].state !== 'unavailable' &&
-          entities[e].state !== 'unknown' &&
-          changedRecently(
-            new Date(entities[e].last_changed),
-            10 * 24,
-            currentTime
-          )
+          entities[e].state !== 'unavailable' && entities[e].state !== 'unknown'
       )
 
   return Object.fromEntries(
@@ -469,15 +434,6 @@ export function filterUncommonEntitiesFromTime(
       .filter((x) => !LOW_VALUE_REGEXES.find((re) => re.test(x)))
       .map((k) => [k, entities[k]])
   )
-}
-
-function changedRecently(date: Date, hours: number, now: number): boolean {
-  const dateTime = date.getTime()
-
-  const timeDifference = now - dateTime
-  const hoursInMilliseconds = hours * 60 * 60 * 1000
-
-  return timeDifference < hoursInMilliseconds
 }
 
 interface HassEventTargetAddRemove {

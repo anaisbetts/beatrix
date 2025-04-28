@@ -23,7 +23,6 @@ import {
   HassState,
   HomeAssistantApi,
   extractNotifiers,
-  filterUncommonEntitiesFromTime,
 } from './lib/ha-ws-api'
 import { LargeLanguageProvider } from './llm'
 import { e } from './logging'
@@ -162,16 +161,6 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     }
 
     return null
-  }
-
-  filterUncommonEntities(
-    entities: Record<string, HassState>,
-    options?: { includeUnavailable?: boolean }
-  ): Record<string, HassState> {
-    // NB: Because we filter entities that haven't changed since a date, we need to
-    // fake out the current time
-    const d = new Date('2025-03-29T18:09:00.000Z')
-    return filterUncommonEntitiesFromTime(entities, d.getTime(), options)
   }
 
   private dontcare = new SerialSubscription()

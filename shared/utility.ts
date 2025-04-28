@@ -1,3 +1,5 @@
+import { Observable, SchedulerLike, map, switchAll, timer } from 'rxjs'
+
 interface GetAllPropertiesOptions {
   includeSymbols?: boolean
   includeNonEnumerable?: boolean
@@ -107,3 +109,12 @@ export function omit<T extends object, K extends keyof T>(
 
   return result
 }
+
+export const guaranteedThrottle =
+  <T>(time: number, scheduler?: SchedulerLike) =>
+  (source: Observable<T>) => {
+    return source.pipe(
+      map((x: T) => timer(time, scheduler).pipe(map(() => x))),
+      switchAll()
+    )
+  }

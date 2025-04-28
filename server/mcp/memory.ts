@@ -62,16 +62,32 @@ export function createMemoryServer(filePath: string, megaServer?: McpServer) {
 
   server.tool(
     'search-observations',
-    'Search saved observations for a specific query string.',
-    { query: z.string().describe('The string to search for.') },
+    'Search saved observations for a specific query regular expression. Return an array of matching observations.',
+    {
+      query: z
+        .union([
+          z
+            .string()
+            .describe(
+              'The Regex to search for, without slashes. Example:\n^\\d+$'
+            ),
+          z.array(z.string()).describe('An array of Regexes to search for.'),
+        ])
+        .describe(
+          'The Regex or list of Regexes to search for, without slashes. Example:\n^\\d+$\n'
+        ),
+    },
     async ({ query }) => {
       try {
         i(`Searching observations for: "${query}"`)
         const observations = await readObservations(filePath)
-        const lowerCaseQuery = query.toLowerCase()
+
+        const regexes = (Array.isArray(query) ? query : [query]).map(
+          (q) => new RegExp(q, 'iv')
+        )
 
         const matchingObservations = observations.filter((obs) =>
-          obs.contents.toLowerCase().includes(lowerCaseQuery)
+          regexes.some((regex) => regex.test(obs.contents))
         )
 
         d(

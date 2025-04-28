@@ -42,6 +42,12 @@ export function createSchedulerServer(
         .describe(
           'The regex to match against the entity state. Note that this will be a case-insensitive regex'
         ),
+      delay: z
+        .number()
+        .optional()
+        .describe(
+          'The amount of time that the trigger must stay in the matching state before the automation is triggered.'
+        ),
       execution_notes: z
         .string()
         .optional()
@@ -49,7 +55,7 @@ export function createSchedulerServer(
           'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
         ),
     },
-    async ({ entity_ids, regex, execution_notes }) => {
+    async ({ entity_ids, regex, delay, execution_notes }) => {
       i(
         `Creating state regex trigger for automation ${automationHash}: entities ${JSON.stringify(entity_ids)}, regex /${regex}/i`
       )
@@ -65,6 +71,7 @@ export function createSchedulerServer(
           type: 'state',
           entityIds: Object.keys(ids),
           regex,
+          delay,
         }
 
         await db

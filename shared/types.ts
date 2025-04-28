@@ -21,6 +21,7 @@ export type StateRegexSignal = {
   type: 'state'
   entityIds: string[]
   regex: string
+  delay?: number
 }
 
 export type CronSignal = {

@@ -271,7 +271,6 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 export function convertAnthropicMessageToOllamaCensored(
   msg: MessageParam
 ): Message {
-  d('Converting Anthropic message to Ollama (censored): %o', msg)
   // Handle standard messages
   let contentString = ''
   if (typeof msg.content === 'string') {

@@ -23,6 +23,7 @@ import {
   SignalHandlerInfo,
   StateRegexSignal,
 } from '../../shared/types'
+import { guaranteedThrottle } from '../../shared/utility'
 import { Signal } from '../db-schema'
 import { HassState, observeStatesForEntities } from '../lib/ha-ws-api'
 import { i } from '../logging'
@@ -213,6 +214,7 @@ export class AbsoluteTimeSignalHandler implements SignalHandler {
     }
   }
 }
+
 export class StateRegexSignalHandler implements SignalHandler {
   readonly signalObservable: Observable<SignalledAutomation>
   readonly friendlySignalDescription: string
@@ -272,6 +274,7 @@ export class StateRegexSignalHandler implements SignalHandler {
         )
         return { signal: this.signal, automation: this.automation }
       }),
+      guaranteedThrottle(stateData.delay ?? 750),
       share()
     )
   }

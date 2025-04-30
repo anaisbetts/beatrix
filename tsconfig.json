@@ -22,6 +22,6 @@
       "bun-types" // add Bun global
     ]
   },
-  "include": ["site", "server", "shared", "scripts"],
+  "include": ["site", "server", "shared", "scripts", "*.d.ts"],
   "exclude": ["node_modules"]
 }

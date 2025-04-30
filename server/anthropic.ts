@@ -12,6 +12,7 @@ import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider, connectServerToClient } from './llm'
 import { e } from './logging'
+import { convertImageBuffersToContentBlocks } from './openai'
 
 const d = debug('b:llm')
 
@@ -59,17 +60,24 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ): Observable<MessageParam> {
     return from(
-      this._executePromptWithTools(prompt, toolServers, previousMessages)
+      this._executePromptWithTools(
+        prompt,
+        toolServers,
+        previousMessages,
+        images
+      )
     )
   }
 
   async *_executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ) {
     const anthropic = new Anthropic({ apiKey: this.apiKey })
 
@@ -122,9 +130,27 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
     // Add the current prompt as a user message if it's not empty
     if (prompt.trim()) {
+      let content: ContentBlockParam[] = [
+        {
+          type: 'text',
+          text: prompt,
+        },
+      ]
+
+      // Add images if provided
+      if (images && images.length > 0) {
+        // Use the shared utility function to convert images
+        content = convertImageBuffersToContentBlocks(
+          images,
+          prompt,
+          'anthropic'
+        ) as ContentBlockParam[]
+        d('Added %d images to the prompt', images.length)
+      }
+
       msgs.push({
         role: 'user',
-        content: prompt,
+        content,
       })
       yield msgs[msgs.length - 1]
     }

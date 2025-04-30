@@ -124,7 +124,7 @@ Please follow these steps:
    - For delays or offsets, use create-relative-time-trigger
    - For specific future times, use create-absolute-time-trigger
 
-5. Provide a clear explanation of your decision process and actions taken
+5. Provide a brief explanation of your decision process and actions taken
 </instructions>
 
 Based on the current date and time, and the automation instructions provided above, please analyze the current scheduling configuration and make any necessary adjustments.

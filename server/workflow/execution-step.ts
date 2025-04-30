@@ -118,12 +118,15 @@ Follow these steps to execute this automation intelligently:
    - Avoid conflicting or redundant actions
    - Ensure all safety conditions are met
 
-4. Explain your reasoning and actions clearly
+4. Explain your reasoning and actions clearly but briefly
 
 5. If difficulties were encountered, **OPTIONALLY** use the save-observation tool to save observations or discoveries.
 </instructions>
 
-Based on the above information, please determine if this automation should take action right now, and if so, what actions to take. Think step by step about the context of the trigger, the current state of the home, and the intent of the automation.
+Based on the above information, please determine if this automation should take
+action right now, and if so, what actions to take. Think step by step about the
+context of the trigger, the current state of the home, and the intent of the
+automation.
 
 <automation>
 ${automation}

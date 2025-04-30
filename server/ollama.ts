@@ -13,6 +13,7 @@ import pkg from '../package.json'
 import { TimeoutError, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider, connectServerToClient } from './llm'
 import { e } from './logging'
+import { convertImageBuffersToContentBlocks } from './openai'
 
 const d = debug('b:llm')
 
@@ -40,17 +41,24 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ): Observable<MessageParam> {
     return from(
-      this._executePromptWithTools(prompt, toolServers, previousMessages)
+      this._executePromptWithTools(
+        prompt,
+        toolServers,
+        previousMessages,
+        images
+      )
     ).pipe(map((m) => convertOllamaMessageToAnthropic(m)))
   }
 
   async *_executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ) {
     const modelName = this.model
 
@@ -116,10 +124,19 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
 
     // Add the current prompt as a user message if it's not empty
     if (prompt.trim()) {
-      msgs.push({
+      const userMessage: Message = {
         role: 'user',
         content: prompt,
-      })
+      }
+
+      // Add images if provided
+      if (images && images.length > 0) {
+        d('Added %d images to the Ollama prompt', images.length)
+        // Ollama expects Uint8Array images
+        userMessage.images = images.map((image) => new Uint8Array(image))
+      }
+
+      msgs.push(userMessage)
       yield msgs[msgs.length - 1]
     }
 
@@ -283,6 +300,24 @@ export function convertOllamaMessageToAnthropic(
       role: 'assistant',
       content: contentBlocks,
     }
+  } else if (msg.role === 'user' && msg.images && msg.images.length > 0) {
+    // User message with images
+    const textContent = msg.content ? String(msg.content) : undefined
+
+    // Use the shared utility function
+    const imageBuffers = msg.images.map((img) =>
+      img instanceof Uint8Array
+        ? Buffer.from(img).buffer
+        : Buffer.from(String(img), 'base64').buffer
+    )
+    return {
+      role: 'user',
+      content: convertImageBuffersToContentBlocks(
+        imageBuffers,
+        textContent,
+        'anthropic'
+      ) as ContentBlockParam[],
+    }
   } else {
     // Standard user or assistant message without tools
     return {
@@ -305,6 +340,32 @@ export function convertAnthropicMessageToOllama(msg: MessageParam): Message {
         role: 'tool',
         content: JSON.stringify(toolResultBlock.content),
         // tool_call_id: toolResultBlock.tool_use_id, // Ollama Message doesn't have tool_call_id
+      }
+    }
+
+    // Check if this message contains images
+    const imageBlocks = msg.content.filter((block) => block.type === 'image')
+    if (imageBlocks.length > 0) {
+      // Extract text content if any
+      const textBlocks = msg.content.filter((block) => block.type === 'text')
+      const textContent =
+        textBlocks.length > 0
+          ? textBlocks.map((block) => block.text).join('\n')
+          : ''
+
+      // Convert image blocks to Uint8Array for Ollama
+      const images = imageBlocks.map((block) => {
+        if (block.type === 'image' && block.source.type === 'base64') {
+          // Convert base64 data back to Uint8Array
+          return new Uint8Array(Buffer.from(block.source.data, 'base64'))
+        }
+        return new Uint8Array()
+      })
+
+      return {
+        role: 'user',
+        content: textContent,
+        images,
       }
     }
   }

@@ -84,6 +84,8 @@ export interface HomeAssistantApi extends SubscriptionLike {
     options: CallServiceOptions,
     testModeOverride?: boolean
   ): Promise<T | null>
+
+  fetchCameraImage(entity_id: string): Promise<Blob>
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
@@ -96,14 +98,15 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   private failCount = 0
 
   private constructor(
-    auth: Auth,
+    private auth: Auth,
+    private haUrl: string,
     private testMode: boolean = false
   ) {
     this.connectionFactory = new Observable<Connection>((subj) => {
       const disp = new Subscription()
 
       i(`Connecting to Home Assistant...`)
-      createConnection({ auth }).then(
+      createConnection({ auth: this.auth }).then(
         (x) => {
           i('Connected successfully')
           this.failCount = 0
@@ -168,17 +171,39 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
           const entityId = ev.data.entity_id
           if (entityId) {
             delete ev.data.new_state.context
-            this.stateCache![entityId] = ev.data.new_state
+            this.stateCache![entityId] = truncateAttributes(ev.data.new_state)
           }
         })
     )
+  }
+
+  async fetchCameraImage(entity_id: string): Promise<Blob> {
+    const states = await this.fetchStates()
+    const state = states[entity_id]
+    if (!state) {
+      throw new Error(`Camera entity ${entity_id} not found`)
+    }
+
+    const image = state.attributes.entity_picture
+    if (!image) {
+      throw new Error(`Camera entity ${entity_id} has no image`)
+    }
+
+    let url = image
+    if (!/^https?:\/\//.test(image)) {
+      // This is a relative URL, like /api/camera_proxy/camera.front_door
+      url = `${this.haUrl}${image}`
+    }
+
+    const response = await fetch(url)
+    return response.blob()
   }
 
   static async createViaConfig(config: AppConfig) {
     i(`Using Home Assistant URL ${config.haBaseUrl}`)
     const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
-    const ret = new LiveHomeAssistantApi(auth)
+    const ret = new LiveHomeAssistantApi(auth, config.haBaseUrl!)
     await firstValueFrom(ret.connectionFactory)
 
     return ret
@@ -209,7 +234,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       (acc, x) => {
         const entityId = x.entity_id
         if (entityId) {
-          acc[entityId] = x
+          acc[entityId] = truncateAttributes(x)
         }
         return acc
       },
@@ -367,7 +392,7 @@ export function observeStatesForEntities(
       const entityId = ev.data.entity_id
 
       if (ids.includes(entityId)) {
-        return of(ev.data.new_state as HassState)
+        return of(truncateAttributes(ev.data.new_state as HassState))
       } else {
         return EMPTY
       }
@@ -454,4 +479,29 @@ function fromHassEvent<R>(
     target.addEventListener(name, h)
     return new Subscription(() => target.removeEventListener(name, h))
   })
+}
+
+// NB: Some Home Assistant integrations like the Roborock camera send back a
+// stupid amount of data in the attributes, which blow up our context when LLMs
+// get ahold of it
+function truncateAttributes(
+  state: HassState,
+  maxLength: number = 512
+): HassState {
+  if (!state.attributes) return state
+
+  const truncatedAttributes: Record<string, any> = {}
+
+  for (const [key, value] of Object.entries(state.attributes)) {
+    if (typeof value === 'string' && value.length > maxLength) {
+      truncatedAttributes[key] = value.substring(0, maxLength) + '...'
+    } else {
+      truncatedAttributes[key] = value
+    }
+  }
+
+  return {
+    ...state,
+    attributes: truncatedAttributes,
+  }
 }

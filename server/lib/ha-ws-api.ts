@@ -171,7 +171,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
           const entityId = ev.data.entity_id
           if (entityId) {
             delete ev.data.new_state.context
-            this.stateCache![entityId] = ev.data.new_state
+            this.stateCache![entityId] = truncateAttributes(ev.data.new_state)
           }
         })
     )
@@ -234,7 +234,7 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
       (acc, x) => {
         const entityId = x.entity_id
         if (entityId) {
-          acc[entityId] = x
+          acc[entityId] = truncateAttributes(x)
         }
         return acc
       },
@@ -392,7 +392,7 @@ export function observeStatesForEntities(
       const entityId = ev.data.entity_id
 
       if (ids.includes(entityId)) {
-        return of(ev.data.new_state as HassState)
+        return of(truncateAttributes(ev.data.new_state as HassState))
       } else {
         return EMPTY
       }
@@ -479,4 +479,29 @@ function fromHassEvent<R>(
     target.addEventListener(name, h)
     return new Subscription(() => target.removeEventListener(name, h))
   })
+}
+
+// NB: Some Home Assistant integrations like the Roborock camera send back a
+// stupid amount of data in the attributes, which blow up our context when LLMs
+// get ahold of it
+function truncateAttributes(
+  state: HassState,
+  maxLength: number = 512
+): HassState {
+  if (!state.attributes) return state
+
+  const truncatedAttributes: Record<string, any> = {}
+
+  for (const [key, value] of Object.entries(state.attributes)) {
+    if (typeof value === 'string' && value.length > maxLength) {
+      truncatedAttributes[key] = value.substring(0, maxLength) + '...'
+    } else {
+      truncatedAttributes[key] = value
+    }
+  }
+
+  return {
+    ...state,
+    attributes: truncatedAttributes,
+  }
 }

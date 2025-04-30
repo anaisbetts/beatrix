@@ -69,6 +69,7 @@ export interface AutomationLogEntry {
   automation: Automation | null
   type: AutomationType
   messages: MessageParam[]
+  images: string[] // base64 bytes
 
   servicesCalled: CallServiceLogEntry[]
 

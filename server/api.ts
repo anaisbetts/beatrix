@@ -172,9 +172,15 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
       this.notebookDirectory
     )
 
+    // Track referenced images during this prompt request
+    const referencedImages: Record<string, ArrayBufferLike> = {}
+
     const tools = createBuiltinServers(rqRuntime, null, {
       testMode: this.testMode || this.evalMode,
       includeCueServer: typeHint === 'chat',
+      onImageReferenced: (name: string, bytes: ArrayBufferLike) => {
+        referencedImages[name] = bytes
+      },
     })
 
     const convo = previousConversationId
@@ -261,6 +267,22 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
             })
             .where('id', '=', Number(serverId!))
             .execute()
+
+          // Store any referenced images in the database
+          const imageEntries = Object.entries(referencedImages)
+          if (imageEntries.length > 0) {
+            for (const [name, bytes] of imageEntries) {
+              await this.runtime.db
+                .insertInto('images')
+                .values({
+                  automationLogId: Number(serverId!),
+                  createdAt: now(this.runtime).toISO()!,
+                  bytes: Buffer.from(bytes),
+                })
+                .execute()
+              i('Saved image reference: %s for log %d', name, Number(serverId!))
+            }
+          }
         })
       )
       .subscribe()

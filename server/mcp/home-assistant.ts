@@ -25,10 +25,12 @@ export function createHomeAssistantServer(
     testMode?: boolean
     schedulerMode?: boolean
     megaServer?: McpServer
+    onImageReferenced?: (name: string, image: ArrayBufferLike) => unknown
   } = {}
 ) {
   const testMode = opts?.testMode ?? false
   const schedulerMode = opts?.schedulerMode ?? false
+  const onImageReferenced = opts?.onImageReferenced ?? (() => {})
 
   const server =
     opts?.megaServer ??
@@ -158,8 +160,6 @@ export function createHomeAssistantServer(
         ? entity_ids
         : [entity_ids]
 
-      // Use Jimp to resize the images to 720p
-      // convert blob to buffer
       const resizedImages = await asyncMap(ids, async (x) => {
         const bytes = await runtime.api.fetchCameraImage(x)
         const buffer = await bytes.arrayBuffer()
@@ -174,6 +174,7 @@ export function createHomeAssistantServer(
           resized = buffer
         }
 
+        onImageReferenced(x, resized)
         return resized
       })
 

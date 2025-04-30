@@ -84,6 +84,8 @@ export interface HomeAssistantApi extends SubscriptionLike {
     options: CallServiceOptions,
     testModeOverride?: boolean
   ): Promise<T | null>
+
+  fetchCameraImage(entity_id: string): Promise<Blob>
 }
 
 export class LiveHomeAssistantApi implements HomeAssistantApi {
@@ -96,14 +98,15 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
   private failCount = 0
 
   private constructor(
-    auth: Auth,
+    private auth: Auth,
+    private haUrl: string,
     private testMode: boolean = false
   ) {
     this.connectionFactory = new Observable<Connection>((subj) => {
       const disp = new Subscription()
 
       i(`Connecting to Home Assistant...`)
-      createConnection({ auth }).then(
+      createConnection({ auth: this.auth }).then(
         (x) => {
           i('Connected successfully')
           this.failCount = 0
@@ -174,11 +177,33 @@ export class LiveHomeAssistantApi implements HomeAssistantApi {
     )
   }
 
+  async fetchCameraImage(entity_id: string): Promise<Blob> {
+    const states = await this.fetchStates()
+    const state = states[entity_id]
+    if (!state) {
+      throw new Error(`Camera entity ${entity_id} not found`)
+    }
+
+    const image = state.attributes.entity_picture
+    if (!image) {
+      throw new Error(`Camera entity ${entity_id} has no image`)
+    }
+
+    let url = image
+    if (!/^https?:\/\//.test(image)) {
+      // This is a relative URL, like /api/camera_proxy/camera.front_door
+      url = `${this.haUrl}${image}`
+    }
+
+    const response = await fetch(url)
+    return response.blob()
+  }
+
   static async createViaConfig(config: AppConfig) {
     i(`Using Home Assistant URL ${config.haBaseUrl}`)
     const auth = createLongLivedTokenAuth(config.haBaseUrl!, config.haToken!)
 
-    const ret = new LiveHomeAssistantApi(auth)
+    const ret = new LiveHomeAssistantApi(auth, config.haBaseUrl!)
     await firstValueFrom(ret.connectionFactory)
 
     return ret

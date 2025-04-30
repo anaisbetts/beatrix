@@ -72,17 +72,24 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ): Observable<MessageParam> {
     return from(
-      this._executePromptWithTools(prompt, toolServers, previousMessages)
+      this._executePromptWithTools(
+        prompt,
+        toolServers,
+        previousMessages,
+        images
+      )
     )
   }
 
   async *_executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ) {
     // Create a client for each tool server and connect them
     const clientServerPairs = toolServers.map((mcpServer, index) => {
@@ -143,9 +150,28 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
 
     // Add the current prompt as a user message if it's not empty
     if (prompt.trim()) {
+      let content: any = prompt
+
+      // Add images if provided
+      if (images && images.length > 0) {
+        const contentItems: Array<any> = [{ type: 'text', text: prompt }]
+
+        // Convert ArrayBufferLike to base64 for OpenAI
+        for (const imageBuffer of images) {
+          contentItems.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:image/jpeg;base64,${Buffer.from(imageBuffer).toString('base64')}`,
+            },
+          })
+        }
+        content = contentItems
+        d('Added %d images to the prompt', images.length)
+      }
+
       msgs.push({
         role: 'user',
-        content: prompt,
+        content,
       })
 
       // Convert to Anthropic format for the interface
@@ -153,6 +179,26 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
         role: 'user',
         content: prompt,
       }
+
+      // Add images to the Anthropic format message if present
+      if (images && images.length > 0) {
+        const contentBlocks: any[] = [{ type: 'text', text: prompt }]
+
+        // Add image blocks for Anthropic format
+        for (const imageBuffer of images) {
+          contentBlocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/jpeg', // Assuming JPEG format
+              data: Buffer.from(imageBuffer).toString('base64'),
+            },
+          })
+        }
+
+        userMessage.content = contentBlocks
+      }
+
       yield userMessage
     }
 
@@ -410,17 +456,53 @@ export function convertOpenAIMessageToAnthropic(
       role: 'assistant',
       content,
     }
-  } else {
-    // Regular message without tool calls
-    return {
-      role: 'assistant',
-      content: [
-        {
+  } else if (Array.isArray(message.content)) {
+    // This could be a message with images
+    const content: any[] = []
+
+    // Process each content item
+    for (const item of message.content) {
+      if (typeof item === 'object' && item.type === 'text') {
+        // Text content
+        content.push({
           type: 'text',
-          text: message.content || '',
-        },
-      ],
+          text: item.text,
+        })
+      } else if (typeof item === 'object' && item.type === 'image_url') {
+        // Image content - convert from OpenAI format to Anthropic format
+        // Extract base64 data from data URL if present
+        if (item.image_url.url.startsWith('data:image/')) {
+          const base64Data = item.image_url.url.split(',')[1]
+          content.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type:
+                item.image_url.url.split(';')[0].split(':')[1] || 'image/jpeg',
+              data: base64Data,
+            },
+          })
+        }
+      }
     }
+
+    if (content.length > 0) {
+      return {
+        role: message.role,
+        content,
+      }
+    }
+  }
+
+  // Regular message without tool calls or special content
+  return {
+    role: 'assistant',
+    content: [
+      {
+        type: 'text',
+        text: message.content || '',
+      },
+    ],
   }
 }
 
@@ -438,6 +520,44 @@ export function convertAnthropicMessageToOpenAI(
 
     // For content blocks
     if (Array.isArray(message.content)) {
+      // Check for images
+      const imageBlocks = message.content.filter(
+        (block) => block.type === 'image'
+      )
+
+      if (imageBlocks.length > 0) {
+        // Message with images
+        const contentItems: any[] = []
+
+        // Add text blocks
+        const textBlocks = message.content.filter(
+          (block) => block.type === 'text'
+        )
+        textBlocks.forEach((block) => {
+          contentItems.push({
+            type: 'text',
+            text: block.text,
+          })
+        })
+
+        // Add image blocks - convert from Anthropic format to OpenAI format
+        imageBlocks.forEach((block) => {
+          if (block.type === 'image' && block.source.type === 'base64') {
+            contentItems.push({
+              type: 'image_url',
+              image_url: {
+                url: `data:${block.source.media_type || 'image/jpeg'};base64,${block.source.data}`,
+              },
+            })
+          }
+        })
+
+        return {
+          role: message.role === 'user' ? 'user' : 'assistant',
+          content: contentItems,
+        }
+      }
+
       // Check for tool results
       const toolResults = message.content.filter(
         (block) => block.type === 'tool_result'

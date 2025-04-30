@@ -59,17 +59,24 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ): Observable<MessageParam> {
     return from(
-      this._executePromptWithTools(prompt, toolServers, previousMessages)
+      this._executePromptWithTools(
+        prompt,
+        toolServers,
+        previousMessages,
+        images
+      )
     )
   }
 
   async *_executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ) {
     const anthropic = new Anthropic({ apiKey: this.apiKey })
 
@@ -122,9 +129,33 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
     // Add the current prompt as a user message if it's not empty
     if (prompt.trim()) {
+      const content: ContentBlockParam[] = [
+        {
+          type: 'text',
+          text: prompt,
+        },
+      ]
+
+      // Add images if provided
+      if (images && images.length > 0) {
+        // Convert ArrayBufferLike to base64 strings for Anthropic API
+        for (const imageBuffer of images) {
+          const base64Image = Buffer.from(imageBuffer).toString('base64')
+          content.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: 'image/jpeg', // Assuming JPEG format
+              data: base64Image,
+            },
+          })
+        }
+        d('Added %d images to the prompt', images.length)
+      }
+
       msgs.push({
         role: 'user',
-        content: prompt,
+        content,
       })
       yield msgs[msgs.length - 1]
     }

@@ -21,7 +21,8 @@ export interface LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],
-    previousMessages?: MessageParam[]
+    previousMessages?: MessageParam[],
+    images?: ArrayBufferLike[]
   ): Observable<MessageParam>
 
   getModelList(): Promise<string[]>

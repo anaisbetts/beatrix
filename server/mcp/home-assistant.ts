@@ -1,12 +1,14 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
-import { firstValueFrom, toArray } from 'rxjs'
+import { firstValueFrom, lastValueFrom, toArray } from 'rxjs'
+import sharp from 'sharp'
 import { z } from 'zod'
 
 import pkg from '../../package.json'
 import { messagesToString } from '../../shared/api'
 import { filterUncommonEntities } from '../lib/ha-ws-api'
+import { asyncMap } from '../lib/promise-extras'
 import { w } from '../logging'
 import { agenticReminders } from '../prompts'
 import { AutomationRuntime } from '../workflow/automation-runtime'
@@ -137,6 +139,58 @@ export function createHomeAssistantServer(
     }
   )
 
+  server.tool(
+    'interrogate-camera-image',
+    'Capture an image from a camera entity or list of entities and answer a question about the image',
+    {
+      entity_ids: z
+        .union([z.string(), z.array(z.string())])
+        .describe('The entity ID or list of IDs of the cameras'),
+      prompt: z
+        .string()
+        .describe('A prompt about the image to send to the LLM'),
+    },
+    async ({ entity_ids, prompt }) => {
+      const ids: string[] = Array.isArray(entity_ids)
+        ? entity_ids
+        : [entity_ids]
+
+      // Use sharp to resize the images to 720p
+      // convert blob to buffer
+      const resizedImages = await asyncMap(ids, async (x) => {
+        const bytes = await runtime.api.fetchCameraImage(x)
+        const buffer = await bytes.arrayBuffer()
+        const img = sharp(buffer)
+
+        let resized: ArrayBufferLike
+        const metadata = await img.metadata()
+        if (metadata.height && metadata.height > 720) {
+          resized = (await img.resize(1280, 720).toBuffer()).buffer
+        } else {
+          resized = buffer
+        }
+
+        return resized
+      })
+
+      // XXX Here is where we would put a "Create an image-friendly LLM"
+      const llm = runtime.llmFactory()
+
+      const msg = await lastValueFrom(
+        llm.executePromptWithTools(
+          analyzeImagePrompt(prompt),
+          [],
+          [],
+          Array.from(resizedImages.values())
+        )
+      )
+
+      return {
+        content: [{ type: 'text', text: messagesToString([msg]) }],
+      }
+    }
+  )
+
   // In scheduler mode, we cannot call services, only do read-only operations
   // on Home Assistant
   if (!schedulerMode) {
@@ -218,7 +272,10 @@ export const callServicePrompt = (
 ) => `
 # Home Assistant Entity Control Assistant
 
-You are an assistant specialized in controlling Home Assistant entities through natural language requests. Your goal is to translate user requests into the appropriate Home Assistant service calls using the MCP server tools available to you.
+You are an assistant specialized in controlling Home Assistant entities through
+natural language requests. Your goal is to translate user requests into the
+appropriate Home Assistant service calls using the MCP server tools available to
+you.
 
 ${agenticReminders}
 
@@ -273,4 +330,37 @@ For the task and entity/entities provided within the XML tags, follow these step
 <task>
 ${prompt}
 </task>
+`
+
+export const analyzeImagePrompt = (question: string) => `
+You are an advanced AI image analysis agent. Your task is to analyze the
+provided image(s) and answer a specific question about them. Here are the
+image(s) and the question:
+
+<question>
+${question}
+</question>
+
+Instructions:
+1. Analyze the image(s) thoroughly, focusing on elements relevant to the
+question.
+2. After your analysis, provide a concise and accurate answer to the question
+within <answer> tags.
+
+Remember:
+- Your analysis can be detailed, but your final answer should be brief and
+directly address the question.
+- If the question requires counting or identifying specific objects, be precise
+in your observations.
+- Focus solely on answering the specific question asked, avoiding unnecessary
+information.
+
+Example output structure (do not copy the content, only the structure):
+
+<answer>
+[Brief, focused answer to the specific question]
+</answer>
+
+Please proceed with your analysis and answer to the question about the provided
+image(s).
 `

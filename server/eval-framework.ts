@@ -8,6 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { NEVER, Observable, firstValueFrom, lastValueFrom, toArray } from 'rxjs'
 
+import cameraImage from '../mocks/camera.jpg' with { type: 'file' }
 import mockServices from '../mocks/services.json'
 import mockStates from '../mocks/states.json'
 import { messagesToString } from '../shared/api'
@@ -161,6 +162,11 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
     }
 
     return null
+  }
+
+  async fetchCameraImage(_entity_id: string): Promise<Blob> {
+    const response = await fetch(cameraImage)
+    return response.blob()
   }
 
   private dontcare = new SerialSubscription()

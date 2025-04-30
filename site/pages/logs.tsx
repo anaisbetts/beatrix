@@ -4,6 +4,12 @@ import { DateTime } from 'luxon'
 import { useEffect, useMemo, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
@@ -23,6 +29,40 @@ import { AutomationLogEntry, SignalData } from '../../shared/types'
 import { ChatMessage } from '../components/chat-message'
 import { Badge } from '../components/ui/badge'
 import { useWebSocket } from '../components/ws-provider'
+
+// New component for displaying images in a modal
+interface ImageModalProps {
+  imageUrl: string
+}
+
+function ImageModal({ imageUrl }: ImageModalProps) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <div className="cursor-pointer rounded-md border p-2 transition-all hover:shadow-md">
+          <img
+            src={imageUrl}
+            alt="Image thumbnail"
+            style={{ height: '100px', objectFit: 'contain' }}
+            className="rounded"
+          />
+        </div>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-3xl">
+        <div className="flex justify-end">
+          <AlertDialogCancel className="mb-2">Close</AlertDialogCancel>
+        </div>
+        <div className="flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt="Full-size image"
+            className="max-h-[80vh] max-w-full rounded object-contain"
+          />
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
 
 export default function Logs() {
   const [searchText, setSearchText] = useState('')
@@ -295,16 +335,10 @@ function LogEntry({
             <div className="mt-4 ml-6">
               <div className="mb-2 font-semibold">Referenced Images:</div>
               <div className="flex flex-wrap gap-4">
-                {log.images.map((base64Image, i) => (
-                  <div key={i} className="rounded-md border p-2">
-                    <img
-                      src={`data:image/jpeg;base64,${base64Image}`}
-                      alt={`Image ${i + 1}`}
-                      style={{ height: '100px', objectFit: 'contain' }}
-                      className="rounded"
-                    />
-                  </div>
-                ))}
+                {log.images.map((base64Image, i) => {
+                  const imageUrl = `data:image/jpeg;base64,${base64Image}`
+                  return <ImageModal key={i} imageUrl={imageUrl} />
+                })}
               </div>
             </div>
           )}

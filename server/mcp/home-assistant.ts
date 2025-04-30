@@ -144,61 +144,61 @@ export function createHomeAssistantServer(
     }
   )
 
-  server.tool(
-    'interrogate-camera-image',
-    'Capture an image from a camera entity or list of entities and answer a question about the image',
-    {
-      entity_ids: z
-        .union([z.string(), z.array(z.string())])
-        .describe('The entity ID or list of IDs of the cameras'),
-      prompt: z
-        .string()
-        .describe('A prompt about the image to send to the LLM'),
-    },
-    async ({ entity_ids, prompt }) => {
-      const ids: string[] = Array.isArray(entity_ids)
-        ? entity_ids
-        : [entity_ids]
-
-      const resizedImages = await asyncMap(ids, async (x) => {
-        const bytes = await runtime.api.fetchCameraImage(x)
-        const buffer = await bytes.arrayBuffer()
-        const img = await Jimp.read(Buffer.from(buffer))
-
-        let resized: ArrayBufferLike
-        const height = img.height
-        if (height > 720) {
-          const resizedImg = img.resize({ w: 720 })
-          resized = (await resizedImg.getBuffer('image/jpeg')).buffer
-        } else {
-          resized = buffer
-        }
-
-        onImageReferenced(x, resized)
-        return resized
-      })
-
-      // XXX Here is where we would put a "Create an image-friendly LLM"
-      const llm = runtime.llmFactory()
-
-      const msg = await lastValueFrom(
-        llm.executePromptWithTools(
-          analyzeImagePrompt(prompt),
-          [],
-          [],
-          Array.from(resizedImages.values())
-        )
-      )
-
-      return {
-        content: [{ type: 'text', text: messagesToString([msg]) }],
-      }
-    }
-  )
-
   // In scheduler mode, we cannot call services, only do read-only operations
   // on Home Assistant
   if (!schedulerMode) {
+    server.tool(
+      'interrogate-camera-image',
+      'Capture an image from a camera entity or list of entities and answer a question about the image',
+      {
+        entity_ids: z
+          .union([z.string(), z.array(z.string())])
+          .describe('The entity ID or list of IDs of the cameras'),
+        prompt: z
+          .string()
+          .describe('A prompt about the image to send to the LLM'),
+      },
+      async ({ entity_ids, prompt }) => {
+        const ids: string[] = Array.isArray(entity_ids)
+          ? entity_ids
+          : [entity_ids]
+
+        const resizedImages = await asyncMap(ids, async (x) => {
+          const bytes = await runtime.api.fetchCameraImage(x)
+          const buffer = await bytes.arrayBuffer()
+          const img = await Jimp.read(Buffer.from(buffer))
+
+          let resized: ArrayBufferLike
+          const height = img.height
+          if (height > 720) {
+            const resizedImg = img.resize({ w: 720 })
+            resized = (await resizedImg.getBuffer('image/jpeg')).buffer
+          } else {
+            resized = buffer
+          }
+
+          onImageReferenced(x, resized)
+          return resized
+        })
+
+        // XXX Here is where we would put a "Create an image-friendly LLM"
+        const llm = runtime.llmFactory()
+
+        const msg = await lastValueFrom(
+          llm.executePromptWithTools(
+            analyzeImagePrompt(prompt),
+            [],
+            [],
+            Array.from(resizedImages.values())
+          )
+        )
+
+        return {
+          content: [{ type: 'text', text: messagesToString([msg]) }],
+        }
+      }
+    )
+
     server.tool(
       'call-service',
       'Asks an entity or multiple entities to do a specific task in plain English. The returned value will be the new entity states',

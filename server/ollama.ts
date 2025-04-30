@@ -13,6 +13,7 @@ import pkg from '../package.json'
 import { TimeoutError, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider, connectServerToClient } from './llm'
 import { e } from './logging'
+import { convertImageBuffersToContentBlocks } from './openai'
 
 const d = debug('b:llm')
 
@@ -131,6 +132,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
       // Add images if provided
       if (images && images.length > 0) {
         d('Added %d images to the Ollama prompt', images.length)
+        // Ollama expects Uint8Array images
         userMessage.images = images.map((image) => new Uint8Array(image))
       }
 
@@ -300,37 +302,21 @@ export function convertOllamaMessageToAnthropic(
     }
   } else if (msg.role === 'user' && msg.images && msg.images.length > 0) {
     // User message with images
-    const contentBlocks: ContentBlockParam[] = []
+    const textContent = msg.content ? String(msg.content) : undefined
 
-    // Add text content if present
-    if (msg.content) {
-      contentBlocks.push({ type: 'text', text: String(msg.content) })
-    }
-
-    // Add image blocks
-    for (const image of msg.images) {
-      let base64Data: string
-
-      if (image instanceof Uint8Array) {
-        base64Data = Buffer.from(image).toString('base64')
-      } else {
-        // Assuming it's a string that's already base64 encoded
-        base64Data = String(image)
-      }
-
-      contentBlocks.push({
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: 'image/jpeg', // Assuming JPEG format
-          data: base64Data,
-        },
-      })
-    }
-
+    // Use the shared utility function
+    const imageBuffers = msg.images.map((img) =>
+      img instanceof Uint8Array
+        ? Buffer.from(img).buffer
+        : Buffer.from(String(img), 'base64').buffer
+    )
     return {
       role: 'user',
-      content: contentBlocks,
+      content: convertImageBuffersToContentBlocks(
+        imageBuffers,
+        textContent,
+        'anthropic'
+      ) as ContentBlockParam[],
     }
   } else {
     // Standard user or assistant message without tools

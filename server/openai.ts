@@ -28,6 +28,55 @@ const TOOL_EXECUTION_TIMEOUT = 3 * 60 * 1000
 
 export const OPENAI_EVAL_MODEL = 'gpt-4-turbo'
 
+/**
+ * Utility function to convert image buffers to content blocks for different LLM providers
+ * @param imageBuffers Array of image buffers to convert
+ * @param textPrompt Optional text prompt to include
+ * @param format Target format ('openai' or 'anthropic')
+ * @returns Array of content blocks in the appropriate format
+ */
+export function convertImageBuffersToContentBlocks(
+  imageBuffers: ArrayBufferLike[],
+  textPrompt?: string,
+  format: 'openai' | 'anthropic' = 'anthropic'
+): Array<any> {
+  const contentBlocks: Array<any> = []
+
+  // Add text content if provided
+  if (textPrompt) {
+    contentBlocks.push({
+      type: 'text',
+      text: textPrompt,
+    })
+  }
+
+  // Convert images based on the target format
+  if (format === 'openai') {
+    for (const imageBuffer of imageBuffers) {
+      contentBlocks.push({
+        type: 'image_url',
+        image_url: {
+          url: `data:image/jpeg;base64,${Buffer.from(imageBuffer).toString('base64')}`,
+        },
+      })
+    }
+  } else {
+    // Anthropic format
+    for (const imageBuffer of imageBuffers) {
+      contentBlocks.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: 'image/jpeg', // Assuming JPEG format
+          data: Buffer.from(imageBuffer).toString('base64'),
+        },
+      })
+    }
+  }
+
+  return contentBlocks
+}
+
 export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
   static OPENAI_API_TIMEOUT = 100 * 1000
 
@@ -154,18 +203,7 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
 
       // Add images if provided
       if (images && images.length > 0) {
-        const contentItems: Array<any> = [{ type: 'text', text: prompt }]
-
-        // Convert ArrayBufferLike to base64 for OpenAI
-        for (const imageBuffer of images) {
-          contentItems.push({
-            type: 'image_url',
-            image_url: {
-              url: `data:image/jpeg;base64,${Buffer.from(imageBuffer).toString('base64')}`,
-            },
-          })
-        }
-        content = contentItems
+        content = convertImageBuffersToContentBlocks(images, prompt, 'openai')
         d('Added %d images to the prompt', images.length)
       }
 
@@ -182,21 +220,11 @@ export class OpenAILargeLanguageProvider implements LargeLanguageProvider {
 
       // Add images to the Anthropic format message if present
       if (images && images.length > 0) {
-        const contentBlocks: any[] = [{ type: 'text', text: prompt }]
-
-        // Add image blocks for Anthropic format
-        for (const imageBuffer of images) {
-          contentBlocks.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: 'image/jpeg', // Assuming JPEG format
-              data: Buffer.from(imageBuffer).toString('base64'),
-            },
-          })
-        }
-
-        userMessage.content = contentBlocks
+        userMessage.content = convertImageBuffersToContentBlocks(
+          images,
+          prompt,
+          'anthropic'
+        )
       }
 
       yield userMessage

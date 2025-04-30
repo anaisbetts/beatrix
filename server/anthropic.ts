@@ -12,6 +12,7 @@ import pkg from '../package.json'
 import { TimeoutError, asyncMap, withTimeout } from './lib/promise-extras'
 import { LargeLanguageProvider, connectServerToClient } from './llm'
 import { e } from './logging'
+import { convertImageBuffersToContentBlocks } from './openai'
 
 const d = debug('b:llm')
 
@@ -129,7 +130,7 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
     // Add the current prompt as a user message if it's not empty
     if (prompt.trim()) {
-      const content: ContentBlockParam[] = [
+      let content: ContentBlockParam[] = [
         {
           type: 'text',
           text: prompt,
@@ -138,18 +139,12 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
 
       // Add images if provided
       if (images && images.length > 0) {
-        // Convert ArrayBufferLike to base64 strings for Anthropic API
-        for (const imageBuffer of images) {
-          const base64Image = Buffer.from(imageBuffer).toString('base64')
-          content.push({
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: 'image/jpeg', // Assuming JPEG format
-              data: base64Image,
-            },
-          })
-        }
+        // Use the shared utility function to convert images
+        content = convertImageBuffersToContentBlocks(
+          images,
+          prompt,
+          'anthropic'
+        ) as ContentBlockParam[]
         d('Added %d images to the prompt', images.length)
       }
 

@@ -4,6 +4,12 @@ import { DateTime } from 'luxon'
 import { useEffect, useMemo, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Collapsible,
@@ -290,8 +296,54 @@ function LogEntry({
               ))}
             </div>
           )}
+
+          {log.images && log.images.length > 0 && (
+            <div className="mt-4 ml-6">
+              <div className="mb-2 font-semibold">Referenced Images:</div>
+              <div className="flex flex-wrap gap-4">
+                {log.images.map((base64Image, i) => {
+                  const imageUrl = `data:image/jpeg;base64,${base64Image}`
+                  return <ImageModal key={i} imageUrl={imageUrl} />
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>
+  )
+}
+
+interface ImageModalProps {
+  imageUrl: string
+}
+
+function ImageModal({ imageUrl }: ImageModalProps) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <div className="cursor-pointer rounded-md border p-2 transition-all hover:shadow-md">
+          <img
+            src={imageUrl}
+            alt="Image thumbnail"
+            style={{ height: '100px', objectFit: 'contain' }}
+            className="rounded"
+          />
+        </div>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-4xl">
+        <div className="flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt="Full-size image"
+            className="max-h-[85vh] max-w-full rounded object-contain"
+          />
+        </div>
+
+        <div className="flex justify-end">
+          <AlertDialogCancel className="mb-2">Close</AlertDialogCancel>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

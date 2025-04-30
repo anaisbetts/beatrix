@@ -90,6 +90,13 @@ export async function fetchAutomationLogs(
     .selectAll()
     .execute()
 
+  // Fetch the images for each automation log
+  const images = await db
+    .selectFrom('images')
+    .where('automationLogId', 'in', automationLogIds)
+    .selectAll()
+    .execute()
+
   // Group service logs by automation log ID using a Map
   const serviceLogsByAutomationId = serviceLogs.reduce((acc, x) => {
     if (!acc.has(x.automationLogId)) {
@@ -104,6 +111,20 @@ export async function fetchAutomationLogs(
     })
     return acc
   }, new Map<number, CallServiceLogEntry[]>())
+
+  // Group images by automation log ID using a Map
+  const imagesByAutomationId = images.reduce((acc, img) => {
+    if (img.automationLogId && !acc.has(img.automationLogId)) {
+      acc.set(img.automationLogId, [])
+    }
+
+    if (img.automationLogId) {
+      // Convert Buffer to base64 string
+      const base64Image = Buffer.from(img.bytes).toString('base64')
+      acc.get(img.automationLogId)?.push(base64Image)
+    }
+    return acc
+  }, new Map<number, string[]>())
 
   // Process each automation log row and convert to AutomationLogEntry
   return rows.map((row) => {
@@ -125,6 +146,9 @@ export async function fetchAutomationLogs(
         data: serviceLog.data, // Keep as string as per type definition
       }
     })
+
+    // Get images for this log
+    const imageData = imagesByAutomationId.get(row.id) || []
 
     // Parse signal data if it exists
     let signaledBy = null
@@ -175,6 +199,7 @@ export async function fetchAutomationLogs(
       servicesCalled,
       automation: matchingAutomation || null,
       signaledBy,
+      images: imageData, // Include the images
     }
   })
 }

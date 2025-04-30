@@ -111,6 +111,7 @@ export function createBuiltinServers(
     testMode?: boolean
     includeCueServer?: boolean
     megaServer?: McpServer
+    onImageReferenced?: (name: string, bytes: ArrayBufferLike) => void
   }
 ) {
   const { testMode, megaServer } = opts ?? {}
@@ -119,6 +120,7 @@ export function createBuiltinServers(
     createHomeAssistantServer(runtime, {
       testMode: testMode ?? false,
       megaServer: megaServer,
+      onImageReferenced: opts?.onImageReferenced,
     }),
   ]
 

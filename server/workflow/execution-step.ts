@@ -32,7 +32,15 @@ export async function runExecutionForAutomation(
     signal
   )
 
-  const tools = createBuiltinServers(runtime, automation)
+  // Track referenced images during automation execution
+  const referencedImages: Record<string, ArrayBufferLike> = {}
+  const onImageReferenced = (name: string, bytes: ArrayBufferLike) => {
+    referencedImages[name] = bytes
+  }
+
+  const tools = createBuiltinServers(runtime, automation, {
+    onImageReferenced,
+  })
 
   const llm = runtime.llmFactory()
   const msgs = await lastValueFrom(
@@ -50,7 +58,8 @@ export async function runExecutionForAutomation(
       .pipe(toArray())
   )
 
-  await runtime.db
+  // Store execution results in the database
+  const insertResult = await runtime.db
     .insertInto('automationLogs')
     .values({
       createdAt: now(runtime).toISO()!,
@@ -59,6 +68,24 @@ export async function runExecutionForAutomation(
       messageLog: JSON.stringify(msgs),
     })
     .execute()
+
+  const logId = Number(insertResult[0].insertId)
+
+  // Store any referenced images in the database
+  const imageEntries = Object.entries(referencedImages)
+  if (imageEntries.length > 0) {
+    for (const [name, bytes] of imageEntries) {
+      await runtime.db
+        .insertInto('images')
+        .values({
+          automationLogId: logId,
+          createdAt: now(runtime).toISO()!,
+          bytes: Buffer.from(bytes),
+        })
+        .execute()
+      i('Saved image reference: %s for log %d', name, logId)
+    }
+  }
 
   i(
     `Execution completed for automation ${automation.fileName}, signal ID: ${signalId}`

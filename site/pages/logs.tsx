@@ -30,40 +30,6 @@ import { ChatMessage } from '../components/chat-message'
 import { Badge } from '../components/ui/badge'
 import { useWebSocket } from '../components/ws-provider'
 
-// New component for displaying images in a modal
-interface ImageModalProps {
-  imageUrl: string
-}
-
-function ImageModal({ imageUrl }: ImageModalProps) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <div className="cursor-pointer rounded-md border p-2 transition-all hover:shadow-md">
-          <img
-            src={imageUrl}
-            alt="Image thumbnail"
-            style={{ height: '100px', objectFit: 'contain' }}
-            className="rounded"
-          />
-        </div>
-      </AlertDialogTrigger>
-      <AlertDialogContent className="max-w-3xl">
-        <div className="flex justify-end">
-          <AlertDialogCancel className="mb-2">Close</AlertDialogCancel>
-        </div>
-        <div className="flex items-center justify-center">
-          <img
-            src={imageUrl}
-            alt="Full-size image"
-            className="max-h-[80vh] max-w-full rounded object-contain"
-          />
-        </div>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
-
 export default function Logs() {
   const [searchText, setSearchText] = useState('')
   const [selectedType, setSelectedType] = useState<string>('All Types')
@@ -345,5 +311,38 @@ function LogEntry({
         </div>
       </CollapsibleContent>
     </Collapsible>
+  )
+}
+
+interface ImageModalProps {
+  imageUrl: string
+}
+
+function ImageModal({ imageUrl }: ImageModalProps) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <div className="cursor-pointer rounded-md border p-2 transition-all hover:shadow-md">
+          <img
+            src={imageUrl}
+            alt="Image thumbnail"
+            style={{ height: '100px', objectFit: 'contain' }}
+            className="rounded"
+          />
+        </div>
+      </AlertDialogTrigger>
+      <AlertDialogContent className="max-w-4xl">
+        <div className="flex justify-end">
+          <AlertDialogCancel className="mb-2">Close</AlertDialogCancel>
+        </div>
+        <div className="flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt="Full-size image"
+            className="max-h-[85vh] max-w-[85vw] rounded object-contain"
+          />
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }

@@ -332,15 +332,16 @@ function ImageModal({ imageUrl }: ImageModalProps) {
         </div>
       </AlertDialogTrigger>
       <AlertDialogContent className="max-w-4xl">
-        <div className="flex justify-end">
-          <AlertDialogCancel className="mb-2">Close</AlertDialogCancel>
-        </div>
         <div className="flex items-center justify-center">
           <img
             src={imageUrl}
             alt="Full-size image"
-            className="max-h-[85vh] max-w-[85vw] rounded object-contain"
+            className="max-h-[85vh] max-w-full rounded object-contain"
           />
+        </div>
+
+        <div className="flex justify-end">
+          <AlertDialogCancel className="mb-2">Close</AlertDialogCancel>
         </div>
       </AlertDialogContent>
     </AlertDialog>

@@ -1,8 +1,11 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import '@jimp/js-jpeg'
+import '@jimp/js-png'
+import '@jimp/plugin-resize'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
+import { Jimp } from 'jimp'
 import { firstValueFrom, lastValueFrom, toArray } from 'rxjs'
-import sharp from 'sharp'
 import { z } from 'zod'
 
 import pkg from '../../package.json'
@@ -155,17 +158,18 @@ export function createHomeAssistantServer(
         ? entity_ids
         : [entity_ids]
 
-      // Use sharp to resize the images to 720p
+      // Use Jimp to resize the images to 720p
       // convert blob to buffer
       const resizedImages = await asyncMap(ids, async (x) => {
         const bytes = await runtime.api.fetchCameraImage(x)
         const buffer = await bytes.arrayBuffer()
-        const img = sharp(buffer)
+        const img = await Jimp.read(Buffer.from(buffer))
 
         let resized: ArrayBufferLike
-        const metadata = await img.metadata()
-        if (metadata.height && metadata.height > 720) {
-          resized = (await img.resize(1280, 720).toBuffer()).buffer
+        const height = img.height
+        if (height > 720) {
+          const resizedImg = img.resize({ w: 720 })
+          resized = (await resizedImg.getBuffer('image/jpeg')).buffer
         } else {
           resized = buffer
         }

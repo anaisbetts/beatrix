@@ -9,6 +9,7 @@ export interface Schema {
   automationLogs: AutomationLogTable
   callServiceLogs: CallServiceLogTable
   logs: LogTable
+  images: ImageTable
 }
 
 export interface LogTable {
@@ -38,12 +39,19 @@ export interface CallServiceLogTable {
 
 export interface AutomationLogTable {
   id: Generated<number>
-  type: AutomationType
   createdAt: Timestamp
+  type: AutomationType
   messageLog: string
 
   automationHash?: string // if type = 'determine-signal', the automation that we read through
   signalId?: number // if type = 'execute-signal', the signal ID that triggered
+}
+
+export interface ImageTable {
+  id: Generated<number>
+  automationLogId?: number // Optional foreign key => AutomationLogTable.id
+  createdAt: Timestamp
+  bytes: Buffer
 }
 
 export type Signal = Selectable<SignalTable>
@@ -52,3 +60,5 @@ export type AutomationLog = Selectable<AutomationLogTable>
 export type NewAutomationLog = Insertable<AutomationLogTable>
 export type CallServiceLog = Selectable<CallServiceLogTable>
 export type NewCallServiceLog = Insertable<CallServiceLogTable>
+export type Image = Selectable<ImageTable>
+export type NewImage = Insertable<ImageTable>

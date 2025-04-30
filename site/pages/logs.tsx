@@ -290,6 +290,24 @@ function LogEntry({
               ))}
             </div>
           )}
+
+          {log.images && log.images.length > 0 && (
+            <div className="mt-4 ml-6">
+              <div className="mb-2 font-semibold">Referenced Images:</div>
+              <div className="flex flex-wrap gap-4">
+                {log.images.map((base64Image, i) => (
+                  <div key={i} className="rounded-md border p-2">
+                    <img
+                      src={`data:image/jpeg;base64,${base64Image}`}
+                      alt={`Image ${i + 1}`}
+                      style={{ height: '100px', objectFit: 'contain' }}
+                      className="rounded"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>

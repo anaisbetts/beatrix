@@ -25,7 +25,7 @@ import {
 } from '../../shared/types'
 import { guaranteedThrottle } from '../../shared/utility'
 import { Signal } from '../db-schema'
-import { HassState, observeStatesForEntities } from '../lib/ha-ws-api'
+import { observeStatesForEntities } from '../lib/ha-ws-api'
 import { i } from '../logging'
 import { AutomationRuntime, SignalledAutomation, d } from './automation-runtime'
 
@@ -259,18 +259,15 @@ export class StateRegexSignalHandler implements SignalHandler {
       stateData.entityIds,
       false
     ).pipe(
-      filter((state: HassState | undefined | null): state is HassState => {
-        if (!state) {
-          return false // Skip null/undefined states
-        }
-
-        const match = regex.test(state.state) // Use the compiled regex (isValid check ensures regex is non-null)
-        return match
+      map((state) => {
+        let match = state ? regex.test(state.state) : false
+        return { state, match }
       }),
-      distinctUntilChanged(),
-      map((matchedState: HassState) => {
+      filter(({ match }) => match),
+      distinctUntilChanged((x, y) => x.match === y.match),
+      map(({ state }) => {
         i(
-          `State regex trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Matched entity: ${matchedState.entity_id}, State: "${matchedState.state}"`
+          `State regex trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Matched entity: ${state.entity_id}, State: "${state.state}"`
         )
         return { signal: this.signal, automation: this.automation }
       }),

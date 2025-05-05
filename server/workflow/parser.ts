@@ -5,6 +5,8 @@ import { firstValueFrom, from, toArray } from 'rxjs'
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml'
 
 import { Automation } from '../../shared/types'
+import { parseModelWithDriverString } from '../../shared/utility'
+import { ModelSpecifier } from '../llm'
 import { i } from '../logging'
 
 export async function* parseAutomations(
@@ -172,5 +174,29 @@ function extractFrontmatter(content: string): Record<string, any> | undefined {
     return undefined
   } catch {
     return undefined
+  }
+}
+
+export function modelSpecFromAutomation(
+  automation: Automation
+): ModelSpecifier {
+  const model = automation.metadata?.model
+  if (!model) {
+    return { type: 'automation' }
+  }
+
+  try {
+    parseModelWithDriverString(model)
+  } catch (e) {
+    i(
+      `Invalid model specifier for automation ${automation.fileName}: ${model}`,
+      e
+    )
+
+    return { type: 'automation' }
+  }
+
+  return {
+    modelWithDriver: automation.metadata?.model,
   }
 }

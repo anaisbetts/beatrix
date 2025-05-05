@@ -1,6 +1,6 @@
-import { useCommand, usePromise } from '@anaisbetts/commands'
+import { useCommand, usePromise, useResult } from '@anaisbetts/commands'
 import { Check, Save } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { firstValueFrom } from 'rxjs'
 
 import {
@@ -32,7 +32,10 @@ const timezones = Intl.supportedValuesOf('timeZone')
 
 export default function Config() {
   const { api } = useWebSocket()
-  const [config, setConfig] = useState<AppConfig>({})
+  const [config, setConfig] = useState<AppConfig>({
+    automationModel: '',
+    visionModel: '',
+  })
   const [isSaved, setIsSaved] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [showCompletionDialog, setShowCompletionDialog] = useState(false)
@@ -40,7 +43,7 @@ export default function Config() {
 
   // Fetch initial config
   const [fetchConfig, configResult] = useCommand(async () => {
-    if (!api) return {}
+    if (!api) return { automationModel: '', visionModel: '' }
     return await firstValueFrom(api.getConfig())
   }, [api])
 
@@ -91,7 +94,11 @@ export default function Config() {
 
   // Handle OpenAI provider changes
   const handleOpenAIProviderChange = useCallback(
-    (index: number, field: keyof OpenAIProviderConfig, value: string) => {
+    (
+      index: number,
+      field: keyof Omit<OpenAIProviderConfig, 'model'>,
+      value: string
+    ) => {
       setConfig((prev) => {
         const updatedProviders = [...(prev.openAIProviders || [])]
 
@@ -159,6 +166,25 @@ export default function Config() {
 
   const handleCloseCompletionDialog = useCallback(() => {
     setShowCompletionDialog(false)
+  }, [])
+
+  const saveResultContent = useResult(saveResult, {
+    ok: () => null,
+    err: (error) => (
+      <div className="text-red-500">
+        Failed to save configuration: {error.message}
+      </div>
+    ),
+    pending: () => null,
+    null: () => null,
+  })
+
+  const timezonesSelectContent = useMemo(() => {
+    return timezones.map((tz) => (
+      <SelectItem key={tz} value={tz}>
+        {tz}
+      </SelectItem>
+    ))
   }, [])
 
   // Show loading state
@@ -234,13 +260,7 @@ export default function Config() {
                   <SelectValue placeholder="Select timezone..." />
                 </SelectTrigger>
 
-                <SelectContent>
-                  {timezones.map((tz) => (
-                    <SelectItem key={tz} value={tz}>
-                      {tz}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectContent>{timezonesSelectContent}</SelectContent>
               </Select>
               <p className="text-xs text-gray-500">
                 Select your local IANA timezone.
@@ -249,26 +269,43 @@ export default function Config() {
           </CardContent>
         </Card>
 
-        {/* LLM Selection */}
+        {/* Model Configuration */}
         <Card>
           <CardHeader>
-            <CardTitle>LLM Provider</CardTitle>
+            <CardTitle>Models</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="llm" className="text-sm font-medium">
-                Default LLM Provider
+              <label htmlFor="automationModel" className="text-sm font-medium">
+                Automation Model
               </label>
               <Input
-                id="llm"
-                name="llm"
-                value={config.llm || ''}
+                id="automationModel"
+                name="automationModel"
+                value={config.automationModel || ''}
                 onChange={handleChange}
-                placeholder="anthropic, ollama, or provider name"
+                placeholder="anthropic/claude-3-5-sonnet-20240620"
               />
               <p className="text-xs text-gray-500">
-                Enter 'anthropic', 'ollama', or a provider name from your OpenAI
-                providers
+                Format: driver/model (e.g.,
+                anthropic/claude-3-5-sonnet-20240620, openai/gpt-4-turbo,
+                ollama/llama3)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="visionModel" className="text-sm font-medium">
+                Vision Model
+              </label>
+              <Input
+                id="visionModel"
+                name="visionModel"
+                value={config.visionModel || ''}
+                onChange={handleChange}
+                placeholder="openai/gpt-4o"
+              />
+              <p className="text-xs text-gray-500">
+                Format: driver/model (e.g., openai/gpt-4o,
+                anthropic/claude-3-5-sonnet-20240620)
               </p>
             </div>
           </CardContent>
@@ -293,18 +330,6 @@ export default function Config() {
                 placeholder="Anthropic API Key"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="anthropicModel" className="text-sm font-medium">
-                Model
-              </label>
-              <Input
-                id="anthropicModel"
-                name="anthropicModel"
-                value={config.anthropicModel || ''}
-                onChange={handleChange}
-                placeholder="claude-3-opus-20240229"
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -324,18 +349,6 @@ export default function Config() {
                 value={config.ollamaHost || ''}
                 onChange={handleChange}
                 placeholder="http://localhost:11434"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="ollamaModel" className="text-sm font-medium">
-                Model
-              </label>
-              <Input
-                id="ollamaModel"
-                name="ollamaModel"
-                value={config.ollamaModel || ''}
-                onChange={handleChange}
-                placeholder="llama3"
               />
             </div>
           </CardContent>
@@ -413,16 +426,6 @@ export default function Config() {
                     placeholder="API Key"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Model</label>
-                  <Input
-                    value={provider.model || ''}
-                    onChange={(e) =>
-                      handleOpenAIProviderChange(index, 'model', e.target.value)
-                    }
-                    placeholder="gpt-4-turbo"
-                  />
-                </div>
               </div>
             ))}
 
@@ -464,16 +467,8 @@ export default function Config() {
 
         {/* Save Result Status and Button */}
         <div className="flex items-center justify-end py-4">
-          {saveResult.mapOrElse({
-            ok: () => null,
-            err: (error) => (
-              <div className="text-red-500 mr-4">
-                Failed to save: {error.message}
-              </div>
-            ),
-            pending: () => null,
-            null: () => null,
-          })}
+          {saveResultContent}
+
           <SaveButton
             saveResult={saveResult}
             onClick={saveConfig}
@@ -536,7 +531,7 @@ interface SaveButtonProps {
 }
 
 function SaveButton({ saveResult, onClick, isSaved }: SaveButtonProps) {
-  const buttonContent = saveResult.mapOrElse({
+  const buttonContent = useResult(saveResult, {
     pending: () => (
       <div className="flex items-center gap-2">
         <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>

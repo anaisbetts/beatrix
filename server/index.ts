@@ -191,7 +191,9 @@ async function evalCommand(options: {
 
     const evalFunction = options.quick ? runQuickEvals : runAllEvals
     for await (const result of evalFunction(() =>
-      createDefaultLLMProvider(config, driver, model)
+      createDefaultLLMProvider(config, {
+        modelWithDriver: `${driver}/${model}`,
+      })
     )) {
       results.push(result)
       if (options.verbose) {

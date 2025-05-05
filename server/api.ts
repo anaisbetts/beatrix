@@ -27,11 +27,7 @@ import {
 import { AppConfig } from '../shared/types'
 import { pick } from '../shared/utility'
 import { fetchAutomationLogs } from './db'
-import {
-  createBuiltinServers,
-  createDefaultLLMProvider,
-  getDefaultModelForDriver,
-} from './llm'
+import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { i } from './logging'
 import { getSystemPrompt } from './prompts'
 import { runAllEvals, runQuickEvals } from './run-evals'
@@ -53,7 +49,10 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     public evalMode: boolean
   ) {}
 
-  getDriverList(): Observable<{ defaultDriver: string; drivers: string[] }> {
+  getDriverList(): Observable<{
+    automationModelWithDriver: string
+    drivers: string[]
+  }> {
     const drivers: string[] = []
     if (this.config.anthropicApiKey) {
       drivers.push('anthropic')
@@ -66,17 +65,20 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         ...this.config.openAIProviders.map((x) => x.providerName ?? 'openai')
       )
     }
-    const defaultDriver = this.config.llm ?? drivers[0]
-    return of({ defaultDriver, drivers })
+
+    return of({
+      automationModelWithDriver: this.config.automationModel ?? '',
+      drivers,
+    })
   }
 
-  getModelListForDriver(
-    driver: string
-  ): Observable<{ defaultModel?: string; models: string[] }> {
-    const llm = createDefaultLLMProvider(this.config, driver.toLowerCase())
+  getModelListForDriver(driver: string): Observable<{ models: string[] }> {
+    const llm = createDefaultLLMProvider(this.config, {
+      modelWithDriver: `${driver}/dontcare`,
+    })
+
     return from(
       llm.getModelList().then((models) => ({
-        defaultModel: getDefaultModelForDriver(this.config, driver),
         models,
       }))
     )
@@ -160,14 +162,13 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
 
   handlePromptRequest(
     prompt: string,
-    model?: string,
-    driver?: string,
+    modelWithDriver: string,
     previousConversationId?: number,
     typeHint?: TypeHint
   ): Observable<MessageParamWithExtras> {
     const rqRuntime = new LiveAutomationRuntime(
       this.runtime.api,
-      () => createDefaultLLMProvider(this.config, driver, model),
+      () => createDefaultLLMProvider(this.config, { modelWithDriver }),
       this.runtime.db,
       this.notebookDirectory
     )
@@ -206,7 +207,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         )
 
         previousMessages = msgs
-        const llm = this.runtime.llmFactory()
+        const llm = this.runtime.llmFactory('automation') // XXX: This is hardcoded above to return the mwd they want
         if (prevMsgs.length > 0) {
           // If we are in a continuing conversation, we don't include the system
           // prompt
@@ -291,8 +292,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
   }
 
   runEvals(
-    model: string,
-    driver: string,
+    modelWithDriver: string,
     type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult> {
@@ -306,7 +306,9 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     return from(
       counter.pipe(
         concatMap(() =>
-          runEvals(() => createDefaultLLMProvider(this.config, driver, model))
+          runEvals(() =>
+            createDefaultLLMProvider(this.config, { modelWithDriver })
+          )
         )
       )
     )

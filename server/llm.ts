@@ -5,8 +5,9 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Observable } from 'rxjs'
 
-import { Automation } from '../shared/types'
+import { Automation, LLMFactoryType } from '../shared/types'
 import { AppConfig } from '../shared/types'
+import { parseModelWithDriverString } from '../shared/utility'
 import { AnthropicLargeLanguageProvider } from './anthropic'
 import { createCueServer } from './mcp/cue'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -30,23 +31,35 @@ export interface LargeLanguageProvider {
 
 export function createDefaultLLMProvider(
   config: AppConfig,
-  driver?: string,
-  model?: string
+  opts?:
+    | {
+        modelWithDriver?: string
+        type?: never
+      }
+    | {
+        modelWithDriver?: never
+        type?: LLMFactoryType
+      }
 ): LargeLanguageProvider {
-  const providerName = driver ?? config.llm
-  if (!providerName) {
-    throw new Error('No driver provided and no default config')
+  let mwd = opts?.modelWithDriver
+  switch (opts?.type) {
+    case 'automation':
+      mwd = config.automationModel
+      break
+    case 'vision':
+      mwd = config.visionModel
+      break
+    default:
+      break
   }
 
-  let effectiveModel = model ?? getDefaultModelForDriver(config, providerName)
-
-  if (!providerName) {
-    throw new Error(
-      'LLM provider name (config.llm) is not configured. Please check your config file or environment variables.'
-    )
+  if (!mwd) {
+    throw new Error('No model provided')
   }
 
-  switch (providerName) {
+  const { driver, model } = parseModelWithDriverString(mwd)
+
+  switch (driver) {
     case 'anthropic':
       if (!config.anthropicApiKey) {
         throw new Error(
@@ -54,10 +67,7 @@ export function createDefaultLLMProvider(
         )
       }
 
-      return new AnthropicLargeLanguageProvider(
-        config.anthropicApiKey,
-        effectiveModel
-      )
+      return new AnthropicLargeLanguageProvider(config.anthropicApiKey, model)
     case 'ollama':
       if (!config.ollamaHost) {
         throw new Error(
@@ -65,42 +75,23 @@ export function createDefaultLLMProvider(
         )
       }
 
-      return new OllamaLargeLanguageProvider(config.ollamaHost, effectiveModel)
+      return new OllamaLargeLanguageProvider(config.ollamaHost, model)
     default:
       // Assume it's an OpenAI-compatible provider name
       const openAIProviderConfig = config.openAIProviders?.find(
-        (p) => p.providerName === providerName
+        (p) => p.providerName === driver
       )
       if (!openAIProviderConfig || !openAIProviderConfig.apiKey) {
         throw new Error(
-          `LLM provider set to '${providerName}' but no corresponding OpenAI provider configuration with an API key was found.`
+          `LLM provider set to '${driver}' but no corresponding OpenAI provider configuration with an API key was found.`
         )
       }
 
       return new OpenAILargeLanguageProvider({
         apiKey: openAIProviderConfig.apiKey,
         baseURL: openAIProviderConfig.baseURL,
-        model: effectiveModel,
+        model,
       })
-  }
-}
-
-export function getDefaultModelForDriver(
-  config: AppConfig,
-  driver: string
-): string {
-  switch (driver) {
-    case 'anthropic':
-      return config.anthropicModel ?? 'claude-3-7-sonnet-20250219'
-    case 'ollama':
-      return config.ollamaModel ?? 'qwen2.5:14b'
-    case 'openai':
-      return (
-        config.openAIProviders?.find((p) => p.providerName === driver)?.model ??
-        'gpt4.1'
-      )
-    default:
-      throw new Error(`Unsupported driver: ${driver}`)
   }
 }
 

@@ -44,7 +44,7 @@ export async function runSchedulerForAutomation(
   const tools = createDefaultSchedulerTools(runtime, automation)
 
   const memory = await fs.readFile(getMemoryFile(runtime), 'utf-8')
-  const llm = runtime.llmFactory()
+  const llm = runtime.llmFactory('automation')
   const msgs = await lastValueFrom(
     llm
       .executePromptWithTools(

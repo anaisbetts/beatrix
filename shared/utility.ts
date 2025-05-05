@@ -118,3 +118,17 @@ export const guaranteedThrottle =
       switchAll()
     )
   }
+
+export function parseModelWithDriverString(modelWithDriver: string) {
+  const [driver, model] = modelWithDriver.split('/')
+
+  if (!/^[a-z]+$/i.test(driver) || driver.length === 0) {
+    throw new Error(`Invalid driver: ${driver}`)
+  }
+
+  if (!model) {
+    throw new Error(`No model provided: ${modelWithDriver}`)
+  }
+
+  return { driver, model }
+}

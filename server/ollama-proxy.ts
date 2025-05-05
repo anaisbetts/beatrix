@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { BlankEnv, BlankSchema } from 'hono/types'
 import { LRUCache } from 'lru-cache'
 import { Message } from 'ollama'
+import { firstValueFrom } from 'rxjs'
 
 import { ServerWebsocketApiImpl } from './api'
 import { convertOllamaMessageToAnthropic } from './ollama'
@@ -54,6 +55,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
   app.post('/ollama/api/chat', async (c) => {
     d('POST /ollama/api/chat called')
     const body = await c.req.json()
+
     d('Request body: %o', body)
     const { messages, stream = false, model } = body
 
@@ -88,6 +90,10 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
       }
     }
 
+    const { automationModelWithDriver } = await firstValueFrom(
+      serverApi.getDriverList()
+    )
+
     if (stream) {
       d('Handling streaming response')
       // Set up streaming response
@@ -111,8 +117,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 
       const observable = serverApi.handlePromptRequest(
         userPrompt,
-        undefined,
-        undefined,
+        automationModelWithDriver,
         previousMessageId,
         'chat'
       )
@@ -201,8 +206,7 @@ export function setupOllamaProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
 
         const observable = serverApi!.handlePromptRequest(
           userPrompt,
-          undefined,
-          undefined,
+          automationModelWithDriver,
           previousMessageId,
           'chat'
         )

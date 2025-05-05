@@ -19,7 +19,7 @@ import {
 } from 'rxjs'
 
 import { SerialSubscription } from '../../shared/serial-subscription'
-import { Automation } from '../../shared/types'
+import { Automation, LLMFactoryType } from '../../shared/types'
 import { AppConfig } from '../../shared/types'
 import { saveConfig } from '../config'
 import { createDatabaseViaEnv } from '../db'
@@ -49,7 +49,7 @@ export interface SignalledAutomation {
 
 export interface AutomationRuntime extends SubscriptionLike {
   readonly api: HomeAssistantApi
-  readonly llmFactory: () => LargeLanguageProvider
+  readonly llmFactory: (type: LLMFactoryType) => LargeLanguageProvider
   readonly db: Kysely<Schema>
   readonly timezone: string // "America/Los_Angeles" etc
   readonly notebookDirectory: string | undefined
@@ -86,7 +86,7 @@ export class LiveAutomationRuntime
 
     return new LiveAutomationRuntime(
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
-      () => createDefaultLLMProvider(config),
+      (type: LLMFactoryType) => createDefaultLLMProvider(config, { type }),
       db,
       config.timezone ?? 'Etc/UTC',
       notebookDirectory
@@ -95,7 +95,7 @@ export class LiveAutomationRuntime
 
   constructor(
     readonly api: HomeAssistantApi,
-    readonly llmFactory: () => LargeLanguageProvider,
+    readonly llmFactory: (type: LLMFactoryType) => LargeLanguageProvider,
     readonly db: Kysely<Schema>,
     readonly timezone: string,
     notebookDirectory?: string

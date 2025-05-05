@@ -1,6 +1,7 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 export type SignalType = 'cron' | 'state' | 'event' | 'offset' | 'time'
+export type LLMFactoryType = 'automation' | 'vision'
 
 export type AutomationType =
   | 'manual'
@@ -102,13 +103,11 @@ export interface AppConfig {
    */
   timezone?: string
 
-  llm?: string // either 'anthropic', 'ollama', or a provider name in openAIProviders
+  automationModel?: string
+  visionModel?: string
 
   anthropicApiKey?: string
-  anthropicModel?: string
-
   ollamaHost?: string
-  ollamaModel?: string
 
   openAIProviders?: OpenAIProviderConfig[] // Array for multiple OpenAI configs
 }
@@ -117,7 +116,6 @@ export interface OpenAIProviderConfig {
   providerName?: string // Name for this provider configuration, the default is 'openai'
   baseURL?: string
   apiKey?: string
-  model?: string
 }
 
 /**

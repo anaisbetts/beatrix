@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
+import { parseModelWithDriverString } from '../../shared/utility'
 import { Button } from './ui/button'
 import { useWebSocket } from './ws-provider'
 
@@ -29,10 +30,14 @@ export function DriverSelector({
 
   const driverList = usePromise(async () => {
     if (!api) return { defaultDriver: '', drivers: [] }
-    const { defaultDriver, drivers } = await firstValueFrom(api.getDriverList())
+    const { automationModelWithDriver, drivers } = await firstValueFrom(
+      api.getDriverList()
+    )
 
-    onDriverChange(defaultDriver)
-    return { defaultDriver, drivers }
+    const { driver } = parseModelWithDriverString(automationModelWithDriver)
+
+    onDriverChange(driver)
+    return { defaultDriver: driver, drivers }
   }, [api])
 
   return useResult(
@@ -59,8 +64,10 @@ export function DriverSelector({
           </Select>
         )
       },
-      err: () => (
-        <div className="text-sm text-red-500">Failed to load drivers</div>
+      err: (e) => (
+        <div className="text-sm text-red-500">
+          Failed to load drivers: {e.toString()}
+        </div>
       ),
       pending: () => (
         <div className="flex h-10 w-[180px] items-center justify-center">
@@ -99,7 +106,6 @@ export function ModelSelector({
     if (!api || !driver) return { defaultModel: '', models: [] }
     const ret = await firstValueFrom(api.getModelListForDriver(driver))
 
-    if (ret.defaultModel) onModelChange(ret.defaultModel)
     return ret
   }, [api, driver])
 

@@ -91,7 +91,11 @@ export default function Config() {
 
   // Handle OpenAI provider changes
   const handleOpenAIProviderChange = useCallback(
-    (index: number, field: keyof OpenAIProviderConfig, value: string) => {
+    (
+      index: number,
+      field: keyof Omit<OpenAIProviderConfig, 'model'>,
+      value: string
+    ) => {
       setConfig((prev) => {
         const updatedProviders = [...(prev.openAIProviders || [])]
 
@@ -249,31 +253,6 @@ export default function Config() {
           </CardContent>
         </Card>
 
-        {/* LLM Selection */}
-        <Card>
-          <CardHeader>
-            <CardTitle>LLM Provider</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="llm" className="text-sm font-medium">
-                Default LLM Provider
-              </label>
-              <Input
-                id="llm"
-                name="llm"
-                value={config.llm || ''}
-                onChange={handleChange}
-                placeholder="anthropic, ollama, or provider name"
-              />
-              <p className="text-xs text-gray-500">
-                Enter 'anthropic', 'ollama', or a provider name from your OpenAI
-                providers
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Anthropic Settings */}
         <Card>
           <CardHeader>
@@ -291,18 +270,6 @@ export default function Config() {
                 onChange={handleChange}
                 type="password"
                 placeholder="Anthropic API Key"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="anthropicModel" className="text-sm font-medium">
-                Model
-              </label>
-              <Input
-                id="anthropicModel"
-                name="anthropicModel"
-                value={config.anthropicModel || ''}
-                onChange={handleChange}
-                placeholder="claude-3-opus-20240229"
               />
             </div>
           </CardContent>
@@ -324,18 +291,6 @@ export default function Config() {
                 value={config.ollamaHost || ''}
                 onChange={handleChange}
                 placeholder="http://localhost:11434"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="ollamaModel" className="text-sm font-medium">
-                Model
-              </label>
-              <Input
-                id="ollamaModel"
-                name="ollamaModel"
-                value={config.ollamaModel || ''}
-                onChange={handleChange}
-                placeholder="llama3"
               />
             </div>
           </CardContent>
@@ -411,16 +366,6 @@ export default function Config() {
                     }
                     type="password"
                     placeholder="API Key"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Model</label>
-                  <Input
-                    value={provider.model || ''}
-                    onChange={(e) =>
-                      handleOpenAIProviderChange(index, 'model', e.target.value)
-                    }
-                    placeholder="gpt-4-turbo"
                   />
                 </div>
               </div>

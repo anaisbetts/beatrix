@@ -16,23 +16,22 @@ export type MessageParamWithExtras = MessageParam & {
 export interface ServerWebsocketApi {
   handlePromptRequest(
     prompt: string,
-    model?: string,
-    driver?: string,
+    modelWithDriver: string,
     previousConversationId?: number,
     typeHint?: TypeHint
   ): Observable<MessageParamWithExtras>
 
   runEvals(
-    model: string,
-    driver: string,
+    modelWithDriver: string,
     type: 'all' | 'quick',
     count: number
   ): Observable<ScenarioResult>
 
-  getModelListForDriver(
-    driver: string
-  ): Observable<{ defaultModel?: string; models: string[] }>
-  getDriverList(): Observable<{ defaultDriver: string; drivers: string[] }>
+  getModelListForDriver(driver: string): Observable<{ models: string[] }>
+  getDriverList(): Observable<{
+    automationModelWithDriver: string
+    drivers: string[]
+  }>
 
   getAutomationLogs(beforeTimestamp?: Date): Observable<AutomationLogEntry[]>
 

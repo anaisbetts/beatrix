@@ -6,7 +6,7 @@ import {
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
-import { Message, Ollama, Tool } from 'ollama'
+import { ChatResponse, Message, Ollama, Tool } from 'ollama'
 import { Observable, from, map } from 'rxjs'
 
 import pkg from '../package.json'
@@ -145,7 +145,7 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
       iterationCount++
 
       // Apply timeout to the Anthropic API call
-      let response
+      let response: ChatResponse
       try {
         response = await withTimeout(
           this.ollama.chat({
@@ -158,11 +158,14 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
               top_p: 0.9,
               top_k: 40,
               num_predict: 512,
+              num_ctx: 16384,
             },
           }),
           OllamaLargeLanguageProvider.OLLAMA_API_TIMEOUT,
           `Ollama API call timed out after ${OllamaLargeLanguageProvider.OLLAMA_API_TIMEOUT}ms`
         )
+
+        d('Ollama response: %o', response)
       } catch (err) {
         if (err instanceof TimeoutError) {
           d('Ollama API call timed out: %s', err.message)

@@ -35,6 +35,8 @@ describe('loadConfig', () => {
     expect(config.haBaseUrl).toBe('https://foo')
     expect(config.haToken).toBe('token')
     expect(config.timezone).toBe('America/Los_Angeles')
+    expect(config.automationModel).toBe('anthropic/claude-3-5-sonnet-20240620')
+    expect(config.visionModel).toBe('openai/gpt-4o')
 
     // Check nested fields
     expect(config.anthropicApiKey).toBe('wiefjef')
@@ -69,20 +71,20 @@ describe('loadConfig', () => {
     expect(scalewayOpenAI?.baseURL).toBe('https://efoiwejf')
   })
 
-  it('should return an empty object if the file does not exist', async () => {
+  it('should return default structure if the file does not exist', async () => {
     const nonExistentPath = path.resolve(__dirname, '../mocks/nonexistent.toml')
     const config = await loadConfig(nonExistentPath)
-    expect(config).toEqual({})
+    expect(config).toEqual({ automationModel: '', visionModel: '' })
   })
 
-  it('should return an empty object for invalid TOML', async () => {
+  it('should return default structure for invalid TOML', async () => {
     // Create a temporary invalid TOML file for this test
     const invalidTomlPath = path.resolve(__dirname, '../mocks/invalid.toml')
     // Ensure cleanup for this specific file too
     try {
       await fs.writeFile(invalidTomlPath, 'invalid toml content ===')
       const config = await loadConfig(invalidTomlPath)
-      expect(config).toEqual({})
+      expect(config).toEqual({ automationModel: '', visionModel: '' })
     } finally {
       try {
         await fs.unlink(invalidTomlPath)
@@ -97,6 +99,8 @@ describe('saveConfig', () => {
       haBaseUrl: 'https://home.example.com',
       haToken: 'test-token-123',
       timezone: 'Europe/London',
+      automationModel: 'openai/gpt-4-turbo',
+      visionModel: 'openai/gpt-4o',
       anthropicApiKey: 'anthropic-key',
       ollamaHost: 'http://ollama.local:11434',
       openAIProviders: [
@@ -148,12 +152,16 @@ describe('saveConfig', () => {
     expect(loadedConfig.haBaseUrl).toEqual('https://home.example.com')
     expect(loadedConfig.haToken).toEqual('test-token-123')
     expect(loadedConfig.timezone).toEqual('Europe/London')
+    expect(loadedConfig.automationModel).toEqual('openai/gpt-4-turbo')
+    expect(loadedConfig.visionModel).toEqual('openai/gpt-4o')
     expect(loadedConfig.anthropicApiKey).toEqual('anthropic-key')
     expect(loadedConfig.ollamaHost).toEqual('http://ollama.local:11434')
   })
 
   it('should handle missing optional fields correctly when saving', async () => {
     const partialConfig: AppConfig = {
+      automationModel: 'ollama/some-model',
+      visionModel: '',
       haBaseUrl: 'https://partial.test',
       openAIProviders: [{ providerName: 'openai', apiKey: 'partial-key' }],
     }
@@ -161,6 +169,8 @@ describe('saveConfig', () => {
     await saveConfig(partialConfig, tempConfigPath)
     const loadedConfig = await loadConfig(tempConfigPath)
 
+    expect(loadedConfig.automationModel).toBe('ollama/some-model')
+    expect(loadedConfig.visionModel).toBe('')
     expect(loadedConfig.haBaseUrl).toBe('https://partial.test')
     expect(loadedConfig.haToken).toBeUndefined()
     expect(loadedConfig.timezone).toBeUndefined()
@@ -173,15 +183,17 @@ describe('saveConfig', () => {
     expect(loadedConfig.openAIProviders?.[0].baseURL).toBeUndefined()
   })
 
-  it('should create an empty file if config object is empty', async () => {
-    const emptyConfig: AppConfig = {}
-    await saveConfig(emptyConfig, tempConfigPath)
+  it('should create an empty file if config object only has empty required fields', async () => {
+    const emptyRequiredConfig: AppConfig = {
+      automationModel: '',
+      visionModel: '',
+    }
+    await saveConfig(emptyRequiredConfig, tempConfigPath)
 
     const fileContent = await fs.readFile(tempConfigPath, 'utf-8')
     expect(fileContent.trim()).toBe('')
 
-    // Also check loadConfig handles it
     const loadedConfig = await loadConfig(tempConfigPath)
-    expect(loadedConfig).toEqual({})
+    expect(loadedConfig).toEqual({ automationModel: '', visionModel: '' })
   })
 })

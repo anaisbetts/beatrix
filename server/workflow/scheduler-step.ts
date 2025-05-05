@@ -46,6 +46,8 @@ export async function runSchedulerForAutomation(
 
   const memory = await fs.readFile(getMemoryFile(runtime), 'utf-8')
   const llm = runtime.llmFactory(modelSpecFromAutomation(automation))
+
+  i('Scheduling via model: ', llm.getModelWithDriver())
   const msgs = await lastValueFrom(
     llm
       .executePromptWithTools(

@@ -44,6 +44,8 @@ export async function runExecutionForAutomation(
   })
 
   const llm = runtime.llmFactory(modelSpecFromAutomation(automation))
+
+  i('Executing via model: ', llm.getModelWithDriver())
   const msgs = await lastValueFrom(
     llm
       .executePromptWithTools(

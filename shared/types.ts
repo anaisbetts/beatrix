@@ -1,6 +1,7 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
 export type SignalType = 'cron' | 'state' | 'event' | 'offset' | 'time'
+export type LLMFactoryType = 'automation' | 'vision'
 
 export type AutomationType =
   | 'manual'

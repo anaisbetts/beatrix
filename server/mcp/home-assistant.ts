@@ -181,9 +181,7 @@ export function createHomeAssistantServer(
           return resized
         })
 
-        // XXX Here is where we would put a "Create an image-friendly LLM"
-        const llm = runtime.llmFactory()
-
+        const llm = runtime.llmFactory('vision')
         const msg = await lastValueFrom(
           llm.executePromptWithTools(
             analyzeImagePrompt(prompt),
@@ -226,7 +224,7 @@ export function createHomeAssistantServer(
             }),
           ]
 
-          const llm = runtime.llmFactory()
+          const llm = runtime.llmFactory('automation')
           msgs = await firstValueFrom(
             llm
               .executePromptWithTools(

@@ -5,7 +5,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { Observable } from 'rxjs'
 
-import { Automation } from '../shared/types'
+import { Automation, LLMFactoryType } from '../shared/types'
 import { AppConfig } from '../shared/types'
 import { parseModelWithDriverString } from '../shared/utility'
 import { AnthropicLargeLanguageProvider } from './anthropic'
@@ -38,7 +38,7 @@ export function createDefaultLLMProvider(
       }
     | {
         modelWithDriver?: never
-        type?: 'automation' | 'vision'
+        type?: LLMFactoryType
       }
 ): LargeLanguageProvider {
   let mwd = opts?.modelWithDriver

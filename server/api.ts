@@ -207,7 +207,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
         )
 
         previousMessages = msgs
-        const llm = this.runtime.llmFactory()
+        const llm = this.runtime.llmFactory('automation') // XXX: This is hardcoded above to return the mwd they want
         if (prevMsgs.length > 0) {
           // If we are in a continuing conversation, we don't include the system
           // prompt

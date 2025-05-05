@@ -2,6 +2,7 @@ import * as crypto from 'crypto'
 import * as fs from 'fs/promises'
 import * as path from 'path'
 import { firstValueFrom, from, toArray } from 'rxjs'
+import { parse as parseYAML, stringify as stringifyYAML } from 'yaml'
 
 import { Automation } from '../../shared/types'
 import { i } from '../logging'
@@ -27,7 +28,7 @@ export async function* parseAutomations(
     const parts = content.split(regex)
 
     // Filter out empty parts and trim each part
-    const automations = parts.map((text) => text.trim()).filter(Boolean)
+    let automations = parts.map((text) => text.trim()).filter(Boolean)
 
     // Log number of automations found within a file at info level
     i(`Found ${automations.length} automations in file: ${file}`)
@@ -39,11 +40,21 @@ export async function* parseAutomations(
         yield automationFromString(trimmedContent, filePath)
       }
     } else {
+      const frontmatter = extractFrontmatter(automations[0])
+      if (frontmatter) {
+        automations = automations.slice(1)
+      }
+
       // Create automation objects for each separated content
       for (const automationContent of automations) {
         // Skip empty automations
         if (!automationContent.trim()) continue
-        yield automationFromString(automationContent, filePath)
+        yield automationFromString(
+          automationContent,
+          filePath,
+          false,
+          frontmatter
+        )
       }
     }
   }
@@ -52,7 +63,8 @@ export async function* parseAutomations(
 export function automationFromString(
   trimmedContent: string,
   filePath: string,
-  allowRelative = false
+  allowRelative = false,
+  frontmatter?: Record<string, any>
 ) {
   if (!path.isAbsolute(filePath) && !allowRelative) {
     throw new Error(
@@ -66,6 +78,7 @@ export function automationFromString(
     hash,
     contents: trimmedContent,
     fileName: filePath,
+    metadata: frontmatter,
   }
 }
 
@@ -78,6 +91,7 @@ export async function parseAllAutomations(
 /**
  * Serializes automations back to their original files.
  * Groups automations by filename and combines them with '---' separators.
+ * If automations have metadata, it's serialized as frontmatter at the beginning of the file.
  */
 export async function serializeAutomations(
   automations: Automation[]
@@ -99,8 +113,22 @@ export async function serializeAutomations(
   for (const [fileName, fileAutomations] of Object.entries(automationsByFile)) {
     // Sort automations if needed (optional, depends on your requirements)
 
+    // Check if we have frontmatter to add
+    let fileContent = ''
+
+    // Use the metadata from the first automation as frontmatter
+    // This assumes all automations in a file share the same metadata
+    const metadata = fileAutomations[0]?.metadata
+    if (metadata && Object.keys(metadata).length > 0) {
+      // Serialize metadata to YAML using the yaml library
+      const yamlMetadata = stringifyYAML(metadata)
+
+      // Add frontmatter with separators, ensuring proper newlines
+      fileContent = `---\n${yamlMetadata}\n---\n\n`
+    }
+
     // Combine automation contents with separator
-    const fileContent = fileAutomations
+    fileContent += fileAutomations
       .map((automation) => automation.contents)
       .join('\n\n---\n\n')
 
@@ -126,4 +154,23 @@ export async function parseAndSerializeAutomations(
   i(
     `Processed ${automations.length} automations across ${new Set(automations.map((a) => a.fileName)).size} files`
   )
+}
+
+function extractFrontmatter(content: string): Record<string, any> | undefined {
+  try {
+    const parsedYAML = parseYAML(content)
+
+    // Check if the parsed result is a plain object (Record<string, any>)
+    if (
+      parsedYAML &&
+      typeof parsedYAML === 'object' &&
+      !Array.isArray(parsedYAML)
+    ) {
+      return parsedYAML as Record<string, any>
+    }
+
+    return undefined
+  } catch {
+    return undefined
+  }
 }

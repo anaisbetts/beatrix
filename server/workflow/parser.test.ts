@@ -161,10 +161,128 @@ describe('Workflow loop functions', () => {
         )
       ).toBe(true)
 
+      // Test file10 with valid frontmatter
+      const file10Automations = automationsByFile['file10.md'] || []
+      expect(file10Automations.length).toBe(2)
+
+      // Both automations should have the same metadata
+      file10Automations.forEach((automation) => {
+        expect(automation.metadata).toBeTruthy()
+        expect(automation.metadata).toEqual({
+          name: 'Test Automation Group',
+          description: 'A group of automations that share metadata',
+          author: 'Test User',
+          version: '1.0.0',
+        })
+      })
+
+      // Test file11 with invalid frontmatter
+      const file11Automations = automationsByFile['file11.md'] || []
+      expect(file11Automations.length).toBe(2)
+
+      // Test file12 with complex frontmatter
+      const file12Automations = automationsByFile['file12.md'] || []
+      expect(file12Automations.length).toBe(1)
+      expect(file12Automations[0].metadata).toBeTruthy()
+      expect(file12Automations[0].metadata?.name).toBe('Complex Frontmatter')
+      expect(file12Automations[0].metadata?.configuration).toEqual({
+        enabled: true,
+        timeout: 5000,
+        retries: 3,
+      })
+      expect(file12Automations[0].metadata?.tags).toEqual([
+        'home',
+        'automation',
+        'testing',
+      ])
+      expect(file12Automations[0].metadata?.conditions).toEqual([
+        { type: 'time', value: '08:00:00' },
+        { type: 'state', entity: 'light.living_room', value: 'on' },
+      ])
+
+      // Test file13 where the YAML-like content is not frontmatter (not at beginning)
+      const file13Automations = automationsByFile['file13.md'] || []
+      expect(file13Automations.length).toBe(3) // Should be split into 3 parts due to --- separator
+      expect(file13Automations[0].metadata).toBeUndefined()
+      expect(file13Automations[1].metadata).toBeUndefined()
+      expect(file13Automations[2].metadata).toBeUndefined()
+
       // Make sure the hashes are all different
       const hashes = automations.map((a) => a.hash)
       const uniqueHashes = new Set(hashes)
       expect(uniqueHashes.size).toBe(automations.length)
+    })
+
+    test('should parse and attach frontmatter to automations', async () => {
+      const mockDir = path.join(
+        import.meta.dir,
+        '..',
+        '..',
+        'mocks',
+        'automation-parsing'
+      )
+      const automations: Automation[] = []
+
+      // Collect all automations
+      for await (const automation of parseAutomations(mockDir)) {
+        automations.push(automation)
+      }
+
+      // Group automations by filename for easier testing
+      const automationsByFile = automations.reduce<
+        Record<string, Automation[]>
+      >((acc, automation) => {
+        const list = acc[path.basename(automation.fileName)] || []
+        list.push(automation)
+        acc[path.basename(automation.fileName)] = list
+        return acc
+      }, {})
+
+      // Test file10 with valid frontmatter
+      const file10Automations = automationsByFile['file10.md'] || []
+      expect(file10Automations.length).toBe(2)
+
+      // Both automations should have the same metadata
+      file10Automations.forEach((automation) => {
+        expect(automation.metadata).toBeTruthy()
+        expect(automation.metadata).toEqual({
+          name: 'Test Automation Group',
+          description: 'A group of automations that share metadata',
+          author: 'Test User',
+          version: '1.0.0',
+        })
+      })
+
+      // Test file11 with invalid frontmatter
+      const file11Automations = automationsByFile['file11.md'] || []
+      expect(file11Automations.length).toBe(2)
+
+      // Test file12 with complex frontmatter
+      const file12Automations = automationsByFile['file12.md'] || []
+      expect(file12Automations.length).toBe(1)
+      expect(file12Automations[0].metadata).toBeTruthy()
+      expect(file12Automations[0].metadata?.name).toBe('Complex Frontmatter')
+      expect(file12Automations[0].metadata?.configuration).toEqual({
+        enabled: true,
+        timeout: 5000,
+        retries: 3,
+      })
+      expect(file12Automations[0].metadata?.tags).toEqual([
+        'home',
+        'automation',
+        'testing',
+      ])
+      expect(file12Automations[0].metadata?.conditions).toEqual([
+        { type: 'time', value: '08:00:00' },
+        { type: 'state', entity: 'light.living_room', value: 'on' },
+      ])
+
+      // Test file13 where the YAML-like content is not frontmatter (not at beginning)
+      const file13Automations = automationsByFile['file13.md'] || []
+      expect(file13Automations.length).toBe(3) // Should be split into 3 parts due to --- separator
+      expect(file13Automations[0].metadata).toBeUndefined()
+      expect(file13Automations[1].metadata).toBeUndefined()
+      expect(file13Automations[2].metadata).toBeUndefined()
     })
   })
 
@@ -256,6 +374,74 @@ describe('Workflow loop functions', () => {
       await serializeAutomations([])
       // Should not throw errors
     })
+
+    test('should preserve frontmatter when serializing automations', async () => {
+      const frontmatterTestDir = path.join(
+        import.meta.dir,
+        '..',
+        '..',
+        'mocks',
+        'automation-serialization',
+        'frontmatter-test'
+      )
+      await fs.mkdir(frontmatterTestDir, { recursive: true })
+
+      try {
+        // Create test automations with metadata
+        const testFile = path.join(frontmatterTestDir, 'test-frontmatter.md')
+        const metadata = {
+          name: 'Test Automation',
+          version: '1.0.0',
+          tags: ['test', 'frontmatter'],
+        }
+
+        const automations: Automation[] = [
+          {
+            hash: '1',
+            contents: 'First automation with frontmatter',
+            fileName: testFile,
+            metadata,
+          },
+          {
+            hash: '2',
+            contents: 'Second automation with same frontmatter',
+            fileName: testFile,
+            metadata,
+          },
+        ]
+
+        // Serialize the automations
+        await serializeAutomations(automations)
+
+        // Read the file back
+        const fileContent = await fs.readFile(testFile, 'utf-8')
+
+        // Check that file contains frontmatter and both automations
+        expect(fileContent).toContain('name: Test Automation')
+        expect(fileContent).toContain('version: 1.0.0')
+        expect(fileContent).toContain('- test')
+        expect(fileContent).toContain('- frontmatter')
+        expect(fileContent).toContain('First automation with frontmatter')
+        expect(fileContent).toContain('Second automation with same frontmatter')
+
+        // Parse the file back and verify the round trip
+        const parsedAutomations: Automation[] = []
+        for await (const automation of parseAutomations(frontmatterTestDir)) {
+          parsedAutomations.push(automation)
+        }
+
+        // Should have 2 automations
+        expect(parsedAutomations.length).toBe(2)
+
+        // Both should have metadata
+        parsedAutomations.forEach((automation) => {
+          expect(automation.metadata).toEqual(metadata)
+        })
+      } finally {
+        // Clean up after test
+        await fs.rm(frontmatterTestDir, { recursive: true, force: true })
+      }
+    })
   })
 
   describe('parseAllAutomations', () => {
@@ -290,7 +476,7 @@ describe('Workflow loop functions', () => {
       }, {})
 
       // Verify we have automations from each test file
-      expect(Object.keys(automationsByFile).length).toBe(9) // 9 test files
+      expect(Object.keys(automationsByFile).length).toBe(13)
 
       // Make sure the hashes are all different
       const hashes = automations.map((a) => a.hash)

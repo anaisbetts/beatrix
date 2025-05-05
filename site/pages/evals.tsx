@@ -31,7 +31,10 @@ export default function Evals() {
     setResults([])
     const before = performance.now()
 
-    const evalCall = api.runEvals(model, driver, evalType, count).pipe(share())
+    const evalCall = api
+      .runEvals(`${driver}/${model}`, evalType, count)
+      .pipe(share())
+
     const evalResults: ScenarioResult[] = []
 
     evalCall.subscribe({

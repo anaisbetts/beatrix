@@ -7,6 +7,7 @@ import { Observable } from 'rxjs'
 
 import { Automation } from '../shared/types'
 import { AppConfig } from '../shared/types'
+import { parseModelWithDriverString } from '../shared/utility'
 import { AnthropicLargeLanguageProvider } from './anthropic'
 import { createCueServer } from './mcp/cue'
 import { createHomeAssistantServer } from './mcp/home-assistant'
@@ -139,18 +140,4 @@ export function connectServerToClient(client: Client, server: Server) {
   const [cli, srv] = InMemoryTransport.createLinkedPair()
   void client.connect(cli)
   void server.connect(srv)
-}
-
-export function parseModelWithDriverString(modelWithDriver: string) {
-  const [driver, model] = modelWithDriver.split('/')
-
-  if (!/^[a-z]+$/i.test(driver)) {
-    throw new Error(`Invalid driver: ${driver}`)
-  }
-
-  if (!model) {
-    throw new Error(`No model provided: ${modelWithDriver}`)
-  }
-
-  return { driver, model }
 }

@@ -44,8 +44,7 @@ export default function Chat() {
     const msgCall = api
       .handlePromptRequest(
         input,
-        model,
-        driver,
+        `${driver}/${model}`,
         currentConversationId,
         isDebugMode ? 'debug' : 'chat'
       )

@@ -57,6 +57,10 @@ export class AnthropicLargeLanguageProvider implements LargeLanguageProvider {
     return response.data.map((model) => model.id)
   }
 
+  getModelWithDriver(): string {
+    return `anthropic/${this.model}`
+  }
+
   executePromptWithTools(
     prompt: string,
     toolServers: McpServer[],

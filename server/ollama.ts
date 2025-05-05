@@ -33,6 +33,10 @@ export class OllamaLargeLanguageProvider implements LargeLanguageProvider {
     this.ollama = new Ollama({ host: endpoint })
   }
 
+  getModelWithDriver(): string {
+    return `ollama/${this.model}`
+  }
+
   async getModelList(): Promise<string[]> {
     const response = await this.ollama.list()
     return response.models.map((model) => model.name)

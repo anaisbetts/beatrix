@@ -37,6 +37,8 @@ export interface LargeLanguageProvider {
   ): Observable<MessageParam>
 
   getModelList(): Promise<string[]>
+
+  getModelWithDriver(): string
 }
 
 export function createDefaultLLMProvider(
@@ -92,6 +94,7 @@ export function createDefaultLLMProvider(
       return new OpenAILargeLanguageProvider({
         apiKey: openAIProviderConfig.apiKey,
         baseURL: openAIProviderConfig.baseURL,
+        driverName: driver,
         model,
       })
   }

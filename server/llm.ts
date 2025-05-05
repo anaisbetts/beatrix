@@ -18,6 +18,16 @@ import { OllamaLargeLanguageProvider } from './ollama'
 import { OpenAILargeLanguageProvider } from './openai'
 import { AutomationRuntime, getMemoryFile } from './workflow/automation-runtime'
 
+export type ModelSpecifier =
+  | {
+      modelWithDriver?: string
+      type?: never
+    }
+  | {
+      modelWithDriver?: never
+      type?: LLMFactoryType
+    }
+
 export interface LargeLanguageProvider {
   executePromptWithTools(
     prompt: string,
@@ -31,18 +41,10 @@ export interface LargeLanguageProvider {
 
 export function createDefaultLLMProvider(
   config: AppConfig,
-  opts?:
-    | {
-        modelWithDriver?: string
-        type?: never
-      }
-    | {
-        modelWithDriver?: never
-        type?: LLMFactoryType
-      }
+  modelSpec?: ModelSpecifier
 ): LargeLanguageProvider {
-  let mwd = opts?.modelWithDriver
-  switch (opts?.type) {
+  let mwd = modelSpec?.modelWithDriver
+  switch (modelSpec?.type) {
     case 'automation':
       mwd = config.automationModel
       break

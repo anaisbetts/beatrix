@@ -19,14 +19,18 @@ import {
 } from 'rxjs'
 
 import { SerialSubscription } from '../../shared/serial-subscription'
-import { Automation, LLMFactoryType } from '../../shared/types'
+import { Automation } from '../../shared/types'
 import { AppConfig } from '../../shared/types'
 import { saveConfig } from '../config'
 import { createDatabaseViaEnv } from '../db'
 import { Schema, Signal } from '../db-schema'
 import { createBufferedDirectoryMonitor } from '../lib/directory-monitor'
 import { HomeAssistantApi, LiveHomeAssistantApi } from '../lib/ha-ws-api'
-import { LargeLanguageProvider, createDefaultLLMProvider } from '../llm'
+import {
+  LargeLanguageProvider,
+  ModelSpecifier,
+  createDefaultLLMProvider,
+} from '../llm'
 import { e, i, w } from '../logging'
 import { getConfigFilePath, isProdMode } from '../paths'
 import { runExecutionForAutomation } from './execution-step'
@@ -49,7 +53,7 @@ export interface SignalledAutomation {
 
 export interface AutomationRuntime extends SubscriptionLike {
   readonly api: HomeAssistantApi
-  readonly llmFactory: (type: LLMFactoryType) => LargeLanguageProvider
+  readonly llmFactory: (modelSpec: ModelSpecifier) => LargeLanguageProvider
   readonly db: Kysely<Schema>
   readonly timezone: string // "America/Los_Angeles" etc
   readonly notebookDirectory: string | undefined
@@ -86,7 +90,8 @@ export class LiveAutomationRuntime
 
     return new LiveAutomationRuntime(
       api ?? (await LiveHomeAssistantApi.createViaConfig(config)),
-      (type: LLMFactoryType) => createDefaultLLMProvider(config, { type }),
+      (modelSpec: ModelSpecifier) =>
+        createDefaultLLMProvider(config, modelSpec),
       db,
       config.timezone ?? 'Etc/UTC',
       notebookDirectory
@@ -95,7 +100,7 @@ export class LiveAutomationRuntime
 
   constructor(
     readonly api: HomeAssistantApi,
-    readonly llmFactory: (type: LLMFactoryType) => LargeLanguageProvider,
+    readonly llmFactory: (modelSpec: ModelSpecifier) => LargeLanguageProvider,
     readonly db: Kysely<Schema>,
     readonly timezone: string,
     notebookDirectory?: string

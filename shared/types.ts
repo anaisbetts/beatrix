@@ -16,6 +16,7 @@ export interface Automation {
   contents: string
   fileName: string
   isCue?: boolean
+  metadata?: Record<string, any>
 }
 
 export type StateRegexSignal = {

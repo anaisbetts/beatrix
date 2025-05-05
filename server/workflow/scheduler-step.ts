@@ -9,6 +9,7 @@ import { createHomeAssistantServer } from '../mcp/home-assistant'
 import { createSchedulerServer } from '../mcp/scheduler'
 import { agenticReminders } from '../prompts'
 import { AutomationRuntime, getMemoryFile, now } from './automation-runtime'
+import { modelSpecFromAutomation } from './parser'
 
 export async function rescheduleAutomations(
   runtime: AutomationRuntime,
@@ -44,7 +45,7 @@ export async function runSchedulerForAutomation(
   const tools = createDefaultSchedulerTools(runtime, automation)
 
   const memory = await fs.readFile(getMemoryFile(runtime), 'utf-8')
-  const llm = runtime.llmFactory('automation')
+  const llm = runtime.llmFactory(modelSpecFromAutomation(automation))
   const msgs = await lastValueFrom(
     llm
       .executePromptWithTools(

@@ -7,6 +7,7 @@ import { createBuiltinServers } from '../llm'
 import { i } from '../logging'
 import { agenticReminders } from '../prompts'
 import { AutomationRuntime, now } from './automation-runtime'
+import { modelSpecFromAutomation } from './parser'
 
 const d = debug('b:execution-step')
 
@@ -42,7 +43,7 @@ export async function runExecutionForAutomation(
     onImageReferenced,
   })
 
-  const llm = runtime.llmFactory('automation')
+  const llm = runtime.llmFactory(modelSpecFromAutomation(automation))
   const msgs = await lastValueFrom(
     llm
       .executePromptWithTools(

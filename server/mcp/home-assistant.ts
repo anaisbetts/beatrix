@@ -181,7 +181,7 @@ export function createHomeAssistantServer(
           return resized
         })
 
-        const llm = runtime.llmFactory('vision')
+        const llm = runtime.llmFactory({ type: 'vision' })
         const msg = await lastValueFrom(
           llm.executePromptWithTools(
             analyzeImagePrompt(prompt),
@@ -224,7 +224,7 @@ export function createHomeAssistantServer(
             }),
           ]
 
-          const llm = runtime.llmFactory('automation')
+          const llm = runtime.llmFactory({ type: 'automation' })
           msgs = await firstValueFrom(
             llm
               .executePromptWithTools(

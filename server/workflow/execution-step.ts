@@ -42,7 +42,7 @@ export async function runExecutionForAutomation(
     onImageReferenced,
   })
 
-  const llm = runtime.llmFactory('automation')
+  const llm = runtime.llmFactory({ type: 'automation' })
   const msgs = await lastValueFrom(
     llm
       .executePromptWithTools(

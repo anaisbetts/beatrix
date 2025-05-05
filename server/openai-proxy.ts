@@ -38,7 +38,7 @@ export function setupOpenAIProxy(app: Hono<BlankEnv, BlankSchema, '/'>) {
     }
 
     // Create LLM provider using runtime
-    const llm = runtime!.llmFactory('automation')
+    const llm = runtime!.llmFactory({ type: 'automation' })
 
     // Convert OpenAI messages to Anthropic format
     const anthropicMessages: MessageParam[] = []

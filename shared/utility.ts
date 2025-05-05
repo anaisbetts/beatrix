@@ -122,7 +122,7 @@ export const guaranteedThrottle =
 export function parseModelWithDriverString(modelWithDriver: string) {
   const [driver, model] = modelWithDriver.split('/')
 
-  if (!/^[a-z]+$/i.test(driver)) {
+  if (!/^[a-z]+$/i.test(driver) || driver.length === 0) {
     throw new Error(`Invalid driver: ${driver}`)
   }
 

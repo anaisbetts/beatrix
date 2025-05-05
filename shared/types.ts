@@ -102,8 +102,8 @@ export interface AppConfig {
    */
   timezone?: string
 
-  automationModel: string
-  visionModel: string
+  automationModel?: string
+  visionModel?: string
 
   anthropicApiKey?: string
   ollamaHost?: string

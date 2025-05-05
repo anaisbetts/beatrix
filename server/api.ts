@@ -67,7 +67,7 @@ export class ServerWebsocketApiImpl implements ServerWebsocketApi {
     }
 
     return of({
-      automationModelWithDriver: this.config.automationModel,
+      automationModelWithDriver: this.config.automationModel ?? '',
       drivers,
     })
   }

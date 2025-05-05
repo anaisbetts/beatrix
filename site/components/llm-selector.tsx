@@ -64,8 +64,10 @@ export function DriverSelector({
           </Select>
         )
       },
-      err: () => (
-        <div className="text-sm text-red-500">Failed to load drivers</div>
+      err: (e) => (
+        <div className="text-sm text-red-500">
+          Failed to load drivers: {e.toString()}
+        </div>
       ),
       pending: () => (
         <div className="flex h-10 w-[180px] items-center justify-center">

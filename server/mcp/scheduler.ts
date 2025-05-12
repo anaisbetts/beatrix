@@ -342,7 +342,7 @@ export function createSchedulerServer(
 
   server.tool(
     'create-state-range-trigger',
-    'Create a new trigger for an automation based on a Home Assistant entity\'s numeric state staying within a specific range for a duration of time.',
+    "Create a new trigger for an automation based on a Home Assistant entity's numeric state staying within a specific range for a duration of time.",
     {
       entity_id: z
         .string()
@@ -373,11 +373,15 @@ export function createSchedulerServer(
       )
       try {
         if (min >= max) {
-          throw new Error(`Invalid range: min (${min}) must be less than max (${max})`)
+          throw new Error(
+            `Invalid range: min (${min}) must be less than max (${max})`
+          )
         }
-        
+
         if (duration_seconds <= 0) {
-          throw new Error(`Invalid duration: ${duration_seconds} seconds must be greater than 0`)
+          throw new Error(
+            `Invalid duration: ${duration_seconds} seconds must be greater than 0`
+          )
         }
 
         const data: StateRangeSignal = {

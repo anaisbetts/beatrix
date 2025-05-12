@@ -9,6 +9,7 @@ import {
   AbsoluteTimeSignal,
   CronSignal,
   RelativeTimeSignal,
+  StateRangeSignal,
   StateRegexSignal,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
@@ -330,6 +331,80 @@ export function createSchedulerServer(
         }
       } catch (err: any) {
         w('error creating absolute time signal:', err)
+
+        return {
+          content: [{ type: 'text', text: err.toString() }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'create-state-range-trigger',
+    'Create a new trigger for an automation based on a Home Assistant entity\'s numeric state staying within a specific range for a duration of time.',
+    {
+      entity_id: z
+        .string()
+        .describe(
+          'The entity ID to monitor for numeric state values (e.g. "sensor.temperature", "input_number.brightness")'
+        ),
+      min: z
+        .number()
+        .describe('The minimum value (inclusive) of the range to monitor'),
+      max: z
+        .number()
+        .describe('The maximum value (inclusive) of the range to monitor'),
+      duration_seconds: z
+        .number()
+        .describe(
+          'The number of seconds the state must continuously stay within the range before triggering'
+        ),
+      execution_notes: z
+        .string()
+        .optional()
+        .describe(
+          'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
+        ),
+    },
+    async ({ entity_id, min, max, duration_seconds, execution_notes }) => {
+      i(
+        `Creating state range trigger for automation ${automationHash}: entity ${entity_id}, range [${min}, ${max}], duration ${duration_seconds}s`
+      )
+      try {
+        if (min >= max) {
+          throw new Error(`Invalid range: min (${min}) must be less than max (${max})`)
+        }
+        
+        if (duration_seconds <= 0) {
+          throw new Error(`Invalid duration: ${duration_seconds} seconds must be greater than 0`)
+        }
+
+        const data: StateRangeSignal = {
+          type: 'range',
+          entityId: entity_id,
+          min,
+          max,
+          durationSeconds: duration_seconds,
+        }
+
+        await db
+          .insertInto('signals')
+          .values({
+            automationHash,
+            createdAt: now(timezone).toISO()!,
+            type: 'range',
+            data: JSON.stringify(data),
+            isDead: false,
+            executionNotes: execution_notes ?? '',
+          })
+          .execute()
+
+        return {
+          content: [{ type: 'text', text: 'Signal created' }],
+        }
+      } catch (err: any) {
+        w('error creating state range signal:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],

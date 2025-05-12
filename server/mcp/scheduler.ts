@@ -14,6 +14,7 @@ import {
 } from '../../shared/types'
 import { Schema } from '../db-schema'
 import { formatDateForLLM, parseDateFromLLM } from '../lib/date-utils'
+import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { i, w } from '../logging'
 
 const d = debug('b:scheduler')
@@ -21,7 +22,8 @@ const d = debug('b:scheduler')
 export function createSchedulerServer(
   db: Kysely<Schema>,
   automationHash: string,
-  timezone: string
+  timezone: string,
+  api?: HomeAssistantApi // Optional HA API for fetching entity states
 ) {
   d('creating scheduler server for automation hash: %s', automationHash)
   const server = new McpServer({
@@ -381,6 +383,49 @@ export function createSchedulerServer(
         if (duration_seconds <= 0) {
           throw new Error(
             `Invalid duration: ${duration_seconds} seconds must be greater than 0`
+          )
+        }
+
+        // Check if we can validate the current entity state
+        if (api) {
+          try {
+            // Fetch the current states from Home Assistant
+            const states = await api.fetchStates()
+            const entityState = states[entity_id]
+
+            // If the entity exists, validate that its state is a number
+            if (entityState) {
+              const numericValue = parseFloat(entityState.state)
+              if (isNaN(numericValue)) {
+                throw new Error(
+                  `Entity ${entity_id} current state "${entityState.state}" is not a number. Cannot create a numeric range trigger for a non-numeric state.`
+                )
+              }
+
+              // Log the current value to help with debugging
+              i(`Current value for ${entity_id} is ${numericValue}`)
+
+              // Optionally provide some guidance if the current value is outside the range
+              if (numericValue < min || numericValue > max) {
+                i(
+                  `Note: Current value ${numericValue} is outside the specified range [${min}, ${max}]`
+                )
+              }
+            } else {
+              i(
+                `Warning: Entity ${entity_id} not found in Home Assistant. Unable to validate if state is numeric.`
+              )
+            }
+          } catch (stateErr) {
+            // Just log the warning but don't prevent creating the trigger
+            w(
+              `Warning: Could not verify if ${entity_id} state is numeric:`,
+              stateErr
+            )
+          }
+        } else {
+          i(
+            `No Home Assistant API provided to scheduler, cannot validate entity ${entity_id} state`
           )
         }
 

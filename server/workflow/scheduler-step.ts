@@ -77,7 +77,8 @@ export function createDefaultSchedulerTools(
     createSchedulerServer(
       runtime.db,
       automation.hash,
-      runtime.timezone || 'Etc/UTC'
+      runtime.timezone || 'Etc/UTC',
+      runtime.api // Pass the Home Assistant API for state validation
     ),
   ]
 }
@@ -123,7 +124,8 @@ Please follow these steps:
 
 4. If new triggers are needed, select the most appropriate trigger type:
    - For recurring time patterns, use create-cron-trigger
-   - For state changes, use create-state-regex-trigger
+   - For state changes matching text patterns, use create-state-regex-trigger
+   - For numeric states within a range for a duration, use create-state-range-trigger
    - For delays or offsets, use create-relative-time-trigger
    - For specific future times, use create-absolute-time-trigger
 

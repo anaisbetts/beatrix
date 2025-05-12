@@ -125,7 +125,8 @@ export function createBuiltinServers(
       createSchedulerServer(
         runtime.db,
         automationForScheduling.hash,
-        runtime.timezone
+        runtime.timezone,
+        runtime.api // Pass API for state validation
       )
     )
   }

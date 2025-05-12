@@ -339,8 +339,10 @@ export class StateRangeSignalHandler implements SignalHandler {
         // Convert state to number and check if it's in range
         const numValue = parseFloat(state.state)
         if (isNaN(numValue)) {
+          // Just log and skip non-numeric states, don't notify or permanently break
+          // This handles 'unavailable', 'unknown' or other non-numeric states gracefully
           d(
-            `Entity ${rangeData.entityId} state "${state.state}" is not a number, ignoring`
+            `Entity ${rangeData.entityId} state "${state.state}" is not a number, skipping this update`
           )
           return false
         }

@@ -70,7 +70,7 @@
     "clsx": "^2.1.1",
     "colorette": "^2.0.20",
     "commander": "^13.1.0",
-    "cron-parser": "^5.1.1",
+    "cron-parser": "^5.2.0",
     "debug": "^4.4.0",
     "dotenv": "^16.5.0",
     "glob": "^11.0.1",

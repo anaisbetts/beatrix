@@ -26,7 +26,7 @@ import {
 } from '../../shared/types'
 import { guaranteedThrottle } from '../../shared/utility'
 import { Signal } from '../db-schema'
-import { observeStatesForEntities } from '../lib/ha-ws-api'
+import { HassState, observeStatesForEntities } from '../lib/ha-ws-api'
 import { i } from '../logging'
 import { AutomationRuntime, SignalledAutomation, d } from './automation-runtime'
 

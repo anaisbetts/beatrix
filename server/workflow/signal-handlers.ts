@@ -292,10 +292,16 @@ export class StateRangeSignalHandler implements SignalHandler {
     const rangeData: StateRangeSignal = JSON.parse(signal.data)
 
     this.isValid = true // Default to valid, we'll check if parameters make sense
-    this.friendlySignalDescription = `State range trigger for entity: ${rangeData.entityId} when value is between ${rangeData.min} and ${rangeData.max} for ${rangeData.durationSeconds} seconds`
+    const minDisplay = rangeData.min !== undefined ? rangeData.min : '-∞'
+    const maxDisplay = rangeData.max !== undefined ? rangeData.max : '∞'
+    this.friendlySignalDescription = `State range trigger for entity: ${rangeData.entityId} when value is between ${minDisplay} and ${maxDisplay} for ${rangeData.durationSeconds} seconds`
 
     // Validate parameters
-    if (rangeData.min >= rangeData.max) {
+    if (
+      rangeData.min !== undefined &&
+      rangeData.max !== undefined &&
+      rangeData.min >= rangeData.max
+    ) {
       this.isValid = false
       this.friendlySignalDescription = `Invalid range values: min (${rangeData.min}) must be less than max (${rangeData.max})`
       this.signalObservable = NEVER
@@ -316,12 +322,12 @@ export class StateRangeSignalHandler implements SignalHandler {
     }
 
     d(
-      'StateRangeSignalHandler created for signal %s, automation %s. Entity: %s, Range: [%d, %d], Duration: %d seconds',
+      'StateRangeSignalHandler created for signal %s, automation %s. Entity: %s, Range: [%s, %s], Duration: %d seconds',
       signal.id,
       automation.hash,
       rangeData.entityId,
-      rangeData.min,
-      rangeData.max,
+      minDisplay,
+      maxDisplay,
       rangeData.durationSeconds
     )
 
@@ -347,7 +353,12 @@ export class StateRangeSignalHandler implements SignalHandler {
           return false
         }
 
-        const inRange = numValue >= rangeData.min && numValue <= rangeData.max
+        // Check if value is in range - handle undefined min/max as no bound in that direction
+        const aboveMin =
+          rangeData.min === undefined || numValue >= rangeData.min
+        const belowMax =
+          rangeData.max === undefined || numValue <= rangeData.max
+        const inRange = aboveMin && belowMax
         const now = Date.now()
 
         if (inRange) {
@@ -355,7 +366,7 @@ export class StateRangeSignalHandler implements SignalHandler {
           if (this.inRangeStartTime === null) {
             this.inRangeStartTime = now
             d(
-              `Entity ${rangeData.entityId} entered range [${rangeData.min}, ${rangeData.max}] with value ${numValue}`
+              `Entity ${rangeData.entityId} entered range [${minDisplay}, ${maxDisplay}] with value ${numValue}`
             )
           }
 
@@ -381,7 +392,7 @@ export class StateRangeSignalHandler implements SignalHandler {
       }),
       map((matchedState: HassState) => {
         i(
-          `State range trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Entity: ${matchedState.entity_id}, Value: ${matchedState.state}, Range: [${rangeData.min}, ${rangeData.max}], Duration: ${rangeData.durationSeconds}s`
+          `State range trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Entity: ${matchedState.entity_id}, Value: ${matchedState.state}, Range: [${rangeData.min ?? '-∞'}, ${rangeData.max ?? '∞'}], Duration: ${rangeData.durationSeconds}s`
         )
         return { signal: this.signal, automation: this.automation }
       }),

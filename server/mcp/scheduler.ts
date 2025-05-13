@@ -353,12 +353,19 @@ export function createSchedulerServer(
         ),
       min: z
         .number()
-        .describe('The minimum value (inclusive) of the range to monitor'),
+        .optional()
+        .describe(
+          'The minimum value (inclusive) of the range to monitor. If not provided, there is no lower bound.'
+        ),
       max: z
         .number()
-        .describe('The maximum value (inclusive) of the range to monitor'),
+        .optional()
+        .describe(
+          'The maximum value (inclusive) of the range to monitor. If not provided, there is no upper bound.'
+        ),
       duration_seconds: z
         .number()
+        .optional()
         .describe(
           'The number of seconds the state must continuously stay within the range before triggering'
         ),
@@ -371,16 +378,16 @@ export function createSchedulerServer(
     },
     async ({ entity_id, min, max, duration_seconds, execution_notes }) => {
       i(
-        `Creating state range trigger for automation ${automationHash}: entity ${entity_id}, range [${min}, ${max}], duration ${duration_seconds}s`
+        `Creating state range trigger for automation ${automationHash}: entity ${entity_id}, range [${min ?? '-∞'}, ${max ?? '∞'}], duration ${duration_seconds}s`
       )
       try {
-        if (min >= max) {
+        if (min !== undefined && max !== undefined && min >= max) {
           throw new Error(
             `Invalid range: min (${min}) must be less than max (${max})`
           )
         }
 
-        if (duration_seconds <= 0) {
+        if (duration_seconds && duration_seconds <= 0) {
           throw new Error(
             `Invalid duration: ${duration_seconds} seconds must be greater than 0`
           )
@@ -406,9 +413,12 @@ export function createSchedulerServer(
               i(`Current value for ${entity_id} is ${numericValue}`)
 
               // Optionally provide some guidance if the current value is outside the range
-              if (numericValue < min || numericValue > max) {
+              if (
+                (min !== undefined && numericValue < min) ||
+                (max !== undefined && numericValue > max)
+              ) {
                 i(
-                  `Note: Current value ${numericValue} is outside the specified range [${min}, ${max}]`
+                  `Note: Current value ${numericValue} is outside the specified range [${min ?? '-∞'}, ${max ?? '∞'}]`
                 )
               }
             } else {
@@ -434,7 +444,7 @@ export function createSchedulerServer(
           entityId: entity_id,
           min,
           max,
-          durationSeconds: duration_seconds,
+          durationSeconds: duration_seconds ?? 0.05,
         }
 
         await db

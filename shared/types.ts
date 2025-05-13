@@ -51,8 +51,8 @@ export type AbsoluteTimeSignal = {
 export type StateRangeSignal = {
   type: 'range'
   entityId: string
-  min: number
-  max: number
+  min?: number
+  max?: number
   durationSeconds: number
 }
 

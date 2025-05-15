@@ -1,6 +1,13 @@
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.mjs'
 
-export type SignalType = 'cron' | 'state' | 'event' | 'offset' | 'time'
+export type SignalType =
+  | 'cron'
+  | 'state'
+  | 'event'
+  | 'offset'
+  | 'time'
+  | 'range'
+
 export type LLMFactoryType = 'automation' | 'vision'
 
 export type AutomationType =
@@ -41,11 +48,20 @@ export type AbsoluteTimeSignal = {
   iso8601Time: string // ISO 8601 date and time format
 }
 
+export type StateRangeSignal = {
+  type: 'range'
+  entityId: string
+  min?: number
+  max?: number
+  durationSeconds: number
+}
+
 export type SignalData =
   | CronSignal
   | StateRegexSignal
   | RelativeTimeSignal
   | AbsoluteTimeSignal
+  | StateRangeSignal
 
 export interface SignalEntry {
   createdAt: Date

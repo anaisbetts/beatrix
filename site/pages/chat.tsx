@@ -103,20 +103,28 @@ export default function Chat() {
     setIsDebugMode(false)
   }, [reset])
 
+  // Reset chat but preserve input text
+  const resetChatKeepInput = useCallback(() => {
+    reset()
+    setMessages([])
+    setCurrentConversationId(undefined)
+    setIsDebugMode(false)
+  }, [reset])
+
   const handleModelChange = useCallback(
     (newModel: string) => {
       setModel(newModel)
-      resetChat()
+      resetChatKeepInput()
     },
-    [resetChat]
+    [resetChatKeepInput]
   )
 
   const handleDriverChange = useCallback(
     (value: string) => {
       setDriver(value)
-      resetChat()
+      resetChatKeepInput()
     },
-    [resetChat]
+    [resetChatKeepInput]
   )
 
   const msgContent = useMemo(() => {

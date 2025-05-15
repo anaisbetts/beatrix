@@ -21,11 +21,12 @@ import {
   CronSignal,
   RelativeTimeSignal,
   SignalHandlerInfo,
+  StateRangeSignal,
   StateRegexSignal,
 } from '../../shared/types'
 import { guaranteedThrottle } from '../../shared/utility'
 import { Signal } from '../db-schema'
-import { observeStatesForEntities } from '../lib/ha-ws-api'
+import { HassState, observeStatesForEntities } from '../lib/ha-ws-api'
 import { i } from '../logging'
 import { AutomationRuntime, SignalledAutomation, d } from './automation-runtime'
 
@@ -272,6 +273,129 @@ export class StateRegexSignalHandler implements SignalHandler {
         return { signal: this.signal, automation: this.automation }
       }),
       guaranteedThrottle(stateData.delay ?? 750),
+      share()
+    )
+  }
+}
+
+export class StateRangeSignalHandler implements SignalHandler {
+  readonly signalObservable: Observable<SignalledAutomation>
+  readonly friendlySignalDescription: string
+  readonly isValid: boolean
+  private inRangeStartTime: number | null = null
+
+  constructor(
+    public readonly signal: Signal,
+    public readonly automation: Automation,
+    private readonly runtime: AutomationRuntime
+  ) {
+    const rangeData: StateRangeSignal = JSON.parse(signal.data)
+
+    this.isValid = true // Default to valid, we'll check if parameters make sense
+    const minDisplay = rangeData.min !== undefined ? rangeData.min : '-∞'
+    const maxDisplay = rangeData.max !== undefined ? rangeData.max : '∞'
+    this.friendlySignalDescription = `State range trigger for entity: ${rangeData.entityId} when value is between ${minDisplay} and ${maxDisplay} for ${rangeData.durationSeconds} seconds`
+
+    // Validate parameters
+    if (
+      rangeData.min !== undefined &&
+      rangeData.max !== undefined &&
+      rangeData.min >= rangeData.max
+    ) {
+      this.isValid = false
+      this.friendlySignalDescription = `Invalid range values: min (${rangeData.min}) must be less than max (${rangeData.max})`
+      this.signalObservable = NEVER
+      i(
+        `Invalid range values for signal ${signal.id}: min ${rangeData.min} >= max ${rangeData.max}`
+      )
+      return
+    }
+
+    if (rangeData.durationSeconds <= 0) {
+      this.isValid = false
+      this.friendlySignalDescription = `Invalid duration: ${rangeData.durationSeconds} seconds must be greater than 0`
+      this.signalObservable = NEVER
+      i(
+        `Invalid duration for signal ${signal.id}: ${rangeData.durationSeconds} seconds`
+      )
+      return
+    }
+
+    d(
+      'StateRangeSignalHandler created for signal %s, automation %s. Entity: %s, Range: [%s, %s], Duration: %d seconds',
+      signal.id,
+      automation.hash,
+      rangeData.entityId,
+      minDisplay,
+      maxDisplay,
+      rangeData.durationSeconds
+    )
+
+    // Create the observable that tracks the entity state
+    this.signalObservable = observeStatesForEntities(
+      this.runtime.api,
+      [rangeData.entityId],
+      false
+    ).pipe(
+      filter((state: HassState | undefined | null): state is HassState => {
+        if (!state) {
+          return false // Skip null/undefined states
+        }
+
+        // Convert state to number and check if it's in range
+        const numValue = parseFloat(state.state)
+        if (isNaN(numValue)) {
+          // Just log and skip non-numeric states, don't notify or permanently break
+          // This handles 'unavailable', 'unknown' or other non-numeric states gracefully
+          d(
+            `Entity ${rangeData.entityId} state "${state.state}" is not a number, skipping this update`
+          )
+          return false
+        }
+
+        // Check if value is in range - handle undefined min/max as no bound in that direction
+        const aboveMin =
+          rangeData.min === undefined || numValue >= rangeData.min
+        const belowMax =
+          rangeData.max === undefined || numValue <= rangeData.max
+        const inRange = aboveMin && belowMax
+        const now = Date.now()
+
+        if (inRange) {
+          // If we just entered the range, record the start time
+          if (this.inRangeStartTime === null) {
+            this.inRangeStartTime = now
+            d(
+              `Entity ${rangeData.entityId} entered range [${minDisplay}, ${maxDisplay}] with value ${numValue}`
+            )
+          }
+
+          // Check if we've been in range long enough
+          const timeInRange = now - this.inRangeStartTime
+          const durationMet = timeInRange >= rangeData.durationSeconds * 1000
+
+          if (durationMet) {
+            d(
+              `Entity ${rangeData.entityId} has been in range for ${timeInRange / 1000} seconds, triggering`
+            )
+            // Reset the start time so we don't keep triggering
+            this.inRangeStartTime = null
+            return true
+          }
+        } else if (this.inRangeStartTime !== null) {
+          // If we were in range but now we're not, reset the start time
+          d(`Entity ${rangeData.entityId} exited range with value ${numValue}`)
+          this.inRangeStartTime = null
+        }
+
+        return false
+      }),
+      map((matchedState: HassState) => {
+        i(
+          `State range trigger fired for signal ${this.signal.id}, automation ${this.automation.hash}. Entity: ${matchedState.entity_id}, Value: ${matchedState.state}, Range: [${rangeData.min ?? '-∞'}, ${rangeData.max ?? '∞'}], Duration: ${rangeData.durationSeconds}s`
+        )
+        return { signal: this.signal, automation: this.automation }
+      }),
       share()
     )
   }

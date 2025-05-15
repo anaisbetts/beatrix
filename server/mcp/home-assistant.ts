@@ -10,7 +10,6 @@ import { z } from 'zod'
 
 import pkg from '../../package.json'
 import { messagesToString } from '../../shared/api'
-import { filterUncommonEntities } from '../lib/ha-ws-api'
 import { asyncMap } from '../lib/promise-extras'
 import { w } from '../logging'
 import { agenticReminders } from '../prompts'
@@ -58,7 +57,7 @@ export function createHomeAssistantServer(
           ])
         )
 
-        const states = filterUncommonEntities(await runtime.api.fetchStates())
+        const states = await runtime.api.fetchStates()
 
         const matchingStates = Object.keys(states).filter(
           (id) => prefixMap[id.replace(/\..*$/, '')]
@@ -127,7 +126,7 @@ export function createHomeAssistantServer(
     async () => {
       try {
         const allStates = await runtime.api.fetchStates()
-        const states = Object.keys(filterUncommonEntities(allStates))
+        const states = Object.keys(allStates)
 
         d('get-all-entities: %d entities', states.length)
         return {

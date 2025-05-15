@@ -41,6 +41,7 @@ import {
   CronSignalHandler,
   RelativeTimeSignalHandler,
   SignalHandler,
+  StateRangeSignalHandler,
   StateRegexSignalHandler,
 } from './signal-handlers'
 
@@ -327,6 +328,19 @@ export class LiveAutomationRuntime
             } catch (error) {
               e(
                 `Error creating StateRegexSignal handler for signal ID ${signal.id}:`,
+                error
+              )
+            }
+            break
+          case 'range':
+            d('Creating StateRangeSignalHandler for signal ID %s', signal.id)
+            try {
+              signalHandlers.push(
+                new StateRangeSignalHandler(signal, automation, this)
+              )
+            } catch (error) {
+              e(
+                `Error creating StateRangeSignal handler for signal ID ${signal.id}:`,
                 error
               )
             }

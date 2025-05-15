@@ -9,10 +9,12 @@ import {
   AbsoluteTimeSignal,
   CronSignal,
   RelativeTimeSignal,
+  StateRangeSignal,
   StateRegexSignal,
 } from '../../shared/types'
 import { Schema } from '../db-schema'
 import { formatDateForLLM, parseDateFromLLM } from '../lib/date-utils'
+import { HomeAssistantApi } from '../lib/ha-ws-api'
 import { i, w } from '../logging'
 
 const d = debug('b:scheduler')
@@ -20,7 +22,8 @@ const d = debug('b:scheduler')
 export function createSchedulerServer(
   db: Kysely<Schema>,
   automationHash: string,
-  timezone: string
+  timezone: string,
+  api?: HomeAssistantApi // Optional HA API for fetching entity states
 ) {
   d('creating scheduler server for automation hash: %s', automationHash)
   const server = new McpServer({
@@ -330,6 +333,137 @@ export function createSchedulerServer(
         }
       } catch (err: any) {
         w('error creating absolute time signal:', err)
+
+        return {
+          content: [{ type: 'text', text: err.toString() }],
+          isError: true,
+        }
+      }
+    }
+  )
+
+  server.tool(
+    'create-state-range-trigger',
+    "Create a new trigger for an automation based on a Home Assistant entity's numeric state staying within a specific range for a duration of time.",
+    {
+      entity_id: z
+        .string()
+        .describe(
+          'The entity ID to monitor for numeric state values (e.g. "sensor.temperature", "input_number.brightness")'
+        ),
+      min: z
+        .number()
+        .optional()
+        .describe(
+          'The minimum value (inclusive) of the range to monitor. If not provided, there is no lower bound.'
+        ),
+      max: z
+        .number()
+        .optional()
+        .describe(
+          'The maximum value (inclusive) of the range to monitor. If not provided, there is no upper bound.'
+        ),
+      duration_seconds: z
+        .number()
+        .optional()
+        .describe(
+          'The number of seconds the state must continuously stay within the range before triggering'
+        ),
+      execution_notes: z
+        .string()
+        .optional()
+        .describe(
+          'Relevant information to pass along to the LLM when executing this automation. Only fill in directly relevant information from saved memory, and only if needed.'
+        ),
+    },
+    async ({ entity_id, min, max, duration_seconds, execution_notes }) => {
+      i(
+        `Creating state range trigger for automation ${automationHash}: entity ${entity_id}, range [${min ?? '-∞'}, ${max ?? '∞'}], duration ${duration_seconds}s`
+      )
+      try {
+        if (min !== undefined && max !== undefined && min >= max) {
+          throw new Error(
+            `Invalid range: min (${min}) must be less than max (${max})`
+          )
+        }
+
+        if (duration_seconds && duration_seconds <= 0) {
+          throw new Error(
+            `Invalid duration: ${duration_seconds} seconds must be greater than 0`
+          )
+        }
+
+        // Check if we can validate the current entity state
+        if (api) {
+          try {
+            // Fetch the current states from Home Assistant
+            const states = await api.fetchStates()
+            const entityState = states[entity_id]
+
+            // If the entity exists, validate that its state is a number
+            if (entityState) {
+              const numericValue = parseFloat(entityState.state)
+              if (isNaN(numericValue)) {
+                throw new Error(
+                  `Entity ${entity_id} current state "${entityState.state}" is not a number. Cannot create a numeric range trigger for a non-numeric state.`
+                )
+              }
+
+              // Log the current value to help with debugging
+              i(`Current value for ${entity_id} is ${numericValue}`)
+
+              // Optionally provide some guidance if the current value is outside the range
+              if (
+                (min !== undefined && numericValue < min) ||
+                (max !== undefined && numericValue > max)
+              ) {
+                i(
+                  `Note: Current value ${numericValue} is outside the specified range [${min ?? '-∞'}, ${max ?? '∞'}]`
+                )
+              }
+            } else {
+              i(
+                `Warning: Entity ${entity_id} not found in Home Assistant. Unable to validate if state is numeric.`
+              )
+            }
+          } catch (stateErr) {
+            // Just log the warning but don't prevent creating the trigger
+            w(
+              `Warning: Could not verify if ${entity_id} state is numeric:`,
+              stateErr
+            )
+          }
+        } else {
+          i(
+            `No Home Assistant API provided to scheduler, cannot validate entity ${entity_id} state`
+          )
+        }
+
+        const data: StateRangeSignal = {
+          type: 'range',
+          entityId: entity_id,
+          min,
+          max,
+          durationSeconds: duration_seconds ?? 0.05,
+        }
+
+        await db
+          .insertInto('signals')
+          .values({
+            automationHash,
+            createdAt: now(timezone).toISO()!,
+            type: 'range',
+            data: JSON.stringify(data),
+            isDead: false,
+            executionNotes: execution_notes ?? '',
+          })
+          .execute()
+
+        return {
+          content: [{ type: 'text', text: 'Signal created' }],
+        }
+      } catch (err: any) {
+        w('error creating state range signal:', err)
 
         return {
           content: [{ type: 'text', text: err.toString() }],

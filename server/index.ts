@@ -21,7 +21,7 @@ import { ServerWebsocketApiImpl } from './api'
 import { createConfigViaEnv } from './config'
 import { createDatabase, createDatabaseViaEnv } from './db'
 import { EvalHomeAssistantApi } from './eval-framework'
-import { LiveHomeAssistantApi, filterUncommonEntities } from './lib/ha-ws-api'
+import { LiveHomeAssistantApi } from './lib/ha-ws-api'
 import { handleWebsocketRpc } from './lib/ws-rpc'
 import { createBuiltinServers, createDefaultLLMProvider } from './llm'
 import { disableLogging, e, i, startLogger } from './logging'
@@ -311,7 +311,7 @@ async function dumpEventsCommand() {
   const config = await createConfigViaEnv('.')
   const conn = await LiveHomeAssistantApi.createViaConfig(config)
 
-  const states = filterUncommonEntities(await conn.fetchStates())
+  const states = await conn.fetchStates()
   await Bun.write('./states.json', JSON.stringify(states, null, 2))
 
   console.error('Dumping non-noisy events...')

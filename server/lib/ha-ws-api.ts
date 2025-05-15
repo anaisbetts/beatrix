@@ -413,54 +413,6 @@ export function observeStatesForEntities(
   )
 }
 
-const LOW_VALUE_REGEXES = [
-  // Domain-based filters (anchored at start)
-  /^update\./,
-  /^binary_sensor\.remote_ui/,
-
-  // Name-based pattern filters (can appear anywhere)
-  /_uptime/,
-  /_cpu_utilization/,
-  /_memory_/,
-  /_uplink_mac/,
-  /_firmware/,
-  /debug_/,
-  /_identify/,
-  /_signal/,
-  /_mac/,
-  /_version/,
-  /_bssid/,
-  /_ssid/,
-  /_ip/,
-  /hacs_/,
-  /_connectivity/,
-]
-
-export function filterUncommonEntities(
-  entities: Record<string, HassState>,
-  options: {
-    includeUnavailable?: boolean
-  } = {}
-): Record<string, HassState> {
-  // Default options
-  const { includeUnavailable = false } = options
-  // Combine domain and pattern filters into a single array of RegExp objects
-
-  // Step 1: Filter out unavailable/unknown entities if configured
-  let filtered = includeUnavailable
-    ? Object.keys(entities)
-    : Object.keys(entities).filter(
-        (e) =>
-          entities[e].state !== 'unavailable' && entities[e].state !== 'unknown'
-      )
-
-  return Object.fromEntries(
-    filtered
-      .filter((x) => !LOW_VALUE_REGEXES.find((re) => re.test(x)))
-      .map((k) => [k, entities[k]])
-  )
-}
-
 interface HassEventTargetAddRemove {
   addEventListener(eventType: string, callback: ConnectionEventListener): void
   removeEventListener(

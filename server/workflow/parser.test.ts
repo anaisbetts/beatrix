@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { afterEach, beforeEach } from 'bun:test'
-import * as fs from 'fs/promises'
 import * as path from 'path'
+import * as fs from 'fs/promises'
 
 import { Automation } from '../../shared/types'
 import {

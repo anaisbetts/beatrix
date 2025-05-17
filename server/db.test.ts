@@ -1,6 +1,6 @@
-import { asyncMap } from '@anaisbetts/commands'
 import { describe, expect, it } from 'bun:test'
 import { promises as fs } from 'fs'
+import { asyncMap } from '@anaisbetts/commands'
 
 import { createDatabase } from './db'
 import { NewAutomationLog, NewSignal } from './db-schema'

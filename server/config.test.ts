@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import fs from 'fs/promises'
 import path from 'path'
+import fs from 'fs/promises'
 
 import { OpenAIProviderConfig } from '../shared/types'
 import { AppConfig } from '../shared/types'

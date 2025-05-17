@@ -1,3 +1,4 @@
+import path from 'path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { ServerWebSocket } from 'bun'
@@ -9,7 +10,6 @@ import { serveStatic } from 'hono/bun'
 import { createBunWebSocket } from 'hono/bun'
 import { sql } from 'kysely'
 import { DateTime } from 'luxon'
-import path from 'path'
 import { Observable, Subject, Subscription, filter, mergeMap } from 'rxjs'
 
 import pkg from '../package.json'

@@ -94,14 +94,14 @@ export default function Evals() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-border flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold">Model Evaluations</h2>
+      <div className="flex items-center justify-between border-border border-b p-4">
+        <h2 className="font-semibold text-lg">Model Evaluations</h2>
         <Button variant="outline" size="sm" onClick={resetEvals}>
           Reset
         </Button>
       </div>
 
-      <div className="border-border flex flex-wrap gap-4 border-b p-4">
+      <div className="flex flex-wrap gap-4 border-border border-b p-4">
         <div className="flex flex-col">
           <label className="mb-1 text-sm">Driver</label>
           <DriverSelector
@@ -169,19 +169,19 @@ export default function Evals() {
         {evalCommand.isPending() && (
           <div className="flex flex-col items-center justify-center p-12">
             <div className="relative mb-4">
-              <div className="border-primary-200 border-t-primary-600 h-12 w-12 animate-spin rounded-full border-4"></div>
-              <Beaker className="text-primary-600 absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform" />
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600"></div>
+              <Beaker className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 left-1/2 h-5 w-5 transform text-primary-600" />
             </div>
-            <p className="text-primary-700 text-lg font-medium">
+            <p className="font-medium text-lg text-primary-700">
               Running evaluations...
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-gray-500 text-sm">
               This may take a few minutes.
             </p>
             {results.length > 0 && (
-              <div className="bg-primary-50 mt-6 rounded-lg p-4 text-center">
-                <p className="text-sm font-medium">Results so far:</p>
-                <div className="text-xl font-bold">
+              <div className="mt-6 rounded-lg bg-primary-50 p-4 text-center">
+                <p className="font-medium text-sm">Results so far:</p>
+                <div className="font-bold text-xl">
                   {totalScore.score}/{totalScore.possible} ({totalScore.percent}
                   %)
                 </div>
@@ -191,9 +191,9 @@ export default function Evals() {
         )}
 
         {!evalCommand.isPending() && results.length > 0 && (
-          <div className="bg-primary-50 mb-4 rounded-lg p-4 text-center">
-            <h3 className="mb-2 text-lg font-semibold">Overall Score</h3>
-            <div className="text-3xl font-bold">
+          <div className="mb-4 rounded-lg bg-primary-50 p-4 text-center">
+            <h3 className="mb-2 font-semibold text-lg">Overall Score</h3>
+            <div className="font-bold text-3xl">
               {totalScore.score}/{totalScore.possible} ({totalScore.percent}%)
             </div>
           </div>
@@ -223,7 +223,7 @@ function EvalResult({ result }: { result: ScenarioResult }) {
         <div className="font-medium">{result.prompt}</div>
         <div className="flex items-center gap-2">
           <div className="text-sm">Tools: {result.toolsDescription}</div>
-          <div className="bg-primary-100 text-primary-800 rounded px-2 py-1 font-semibold">
+          <div className="rounded bg-primary-100 px-2 py-1 font-semibold text-primary-800">
             {result.finalScore}/{result.finalScorePossible} ({percentScore}%)
           </div>
         </div>
@@ -231,7 +231,7 @@ function EvalResult({ result }: { result: ScenarioResult }) {
 
       <div className="p-3">
         <h4 className="mb-2 font-medium">Response:</h4>
-        <div className="mb-4 rounded border bg-gray-50 p-2 text-sm whitespace-pre-wrap">
+        <div className="mb-4 whitespace-pre-wrap rounded border bg-gray-50 p-2 text-sm">
           {(() => {
             const content = result.messages[result.messages.length - 1]?.content
             if (typeof content === 'string') {
@@ -266,7 +266,7 @@ function GraderResult({ gradeResult }: { gradeResult: GradeResult }) {
   return (
     <div className="flex items-center justify-between rounded border p-2">
       <div className="text-sm">{gradeResult.graderInfo}</div>
-      <div className="bg-primary-50 text-primary-700 rounded px-2 py-1 text-sm font-medium">
+      <div className="rounded bg-primary-50 px-2 py-1 font-medium text-primary-700 text-sm">
         {gradeResult.score}/{gradeResult.possibleScore} ({percentScore}%)
       </div>
     </div>

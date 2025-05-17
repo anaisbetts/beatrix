@@ -1,7 +1,7 @@
+import * as path from 'path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
 import * as fs from 'fs/promises'
-import * as path from 'path'
 import { z } from 'zod'
 
 import pkg from '../../package.json'

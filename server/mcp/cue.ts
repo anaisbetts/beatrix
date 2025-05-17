@@ -1,7 +1,7 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import debug from 'debug'
 import { exists, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import debug from 'debug'
 import { z } from 'zod'
 
 import pkg from '../../package.json'

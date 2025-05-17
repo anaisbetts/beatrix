@@ -63,11 +63,11 @@ export function ContentBlock({
       break
     case 'tool_use':
       const spinner = isLastMsg ? (
-        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
       ) : null
 
       content = (
-        <div className="text-muted-foreground flex items-center gap-2 p-1 text-sm font-medium">
+        <div className="flex items-center gap-2 p-1 font-medium text-muted-foreground text-sm">
           {spinner}
           Calling tool {msg.name}...
         </div>
@@ -90,7 +90,7 @@ export function ContentBlock({
             </CollapsibleTrigger>
           </div>
           <CollapsibleContent className="pt-2">
-            <pre className="bg-muted overflow-auto rounded p-2 text-sm">
+            <pre className="overflow-auto rounded bg-muted p-2 text-sm">
               {JSON.stringify(msg.content, null, 2)}
             </pre>
           </CollapsibleContent>

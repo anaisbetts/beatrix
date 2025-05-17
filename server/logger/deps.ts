@@ -1,6 +1,6 @@
-import { cyan, gray, green, red, yellow } from 'colorette'
 import { constants as fsConstants } from 'node:fs'
 import { access, rename, stat } from 'node:fs/promises'
+import { cyan, gray, green, red, yellow } from 'colorette'
 import stripAnsi from 'strip-ansi'
 
 /**

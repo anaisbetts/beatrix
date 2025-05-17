@@ -144,7 +144,7 @@ export class RecursiveProxyHandler implements ProxyHandler<Function> {
    *
    * @private
    */
-  get(target: Function, prop: string | symbol): any {
+  get(_target: Function, prop: string | symbol): any {
     if (this.overrides && typeof prop === 'string' && prop in this.overrides) {
       return this.overrides[prop]
     }
@@ -158,7 +158,7 @@ export class RecursiveProxyHandler implements ProxyHandler<Function> {
    *
    * @private
    */
-  apply(target: Function, thisArg: any, argList: any[]): any {
+  apply(_target: Function, _thisArg: any, argList: any[]): any {
     let methodChain = [this.replaceGetterWithName(this.name)]
     let iter = this.parent
 

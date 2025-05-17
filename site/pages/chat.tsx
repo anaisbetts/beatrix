@@ -91,6 +91,7 @@ export default function Chat() {
   }, [result])
 
   // Scroll to bottom when messages change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
@@ -152,8 +153,8 @@ export default function Chat() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-border flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold">Chat Session</h2>
+      <div className="flex items-center justify-between border-border border-b p-4">
+        <h2 className="font-semibold text-lg">Chat Session</h2>
         <div className="flex items-center gap-2">
           <DriverSelector
             driver={driver}

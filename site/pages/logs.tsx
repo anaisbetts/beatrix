@@ -92,8 +92,8 @@ export default function Logs() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-border flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold">Automation Logs</h2>
+      <div className="flex items-center justify-between border-border border-b p-4">
+        <h2 className="font-semibold text-lg">Automation Logs</h2>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={refreshLogs}>
             <RotateCw size={18} />
@@ -103,7 +103,7 @@ export default function Logs() {
 
       <div className="flex items-center gap-4 border-b p-4">
         <div className="relative flex-1">
-          <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
+          <Search className="absolute top-2.5 left-2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search logs..."
             className="pl-8"
@@ -138,10 +138,10 @@ export default function Logs() {
       <div className="flex-1 overflow-y-auto p-4">
         {fetchLogsResult.isPending() ? (
           <div className="flex justify-center p-8">
-            <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div className="text-muted-foreground p-8 text-center">
+          <div className="p-8 text-center text-muted-foreground">
             No logs found
           </div>
         ) : (
@@ -172,13 +172,13 @@ function SignalInfo({ signal }: { signal: SignalData | null }) {
   switch (signal.type) {
     case 'cron':
       return (
-        <div className="text-muted-foreground ml-8 text-sm">
+        <div className="ml-8 text-muted-foreground text-sm">
           <span className="font-semibold">Cron Schedule:</span> {signal.cron}
         </div>
       )
     case 'state':
       return (
-        <div className="text-muted-foreground ml-8 text-sm">
+        <div className="ml-8 text-muted-foreground text-sm">
           <span className="font-semibold">State Change:</span>{' '}
           {signal.entityIds.join(', ')}
           <span className="ml-2 text-xs">(regex: {signal.regex})</span>
@@ -186,14 +186,14 @@ function SignalInfo({ signal }: { signal: SignalData | null }) {
       )
     case 'offset':
       return (
-        <div className="text-muted-foreground ml-8 text-sm">
+        <div className="ml-8 text-muted-foreground text-sm">
           <span className="font-semibold">Time Offset:</span>{' '}
           {signal.offsetInSeconds}s
         </div>
       )
     case 'time':
       return (
-        <div className="text-muted-foreground ml-8 text-sm">
+        <div className="ml-8 text-muted-foreground text-sm">
           <span className="font-semibold">Scheduled Time:</span>{' '}
           {signal.iso8601Time}
         </div>
@@ -246,7 +246,7 @@ function LogEntry({
           )}
           {typeBadge}
         </div>
-        <div className="text-sm font-medium">{formattedDate}</div>
+        <div className="font-medium text-sm">{formattedDate}</div>
       </CollapsibleTrigger>
 
       <CollapsibleContent>
@@ -255,7 +255,7 @@ function LogEntry({
             <div className="ml-6 text-sm">
               <span className="font-semibold">Automation:</span>{' '}
               {log.automation.fileName}
-              <div className="text-muted-foreground mt-1 font-mono text-xs">
+              <div className="mt-1 font-mono text-muted-foreground text-xs">
                 # {log.automation.hash}
               </div>
             </div>

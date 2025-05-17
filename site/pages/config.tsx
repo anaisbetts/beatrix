@@ -191,7 +191,7 @@ export default function Config() {
   if (configResult.isPending()) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="border-primary h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
       </div>
     )
   }
@@ -207,8 +207,8 @@ export default function Config() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-border flex items-center justify-between border-b p-4">
-        <h2 className="text-lg font-semibold">Configuration</h2>
+      <div className="flex items-center justify-between border-border border-b p-4">
+        <h2 className="font-semibold text-lg">Configuration</h2>
         <SaveButton
           saveResult={saveResult}
           onClick={saveConfig}
@@ -216,7 +216,7 @@ export default function Config() {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 space-y-6 overflow-y-auto p-4">
         {/* Home Assistant Settings */}
         <Card>
           <CardHeader>
@@ -224,7 +224,7 @@ export default function Config() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="haBaseUrl" className="text-sm font-medium">
+              <label htmlFor="haBaseUrl" className="font-medium text-sm">
                 Base URL
               </label>
               <Input
@@ -236,7 +236,7 @@ export default function Config() {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="haToken" className="text-sm font-medium">
+              <label htmlFor="haToken" className="font-medium text-sm">
                 Access Token
               </label>
               <Input
@@ -249,7 +249,7 @@ export default function Config() {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="timezone" className="text-sm font-medium">
+              <label htmlFor="timezone" className="font-medium text-sm">
                 Timezone
               </label>
               <Select
@@ -262,7 +262,7 @@ export default function Config() {
 
                 <SelectContent>{timezonesSelectContent}</SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
+              <p className="text-gray-500 text-xs">
                 Select your local IANA timezone.
               </p>
             </div>
@@ -276,7 +276,7 @@ export default function Config() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="automationModel" className="text-sm font-medium">
+              <label htmlFor="automationModel" className="font-medium text-sm">
                 Automation Model
               </label>
               <Input
@@ -286,14 +286,14 @@ export default function Config() {
                 onChange={handleChange}
                 placeholder="anthropic/claude-3-5-sonnet-20240620"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-gray-500 text-xs">
                 Format: driver/model (e.g.,
                 anthropic/claude-3-5-sonnet-20240620, openai/gpt-4-turbo,
                 ollama/llama3)
               </p>
             </div>
             <div className="space-y-2">
-              <label htmlFor="visionModel" className="text-sm font-medium">
+              <label htmlFor="visionModel" className="font-medium text-sm">
                 Vision Model
               </label>
               <Input
@@ -303,7 +303,7 @@ export default function Config() {
                 onChange={handleChange}
                 placeholder="openai/gpt-4o"
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-gray-500 text-xs">
                 Format: driver/model (e.g., openai/gpt-4o,
                 anthropic/claude-3-5-sonnet-20240620)
               </p>
@@ -318,7 +318,7 @@ export default function Config() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="anthropicApiKey" className="text-sm font-medium">
+              <label htmlFor="anthropicApiKey" className="font-medium text-sm">
                 API Key
               </label>
               <Input
@@ -340,7 +340,7 @@ export default function Config() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="ollamaHost" className="text-sm font-medium">
+              <label htmlFor="ollamaHost" className="font-medium text-sm">
                 Host
               </label>
               <Input
@@ -366,8 +366,8 @@ export default function Config() {
             {(config.openAIProviders || []).map((provider, index) => (
               <div key={index} className="space-y-4 pb-4">
                 {index > 0 && <Separator className="my-4" />}
-                <div className="flex justify-between items-center">
-                  <h3 className="text-md font-medium">Provider {index + 1}</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-md">Provider {index + 1}</h3>
                   <Button
                     variant="outline"
                     size="sm"
@@ -378,7 +378,7 @@ export default function Config() {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Provider Name</label>
+                  <label className="font-medium text-sm">Provider Name</label>
                   <Input
                     value={provider.providerName || ''}
                     onChange={(e) =>
@@ -390,12 +390,12 @@ export default function Config() {
                     }
                     placeholder="openai, google, etc."
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-gray-500 text-xs">
                     Default provider should be named 'openai'
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Base URL</label>
+                  <label className="font-medium text-sm">Base URL</label>
                   <Input
                     value={provider.baseURL || ''}
                     onChange={(e) =>
@@ -407,12 +407,12 @@ export default function Config() {
                     }
                     placeholder="https://api.openai.com/v1"
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-gray-500 text-xs">
                     Leave empty for official OpenAI API
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">API Key</label>
+                  <label className="font-medium text-sm">API Key</label>
                   <Input
                     value={provider.apiKey || ''}
                     onChange={(e) =>
@@ -431,7 +431,7 @@ export default function Config() {
 
             {(!config.openAIProviders ||
               config.openAIProviders.length === 0) && (
-              <div className="text-center py-4 text-gray-500">
+              <div className="py-4 text-center text-gray-500">
                 No OpenAI providers configured. Click "Add Provider" to add one.
               </div>
             )}
@@ -444,7 +444,7 @@ export default function Config() {
             <CardTitle>Debugging</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-gray-600 text-sm">
               Generate a debug report containing automation configurations and
               Home Assistant details. This can be helpful for troubleshooting.
             </p>
@@ -458,7 +458,7 @@ export default function Config() {
                 : 'Generate Debug Report'}
             </Button>
             {debugReportError && (
-              <p className="text-sm text-red-500">
+              <p className="text-red-500 text-sm">
                 Error generating report: {debugReportError}
               </p>
             )}

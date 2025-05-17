@@ -1,6 +1,6 @@
-import debug from 'debug'
 import { watch } from 'fs'
 import { join } from 'path'
+import debug from 'debug'
 import {
   Observable,
   bufferTime,

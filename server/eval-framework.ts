@@ -1,11 +1,11 @@
+import { mkdir } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 import { asyncMap } from '@anaisbetts/commands'
 import { MessageParam } from '@anthropic-ai/sdk/resources/index.js'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import debug from 'debug'
 import { HassEvent, HassServices } from 'home-assistant-js-websocket'
-import { mkdir } from 'node:fs/promises'
-import os from 'node:os'
-import path from 'node:path'
 import { NEVER, Observable, firstValueFrom, lastValueFrom, toArray } from 'rxjs'
 
 import cameraImage from '../mocks/camera.jpg' with { type: 'file' }
@@ -128,9 +128,9 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
   async sendNotification(
     target: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    message: string,
+    _message: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    title: string | undefined
+    _title: string | undefined
   ): Promise<void> {
     const svcs = await this.fetchServices()
     const notifiers = await extractNotifiers(svcs)
@@ -143,7 +143,7 @@ export class EvalHomeAssistantApi implements HomeAssistantApi {
   async callService<T = any>(
     options: CallServiceOptions,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    testModeOverride?: boolean
+    _testModeOverride?: boolean
   ): Promise<T | null> {
     // In test mode, validate that entity_id starts with domain
     const entityId = options.target?.entity_id

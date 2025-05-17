@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
 import { join } from 'path'
+import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises'
 import { firstValueFrom } from 'rxjs'
 import { take, timeout } from 'rxjs/operators'
 

@@ -65,13 +65,13 @@ export function DriverSelector({
         )
       },
       err: (e) => (
-        <div className="text-sm text-red-500">
+        <div className="text-red-500 text-sm">
           Failed to load drivers: {e.toString()}
         </div>
       ),
       pending: () => (
         <div className="flex h-10 w-[180px] items-center justify-center">
-          <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
         </div>
       ),
       null: () => <div className="text-sm italic">Select a driver</div>,
@@ -169,7 +169,7 @@ export function ModelSelector({
       },
       err: () => (
         <div
-          className={`flex h-10 items-center ${triggerClassName} text-sm text-red-500`}
+          className={`flex h-10 items-center ${triggerClassName} text-red-500 text-sm`}
         >
           Failed to load models
         </div>
@@ -178,7 +178,7 @@ export function ModelSelector({
         <div
           className={`flex h-10 items-center justify-center ${triggerClassName}`}
         >
-          <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
         </div>
       ),
       null: () => (

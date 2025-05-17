@@ -198,14 +198,14 @@ export function NotebookEditorPage() {
     <div className="flex h-screen flex-col">
       <div className="border-border border-b p-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">Notebook Editor</h1>
+          <h1 className="font-semibold text-lg">Notebook Editor</h1>
           {isSaving && (
-            <span className="text-sm text-muted-foreground">Saving...</span>
+            <span className="text-muted-foreground text-sm">Saving...</span>
           )}
         </div>
       </div>
       {error && (
-        <div className="bg-destructive text-destructive-foreground p-2">
+        <div className="bg-destructive p-2 text-destructive-foreground">
           {error}
         </div>
       )}
@@ -213,7 +213,7 @@ export function NotebookEditorPage() {
         {/* File Tree */}
         <div className="w-1/4 overflow-y-auto border-r p-2">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Files</h2>
+            <h2 className="font-semibold text-sm">Files</h2>
             <div className="flex space-x-1">
               <Button
                 variant="ghost"
@@ -284,13 +284,11 @@ export function NotebookEditorPage() {
             <AlertDialogDescription>
               Enter a filename. It will be created in the `notebook/
               {createFileType}s/` directory.
-              {error && (
-                <p className="text-destructive mt-2">Error: {error}</p>
-              )}{' '}
+              {error && <p className="mt-2 text-destructive">Error: {error}</p>}{' '}
               {/* Show error inside dialog */}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="grid gap-2 py-4 bg-white">
+          <div className="grid gap-2 bg-white py-4">
             <Label htmlFor="name">Filename</Label>
             <Input
               id="name"

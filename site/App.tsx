@@ -39,7 +39,7 @@ function AppSidebar({ onPageClicked }: AppSidebarProps) {
 
   const headerContent =
     open || isMobile ? (
-      <h2 className="text-2xl text-nowrap">Agentic Automation</h2>
+      <h2 className="text-nowrap text-2xl">Agentic Automation</h2>
     ) : null
 
   const nav = useCallback(
@@ -140,7 +140,7 @@ export default function Home() {
   }, [page])
 
   return (
-    <div className="bg-background min-h-screen max-w-screen">
+    <div className="min-h-screen max-w-screen bg-background">
       <SidebarProvider defaultOpen={defaultOpen}>
         <Sidebar variant="floating" collapsible="icon">
           <AppSidebar onPageClicked={setPage} />

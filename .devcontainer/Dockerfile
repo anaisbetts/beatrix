@@ -9,9 +9,8 @@ RUN apt-get update && apt-get install -y \
     nano \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
-RUN groupadd --gid 1000 bun \
-    && useradd --uid 1000 --gid bun --shell /bin/bash --create-home bun
+# Create a non-root user (bun group already exists)
+RUN useradd --uid 1000 --gid bun --shell /bin/bash --create-home bun
 
 # Set up workspace
 WORKDIR /workspace

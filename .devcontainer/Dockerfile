@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     vim \
     nano \
+    zsh \
     && rm -rf /var/lib/apt/lists/*
 
 # Use existing bun user (already exists in base image)

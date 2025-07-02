@@ -29,22 +29,13 @@
       }
     }
   },
-  "forwardPorts": [8080, 3000],
+  "forwardPorts": [3000],
   "portsAttributes": {
-    "8080": {
-      "label": "Beatrix Server",
-      "onAutoForward": "notify"
-    },
     "3000": {
       "label": "Vite Dev Server",
       "onAutoForward": "notify"
     }
   },
   "postCreateCommand": "bun install",
-  "postStartCommand": "mkdir -p ./notebook",
-  "mounts": [
-    "source=${localWorkspaceFolder}/notebook,target=/workspace/notebook,type=bind,consistency=cached"
-  ],
-  "remoteUser": "bun",
-  "workspaceFolder": "/workspace"
+  "remoteUser": "bun"
 }
